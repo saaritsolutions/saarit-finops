@@ -27,12 +27,12 @@ jobs:
       with:
         filters: |
           backend:
-            - '**/*.cs'
-            - '**/*.csproj'
+            - 'saar-core-banking-services/**/*.cs'
+            - 'saar-core-banking-services/**/*.csproj'
             - '**/appsettings*.json'
             - 'Dockerfile*'
           frontend:
-            - 'frontend-ui/**'
+            - 'saar-core-banking-services/frontend-ui/**'
           docker:
             - '**/Dockerfile*'
             - 'docker-compose*.yml'
@@ -68,13 +68,13 @@ jobs:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
     - name: Restore dependencies
-      run: dotnet restore SaaRCoreBankingMicroservices.sln
+      run: dotnet restore saar-core-banking-services/SaaRCoreBankingMicroservices.sln
 
     - name: Build solution
-      run: dotnet build SaaRCoreBankingMicroservices.sln --no-restore --configuration Release
+      run: dotnet build saar-core-banking-services/SaaRCoreBankingMicroservices.sln --no-restore --configuration Release
 
     - name: Run tests
-      run: dotnet test SaaRCoreBankingMicroservices.sln --no-build --configuration Release --verbosity normal
+      run: dotnet test saar-core-banking-services/SaaRCoreBankingMicroservices.sln --no-build --configuration Release --verbosity normal
 
   frontend-test:
     name: Frontend Tests
@@ -84,7 +84,7 @@ jobs:
     
     defaults:
       run:
-        working-directory: ./frontend-ui
+        working-directory: ./saar-core-banking-services/frontend-ui
 
     steps:
     - name: Checkout code
@@ -95,7 +95,7 @@ jobs:
       with:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
-        cache-dependency-path: frontend-ui/package-lock.json
+        cache-dependency-path: saar-core-banking-services/frontend-ui/package-lock.json
 
     - name: Install dependencies
       run: npm ci
@@ -140,24 +140,24 @@ jobs:
       with:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
-        cache-dependency-path: frontend-ui/package-lock.json
+        cache-dependency-path: saar-core-banking-services/frontend-ui/package-lock.json
 
     - name: Build backend
       run: |
-        dotnet restore SaaRCoreBankingMicroservices.sln
-        dotnet build SaaRCoreBankingMicroservices.sln --no-restore --configuration Release
+        dotnet restore saar-core-banking-services/SaaRCoreBankingMicroservices.sln
+        dotnet build saar-core-banking-services/SaaRCoreBankingMicroservices.sln --no-restore --configuration Release
 
     - name: Start backend services
       run: |
-        cd CustomerService
+        cd saar-core-banking-services/CustomerService
         nohup dotnet run --configuration Release --urls="http://localhost:5200" &
-        cd ../AccountService  
+        cd saar-core-banking-services/AccountService  
         nohup dotnet run --configuration Release --urls="http://localhost:5217" &
         sleep 30
 
     - name: Build and start frontend
       run: |
-        cd frontend-ui
+        cd saar-core-banking-services/frontend-ui
         npm ci
         npm run build
         nohup npm start &
@@ -170,7 +170,7 @@ jobs:
 
     - name: Run integration tests
       run: |
-        cd frontend-ui
+        cd saar-core-banking-services/frontend-ui
         npm run test -- --watch=false --browsers=ChromeHeadless
 
   docker-build:
@@ -183,16 +183,16 @@ jobs:
       matrix:
         include:
           - service: frontend-ui
-            context: ./frontend-ui
+            context: ./saar-core-banking-services/saar-core-banking-services/frontend-ui
             dockerfile: ./frontend-ui/Dockerfile
           - service: AccountService
-            context: .
-            dockerfile: ./AccountService/Dockerfile
+            context: ./saar-core-banking-services
+            dockerfile: ./saar-core-banking-services/AccountService/Dockerfile
           - service: CustomerService
-            context: .
+            context: ./saar-core-banking-services
             dockerfile: ./CustomerService/Dockerfile
           - service: APIGateway
-            context: .
+            context: ./saar-core-banking-services
             dockerfile: ./APIGateway/Dockerfile
 
     steps:
