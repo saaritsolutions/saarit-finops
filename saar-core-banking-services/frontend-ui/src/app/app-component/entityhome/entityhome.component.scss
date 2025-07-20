@@ -1,0 +1,62 @@
+.entity-tabs {
+  display: flex;
+  flex-direction: column;
+  height: 100%; /* Full viewport height */
+  width: 100%; /* Full width of the container */
+  box-sizing: border-box; /* Include padding and borders in dimensions */
+  margin: 0;
+ // padding: 1rem; /* Add padding to prevent content from touching edges */
+  overflow: hidden; /* Prevent unnecessary scrolling */
+  padding: 16px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+}
+mat-tab-group {
+  flex: 1; /* Allow tab group to grow and fill the available space */
+  width: 100%;
+ // background: #fff;
+  box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  overflow: auto; /* Ensure scrollable content if needed */
+  margin-top: 16px;
+}
+
+mat-tab .mat-tab-label {
+  display: flex;
+  align-items: center;
+}
+
+mat-tab .mat-tab-label button {
+  margin-left: 8px;
+}
+.search-card {
+  background-color: #fff; /* White card background */
+  border-radius: 8px; /* Rounded corners */
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+  padding: 16px; /* Inner spacing */
+  display: flex;
+  flex-direction: column;
+
+  .search-card-content {
+   display: flex;
+    justify-content: space-between; /* Space between search and create button */
+    align-items: center; /* Center items vertically */
+
+    @media (max-width: 768px) {
+      flex-direction: column; /* Stack content vertically on small screens */
+      align-items: flex-start;
+      gap: 12px; /* Add spacing between rows */
+    }
+  }
+}
+
+.search-tab-content,
+.create-tab-content {
+  padding: 1rem;
+ // overflow-y: auto; /* Enable vertical scrolling for tab content */
+  height: calc(100% - 50px); /* Adjust for tab headers */
+}
+
+
+

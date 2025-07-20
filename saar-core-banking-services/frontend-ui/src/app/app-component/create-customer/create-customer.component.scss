@@ -1,0 +1,160 @@
+
+  @media (max-width: 768px) {
+    .form-grid {
+      grid-template-columns: 1fr; // Single column for small screens
+    }
+}
+/* Form Card Styling */
+.form-container {
+  //  max-width: 900px;
+    padding: 20px;
+  }
+  
+  mat-card {
+    background: #fff; /* White background for the card */
+    border-radius: 12px; /* Rounded corners */
+    padding: 20px; /* Inner padding */
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1); /* Soft shadow */
+  }
+  
+  mat-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0; /* Remove default padding */
+    margin-bottom: 16px; /* Space below the header */
+    border-bottom: 1px solid #ddd; /* Separator line */
+  }
+  
+  mat-card-title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #3f51b5; /* Material primary color */
+    padding-bottom: 8px; /* Space below title */
+  }
+  
+  /* Typography */
+  h1, h2 {
+    font-family: 'Roboto', sans-serif;
+    color: #333; /* Slightly darker text */
+    margin: 0;
+  }
+  
+  h1 {
+    font-size: 24px;
+  }
+  
+  h2 {
+    font-size: 20px;
+    margin-top: 20px;
+    margin-bottom: 10px;
+  }
+  
+  /* Form Grid Layout */
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* Three columns */
+    gap: 16px; /* Space between items */
+    margin-bottom: 20px; /* Space below sections */
+  }
+  
+  .form-item {
+    width: 100%; /* Ensure full width within grid */
+  }
+  
+  /* Material Form Fields */
+  .mat-form-field {
+    width: 100%;
+  }
+  
+  .mat-form-field.mat-focused .mat-form-field-label {
+    color: #3f51b5 !important; /* Customize focus label color */
+  }
+  
+  /* Buttons */
+  button {
+    margin-top: 20px;
+    font-size: 14px;
+  }
+  
+  button[mat-raised-button][color="primary"] {
+    background-color: #3f51b5; /* Primary color */
+    color: #fff;
+  }
+  
+  /* Slide Toggles */
+  .mat-slide-toggle {
+    display: flex;
+    align-items: center;
+    margin: 16px 0; /* Add vertical spacing */
+  }
+  
+  /* Error Messages */
+  .mat-error {
+    font-size: 12px;
+    color: #d32f2f; /* Material Design error color */
+    margin-top: 4px; /* Spacing between input and error */
+  }
+  
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .form-grid {
+      grid-template-columns: 1fr; /* Single column for smaller screens */
+    }
+  }
+  .mat-form-field {
+    transition: box-shadow 0.3s ease-in-out;
+  }
+  
+  .mat-form-field:hover {
+    box-shadow: 0 0 5px rgba(63, 81, 181, 0.5); /* Soft blue glow */
+  }
+  .mat-slide-toggle {
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .mat-slide-toggle-thumb {
+    background-color: #3f51b5; /* Custom color for thumb */
+  }
+/* Slide Toggle Styling */
+.mat-slide-toggle {
+    display: flex;
+    align-items: center;
+    margin: 16px 0;
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .mat-slide-toggle-thumb {
+    background-color: #3f51b5 !important; /* Primary color for thumb */
+    transition: background-color 0.3s ease;
+  }
+  
+  .mat-slide-toggle.mat-checked .mat-slide-toggle-thumb {
+    background-color: #3f51b5; /* Thumb color when checked */
+  }
+  
+  .mat-slide-toggle.mat-checked .mat-slide-toggle-bar {
+    background-color: rgba(63, 81, 181, 0.5); /* Bar color when checked */
+  }
+  
+  .mat-slide-toggle.mat-disabled .mat-slide-toggle-thumb {
+    background-color: #bdbdbd; /* Thumb color when disabled */
+  }
+  
+  .mat-slide-toggle-bar {
+    background-color: #ddd; /* Default bar color */
+    transition: background-color 0.3s ease;
+  }
+  
+  .mat-slide-toggle-thumb-container {
+    transition: transform 0.3s ease; /* Smooth slide animation */
+  }
+  
+  .mat-slide-toggle.mat-checked .mat-slide-toggle-thumb-container {
+    transform: translateX(20px); /* Slide thumb to the right */
+  }
+  
+  .mat-slide-toggle:hover .mat-slide-toggle-bar {
+    background-color: rgba(63, 81, 181, 0.3); /* Lighter hover effect for the bar */
+  }
+  

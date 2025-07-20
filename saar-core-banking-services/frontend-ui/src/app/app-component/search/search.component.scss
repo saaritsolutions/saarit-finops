@@ -1,0 +1,75 @@
+/* Core Data Grid CSS */
+/* Core Data Grid CSS */
+
+// .search-container {
+//     display: flex;
+//     flex-direction: column;
+//     gap: 1rem;
+//     max-width: 100%; /* Ensures it doesn't overflow */
+//     margin: 0 auto;
+//   }
+  
+.search-container {
+  
+  
+  display: flex; /* Flexbox layout for horizontal alignment */
+  align-items: center; /* Align items vertically in the center */
+ // justify-content: center; /* Center horizontally */
+  gap: 8px; /* Add spacing between the input and button */
+  margin: 16px 0; /* Add vertical spacing above and below the search container */
+
+  .search-box {
+    //flex: 1; /* Allow the input field to take up remaining space */
+    max-width: 400px; /* Limit the maximum width of the input field */
+    
+    mat-form-field {
+      width: 100%; /* Ensure the form field spans full width of its container */
+      height: 40px; /* Adjust the height for consistency with the button */
+
+      mat-icon {
+        font-size: 20px; /* Reduce the size of the search icon */
+        color: #757575; /* Set icon color */
+      }
+
+      input {
+        font-size: 14px; /* Font size for the input field */
+        height: 36px; /* Match height with the button */
+        padding: 6px 10px; /* Compact padding */
+      }
+    }
+  }
+
+  .search-button {
+    height: 40px; /* Match button height with the input field */
+    line-height: 40px; /* Center text vertically inside the button */
+    font-size: 14px; /* Font size for the button text */
+    padding:16px; /* Padding for the button */
+    white-space: nowrap; /* Prevent the button text from wrapping */
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .search-container {
+    flex-direction: column; /* Stack elements vertically on smaller screens */
+    gap: 12px; /* Increase spacing between elements when stacked */
+  }
+
+  .search-box {
+    width: 100%; /* Full width for smaller screens */
+  }
+
+  .search-button {
+    width: 100%; /* Full width button for smaller screens */
+  }
+}
+.search-bar {
+  display: flex;
+  gap:10px;
+  flex-wrap: nowrap;
+  align-content: center;
+  justify-content: center;
+  align-content: baseline;
+  align-items: baseline;
+  height: 75px;
+}

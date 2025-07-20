@@ -32,3 +32,5 @@ Thumbs.db
 
 # angular 
 .angular/cache
+/saar-core-banking-services/frontend-ui/.angular/cache
+/saar-core-banking-services/frontend-ui/dist

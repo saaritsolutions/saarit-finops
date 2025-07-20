@@ -1,0 +1,73 @@
+@startuml
+!define RECTANGLE class
+
+RECTANGLE "API Gateway / BFF" as APIGW
+
+RECTANGLE "Customer Service\n(KYC, Profile, AML, Hierarchy)" as Customer
+RECTANGLE "Account Service\n(Open/Close, Status, Flags)" as Account
+RECTANGLE "Deposit Service\n(TD, RD, Renewal, Interest, Penalty)" as Deposit
+RECTANGLE "Loan Service\n(Origination, Disbursement, NPA)" as Loan
+RECTANGLE "Transaction Service\n(Ledger, Posting, EOD/EOM)" as Transaction
+RECTANGLE "Cheque & Clearing Service\n(CTS, ECS, NACH)" as Cheque
+RECTANGLE "Remittance & Payment Service\n(NEFT, RTGS, IMPS, UPI, etc.)" as Remittance
+RECTANGLE "Card & ATM Service\n(Limits, Alerts)" as Card
+RECTANGLE "Locker Service\n(Safe Deposit Lockers)" as Locker
+RECTANGLE "GL & Accounting Service\n(Trial Balance, P&L, Reconciliation)" as GL
+RECTANGLE "Interest & Fee Service\n(TDS, Tax, Certificates)" as Interest
+RECTANGLE "Regulatory & Compliance Service\n(Statutory, Audit)" as Compliance
+RECTANGLE "Reporting & MIS Service\n(Dashboards, Reports)" as Reporting
+
+RECTANGLE "User & Access Management" as UserAccess
+RECTANGLE "Product & Param Management" as ProductParam
+RECTANGLE "Document Management" as Document
+RECTANGLE "Notification Service" as Notification
+RECTANGLE "Audit & Logging Service" as Audit
+RECTANGLE "HRMS Service" as HRMS
+
+APIGW -down-> Customer
+APIGW -down-> Account
+APIGW -down-> Deposit
+APIGW -down-> Loan
+APIGW -down-> Transaction
+APIGW -down-> Cheque
+APIGW -down-> Remittance
+APIGW -down-> Card
+APIGW -down-> Locker
+APIGW -down-> GL
+APIGW -down-> Interest
+APIGW -down-> Compliance
+APIGW -down-> Reporting
+
+Customer ..> UserAccess : uses
+Account ..> UserAccess : uses
+Deposit ..> UserAccess : uses
+Loan ..> UserAccess : uses
+Transaction ..> UserAccess : uses
+Cheque ..> UserAccess : uses
+Remittance ..> UserAccess : uses
+Card ..> UserAccess : uses
+Locker ..> UserAccess : uses
+
+Customer ..> ProductParam : config
+Account ..> ProductParam : config
+Deposit ..> ProductParam : config
+Loan ..> ProductParam : config
+
+Customer ..> Document : KYC docs
+Account ..> Document : Signatures
+Loan ..> Document : Collateral
+
+Customer ..> Notification : alerts
+Account ..> Notification : alerts
+Deposit ..> Notification : alerts
+Loan ..> Notification : alerts
+
+Customer ..> Audit : logs
+Account ..> Audit : logs
+Deposit ..> Audit : logs
+Loan ..> Audit : logs
+Transaction ..> Audit : logs
+
+HRMS ..> UserAccess : staff auth
+
+@enduml

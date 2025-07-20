@@ -1,0 +1,70 @@
+<div class="entity-tabs">
+    <mat-tab-group [(selectedIndex)]="selectedTabIndex" (selectedIndexChange)="onTabChange($event)">
+      <!-- Search Tab -->
+      <mat-tab [label]="'Search ' + entityName">
+        <div class="search-tab-content">
+          <!-- <h3>Search {{ entityName }}</h3> -->
+          <!-- Include the Search Component -->
+          <mat-card class="search-card">
+            <div class="search-card-content">
+              <!-- <div class="search-actions"> -->
+          <app-search [entityName]="entityName"   (searchResults)="onSearchResults($event)"></app-search>
+              <!-- </div> -->
+          <button mat-raised-button color="primary" (click)="openCreateCustomerTab('')">
+            Create Customer
+          </button>
+        </div>
+      </mat-card>
+          <app-grid [dataSource]="gridData" (editRecord)="onEditRecord($event)" (viewRecord)="onViewRecord($event)"></app-grid>
+          
+        </div>
+      </mat-tab>
+       <!-- Dynamically Added Tabs -->
+    <!-- Dynamically Added Tabs -->
+    <ng-container *ngFor="let tab of dynamicTabs; let i = index">
+      <mat-tab>
+        <ng-template matTabLabel>
+          {{ tab.title }}
+          <button mat-icon-button color="warn" (click)="closeTab(i)">
+            <mat-icon>close</mat-icon>
+          </button>
+        </ng-template>
+        <ng-template matTabContent>
+          <ng-container *ngComponentOutlet="tab.content"></ng-container>
+        </ng-template>
+      </mat-tab>
+    </ng-container>
+  
+      <!-- Create Tab -->
+      <!-- <mat-tab [label]="'Create ' + entityName"> -->
+        <!-- <div class="create-tab-content"> -->
+          <!-- <div *ngIf="entityName === 'customer'"> <div><app-create-customer></app-create-customer></div> </div> -->
+          <!-- <app-create-customer></app-create-customer> -->
+          <!-- <h3>Create {{ entityName }}</h3> -->
+          <!-- <form (ngSubmit)="onCreateEntity()">
+            <mat-form-field appearance="fill">
+              <mat-label>Name</mat-label>
+              <input
+                matInput
+                [(ngModel)]="newEntity.name"
+                name="name"
+                required
+              />
+            </mat-form-field>
+            <mat-form-field appearance="fill">
+              <mat-label>Email</mat-label>
+              <input
+                matInput
+                [(ngModel)]="newEntity.email"
+                name="email"
+                required
+              />
+            </mat-form-field>
+            <button mat-raised-button color="primary" type="submit">
+              Create
+            </button>
+          </form> -->
+         <!-- </div>  -->
+      <!-- </mat-tab> -->
+    </mat-tab-group>
+  </div>

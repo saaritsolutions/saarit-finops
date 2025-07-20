@@ -1,0 +1,158 @@
+<div class="form-container">
+    <mat-card>
+    <mat-card-header>
+        <mat-card-title>Create Customer</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+    <form [formGroup]="customerForm" (ngSubmit)="submitForm()">
+      <!-- Personal Details -->
+      <h2>Personal Details</h2>
+      <div class="form-grid">
+        <mat-form-field appearance="fill" class="form-item">
+          <mat-label>Customer No</mat-label>
+          <input matInput formControlName="customerNo" />
+          <mat-error *ngIf="customerForm.get('customerNo')?.hasError('required')">
+            Customer No is required
+          </mat-error>
+        </mat-form-field>
+  
+        <mat-form-field appearance="fill" class="form-item">
+          <mat-label>Name</mat-label>
+          <input matInput formControlName="name" />
+          <mat-error *ngIf="customerForm.get('name')?.hasError('required')">
+            Name is required
+          </mat-error>
+        </mat-form-field>
+  
+        <mat-radio-group formControlName="gender" class="form-item">
+          <mat-radio-button value="M">Male</mat-radio-button>
+          <mat-radio-button value="F">Female</mat-radio-button>
+          <mat-radio-button value="O">Other</mat-radio-button>
+        </mat-radio-group>
+  
+        <mat-form-field appearance="fill" class="form-item">
+          <mat-label>Date of Birth</mat-label>
+          <input matInput formControlName="dateOfBirth" type="date" (change)="onDateOfBirthChange()" />
+          <mat-error *ngIf="customerForm.get('dateOfBirth')?.hasError('required')">
+            Date of Birth is required
+          </mat-error>
+        </mat-form-field>
+  
+        <mat-form-field appearance="fill" class="form-item">
+          <mat-label>Age</mat-label>
+          <input matInput formControlName="age" />
+        </mat-form-field>
+      </div>
+  
+      <!-- Address Details -->
+      <h2>Address Details</h2>
+      <div class="form-grid" formGroupName="address">
+        <mat-form-field appearance="fill" class="form-item">
+          <mat-label>Address Line</mat-label>
+          <input matInput formControlName="addressText" />
+          <mat-error *ngIf="customerForm.get('address.addressText')?.hasError('required')">
+            Address Line is required
+          </mat-error>
+        </mat-form-field>
+  
+        <mat-form-field appearance="fill" class="form-item">
+          <mat-label>State</mat-label>
+          <mat-select formControlName="state" (selectionChange)="updateDistricts($event.value)">
+            <mat-option *ngFor="let state of states" [value]="state">{{ state }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+  
+        <mat-form-field appearance="fill" class="form-item">
+          <mat-label>District</mat-label>
+          <mat-select formControlName="district">
+            <mat-option *ngFor="let district of filteredDistricts" [value]="district">{{ district }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+  
+        <mat-form-field appearance="fill" class="form-item">
+          <mat-label>Phone Number</mat-label>
+          <input matInput formControlName="phoneNumber" type="text" />
+          <mat-error *ngIf="customerForm.get('address.phoneNumber')?.hasError('pattern')">
+            Phone number must be 10 digits
+          </mat-error>
+        </mat-form-field>
+  
+        <mat-form-field appearance="fill" class="form-item">
+          <mat-label>Alternate Phone Number</mat-label>
+          <input matInput formControlName="alternatePhoneNumber" type="text" />
+          <mat-error *ngIf="customerForm.get('address.alternatePhoneNumber')?.hasError('pattern')">
+            Alternate phone number must be 10 digits
+          </mat-error>
+        </mat-form-field>
+  
+        <mat-form-field appearance="fill" class="form-item">
+          <mat-label>Pin Code</mat-label>
+          <input matInput formControlName="pinCode" type="text" />
+          <mat-error *ngIf="customerForm.get('address.pinCode')?.hasError('pattern')">
+            Pin Code must be 6 digits
+          </mat-error>
+        </mat-form-field>
+      </div>
+  
+      <!-- KYC Documents -->
+      <h2>KYC Documents</h2>
+      <div formArrayName="kycDocs">
+        <div class="form-grid" *ngFor="let doc of kycDocs.controls; let i = index" [formGroupName]="i">
+          <mat-form-field appearance="fill" class="form-item">
+            <mat-label>Document Type</mat-label>
+            <mat-select formControlName="document">
+              <mat-option value="Aadhar">Aadhar</mat-option>
+              <mat-option value="Pan">PAN</mat-option>
+            </mat-select>
+          </mat-form-field>
+  
+          <mat-form-field appearance="fill" class="form-item">
+            <mat-label>Status</mat-label>
+            <mat-select formControlName="status">
+              <mat-option value="Pending">Pending</mat-option>
+              <mat-option value="Verified">Verified</mat-option>
+            </mat-select>
+          </mat-form-field>
+  
+          <input type="file" (change)="onFileChange($event, doc)" class="form-item" />
+          <button mat-raised-button color="warn" (click)="removeKycDoc(i)" class="form-item">Remove</button>
+        </div>
+      </div>
+      <button mat-raised-button color="primary" (click)="addKycDoc()">Add Document</button>
+  
+      <!-- Additional Info -->
+      <h2>Additional Info</h2>
+      <div class="form-grid">
+        <mat-slide-toggle formControlName="onHold" class="form-item">On Hold</mat-slide-toggle>
+        <mat-slide-toggle formControlName="active" class="form-item">Active</mat-slide-toggle>
+  
+        <mat-form-field appearance="fill" class="form-item">
+          <mat-label>KYC Status</mat-label>
+          <mat-select formControlName="kycStatus">
+            <mat-option value="Verified">Verified</mat-option>
+            <mat-option value="Pending">Pending</mat-option>
+          </mat-select>
+        </mat-form-field>
+  
+        <mat-form-field appearance="fill" class="form-item">
+          <mat-label>Authorization Status</mat-label>
+          <mat-select formControlName="authStat">
+            <mat-option value="A">Approved</mat-option>
+            <mat-option value="P">Pending</mat-option>
+            <mat-option value="R">Rejected</mat-option>
+          </mat-select>
+        </mat-form-field>
+  
+        <mat-form-field appearance="fill" class="form-item">
+          <mat-label>Comments</mat-label>
+          <textarea matInput formControlName="comments"></textarea>
+        </mat-form-field>
+      </div>
+  
+      <button mat-raised-button color="primary" type="submit">Submit</button>
+      <button mat-raised-button color="accent" (click)="fillTestData()">Fill Test Data</button>
+
+    </form>
+</mat-card-content>
+</mat-card>
+  </div>

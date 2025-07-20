@@ -1,0 +1,6 @@
+@CardATMService_HostAddress = http://localhost:5266
+
+GET {{CardATMService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

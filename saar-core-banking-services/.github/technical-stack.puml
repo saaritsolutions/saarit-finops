@@ -1,0 +1,50 @@
+@startuml
+!theme spacelab
+
+title SAAR FINOPS – Technology Stack
+
+package "Frontend" {
+  rectangle "Angular" as Angular
+  rectangle "Angular Material" as AngularMaterial
+  rectangle "Cypress" as Cypress
+  rectangle "Jasmine/Karma" as JasmineKarma
+}
+
+package "API Gateway" {
+  rectangle "ASP.NET Core Web API" as APIGateway
+}
+
+package "Microservices" {
+  rectangle "ASP.NET Core Web API" as ASPNetCore
+  rectangle "Entity Framework Core" as EFCore
+  rectangle "PostgreSQL" as PostgreSQL
+  rectangle "Docker" as Docker
+}
+
+package "DevOps & Tooling" {
+  rectangle "GitHub Actions" as GitHubActions
+  rectangle "Docker Compose" as DockerCompose
+  rectangle "PlantUML" as PlantUML
+}
+
+Angular -down-> APIGateway : REST API
+APIGateway -down-> ASPNetCore : REST API
+ASPNetCore -down-> EFCore : ORM
+EFCore -down-> PostgreSQL : Database
+
+Angular -right-> AngularMaterial : UI Components
+Angular -right-> Cypress : E2E Tests
+Angular -right-> JasmineKarma : Unit/Integration Tests
+
+ASPNetCore -right-> Docker : Containerization
+APIGateway -right-> Docker : Containerization
+
+Docker -down-> DockerCompose : Orchestration
+
+GitHubActions -down-> APIGateway : CI/CD
+GitHubActions -down-> ASPNetCore : CI/CD
+GitHubActions -down-> Angular : CI/CD
+
+note right: PlantUML used for architecture diagrams
+
+@enduml

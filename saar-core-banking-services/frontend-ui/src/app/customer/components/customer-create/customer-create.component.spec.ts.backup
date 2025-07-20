@@ -1,0 +1,336 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
+import { HttpClientModule, HttpClient } from '@angular/common/http';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { MatCardModule } from '@angular/material/card';
+import { CustomerCreateComponent } from './customer-create.component';
+import { CustomerService } from '../../services/customer.service';
+import { of, throwError } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatRadioModule } from '@angular/material/radio';
+import { MatSelectModule } from '@angular/material/select';
+import { MatOptionModule } from '@angular/material/core';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
+import { MatIconModule } from '@angular/material/icon';
+import { CommonModule } from '@angular/common';
+
+// Mock MatSnackBar to prevent overlay injection errors
+class MockMatSnackBar {
+  open() {
+    return {
+      afterDismissed: () => of({})
+    };
+  }
+  dismiss() {}
+}
+
+// Unit tests for component (using HttpClientTestingModule)
+describe('CustomerCreateComponent (Unit Tests)', () => {
+  let component: CustomerCreateComponent;
+  let fixture: ComponentFixture<CustomerCreateComponent>;
+  let mockSnackBar: MockMatSnackBar;
+  let customerService: jasmine.SpyObj<CustomerService>;
+
+  beforeEach(async () => {
+    mockSnackBar = new MockMatSnackBar();
+    const customerServiceSpy = jasmine.createSpyObj('CustomerService', ['createCustomer']);
+    customerServiceSpy.createCustomer.and.returnValue(of({customerId: 1}));
+
+    await TestBed.configureTestingModule({
+      imports: [ReactiveFormsModule, MatSnackBarModule, HttpClientTestingModule, BrowserAnimationsModule, MatCardModule,
+        MatTabsModule, MatFormFieldModule, MatInputModule, MatRadioModule, MatSelectModule, MatOptionModule, FormsModule, CommonModule,
+        MatDatepickerModule, MatNativeDateModule, MatIconModule],
+      declarations: [CustomerCreateComponent],
+      providers: [
+        { provide: CustomerService, useValue: customerServiceSpy },
+        { provide: MatSnackBar, useValue: mockSnackBar }
+      ]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(CustomerCreateComponent);
+    component = fixture.componentInstance;
+    customerService = TestBed.inject(CustomerService) as jasmine.SpyObj<CustomerService>;
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    TestBed.resetTestingModule();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should render form fields', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('input[formControlName="firstName"]')).toBeTruthy();
+    expect(compiled.querySelector('input[formControlName="lastName"]')).toBeTruthy();
+    expect(compiled.querySelector('input[formControlName="dateOfBirth"]')).toBeTruthy();
+  });
+
+  it('should show validation errors for required fields', () => {
+    component.customerForm.markAllAsTouched();
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('First name is required');
+    expect(compiled.textContent).toContain('Last name is required');
+  });
+
+  it('should call createCustomer and show success on valid submit', () => {
+    component.customerForm.patchValue({
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john@example.com',
+      salutation: 'Mr',
+      middleName: '',
+      fatherOrHusbandName: '',
+      postalAddress: '123 Main St',
+      addressText: '123 Main St',
+      telephone: '',
+      mobile: '1234567890',
+      dateOfBirth: '1990-01-01',
+      gender: 'M',
+      pan: '',
+      passport: '',
+      drivingLicense: '',
+      voterId: '',
+      uid: '',
+      introducerAccountNumber: '',
+      customerType: 'Individual'
+    });
+    
+    component.submitForm();
+    expect(customerService.createCustomer).toHaveBeenCalled();
+  });
+
+  it('should not submit if form is invalid', () => {
+    component.customerForm.patchValue({
+      firstName: '',
+      lastName: '',
+    });
+    
+    component.submitForm();
+    expect(customerService.createCustomer).not.toHaveBeenCalled();
+  });
+
+  it('should show error if service fails', () => {
+    customerService.createCustomer.and.returnValue(throwError(() => new Error('Test error')));
+    
+    component.customerForm.patchValue({
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john@example.com',
+      salutation: 'Mr',
+      postalAddress: '123 Main St',
+      mobile: '1234567890',
+      dateOfBirth: '1990-01-01',
+      gender: 'M',
+      customerType: 'Individual'
+    });
+    
+    component.submitForm();
+    expect(customerService.createCustomer).toHaveBeenCalled();
+  });
+});
+
+// Integration test for backend (using real HttpClientModule)
+// Only run this when you want to actually insert data in backend
+describe('CustomerCreateComponent (Integration Test)', () => {
+  let component: CustomerCreateComponent;
+  let fixture: ComponentFixture<CustomerCreateComponent>;
+  let mockSnackBar: MockMatSnackBar;
+  let originalTimeout: number;
+
+  // Increase Jasmine's default timeout to 60 seconds for these integration tests
+  beforeAll(() => {
+    originalTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
+    jasmine.DEFAULT_TIMEOUT_INTERVAL = 60000; // 60 seconds
+    console.log('Set Jasmine timeout to 60 seconds for integration tests');
+  });
+
+  afterAll(() => {
+    jasmine.DEFAULT_TIMEOUT_INTERVAL = originalTimeout;
+    console.log('Reset Jasmine timeout to original value');
+  });
+
+  beforeEach(async () => {
+    mockSnackBar = new MockMatSnackBar();
+    
+    await TestBed.configureTestingModule({
+      imports: [ReactiveFormsModule, MatSnackBarModule, HttpClientModule, BrowserAnimationsModule, MatCardModule,
+        MatTabsModule, MatFormFieldModule, MatInputModule, MatRadioModule, MatSelectModule, MatOptionModule, FormsModule, CommonModule,
+        MatDatepickerModule, MatNativeDateModule, MatIconModule],
+      declarations: [CustomerCreateComponent],
+      providers: [
+        CustomerService,
+        { provide: MatSnackBar, useValue: mockSnackBar }
+      ]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(CustomerCreateComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    TestBed.resetTestingModule();
+  });
+
+  // No longer focused since we're using the other test
+  it('should send data to real backend service', async () => {
+    const testData = {
+      firstName: 'Integration',
+      lastName: 'Test',
+      email: 'integration.test@example.com',
+      salutation: 'Ms',
+      middleName: '',
+      fatherOrHusbandName: '',
+      postalAddress: '789 Integration St',
+      addressText: '789 Integration St',
+      telephone: '',
+      mobile: '9876543210',
+      dateOfBirth: '1995-05-05',
+      gender: 'F',
+      pan: '',
+      passport: '',
+      drivingLicense: '',
+      voterId: '',
+      uid: '',
+      introducerAccountNumber: '',
+      customerType: 'Individual'
+    };
+    
+    // Set test data
+    component.customerForm.patchValue(testData);
+    
+    // Submit form (returns void, not a promise)
+    component.submitForm();
+    
+    // Allow time for the HTTP request to complete
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    // At this point, if the backend call was successful,
+    // the component should have called resetForm() and isSubmitting should be false
+    expect(component.isSubmitting).toBeFalse();
+  });
+
+  // Using 'fit' to focus only on this test for backend integration
+  // This will be the only test that runs
+  fit('should verify API connectivity and create customer', async () => {
+    // Generate a unique timestamp for this test run
+    const timestamp = Date.now();
+    const testEmail = `test${timestamp}@example.com`;
+    
+    console.log(`Starting API verification test with unique email: ${testEmail}`);
+    
+    // Skip the form submission and directly test the API
+    const httpClient = TestBed.inject(HttpClient);
+    
+    // 1. Verify GET endpoint works
+    try {
+      console.log('Testing GET /api/Customer endpoint...');
+      const customers = await firstValueFrom(httpClient.get<any[]>('http://localhost:5200/api/Customer'));
+      console.log(`GET successful, found ${customers.length} existing customers`);
+      expect(customers).toBeTruthy('API should return customer data');
+    } catch (err) {
+      console.error('GET API failed:', err);
+      fail('GET API request failed: ' + JSON.stringify(err));
+    }
+    
+    // 2. Create a customer directly via API
+    try {
+      console.log('Testing POST /api/Customer endpoint...');
+      const newCustomer = {
+        firstName: 'Direct',
+        lastName: `Test${timestamp}`,
+        email: testEmail,
+        dateOfBirth: '1995-05-05T00:00:00Z',
+        gender: 'F',
+        customerType: 'Individual',
+        postalAddress: '789 Test St',
+        mobile: '9876543210'
+      };
+      
+      const result = await firstValueFrom(
+        httpClient.post<any>('http://localhost:5200/api/Customer', newCustomer)
+      );
+      
+      console.log('POST successful, created customer:', result);
+      expect(result).toBeTruthy('API should return the created customer');
+      expect(result.email).toBe(testEmail, 'Created customer should have the correct email');
+    } catch (err) {
+      console.error('POST API failed:', err);
+      fail('POST API request failed: ' + JSON.stringify(err));
+    }
+    
+    // 3. Verify the customer was created by fetching all customers again
+    try {
+      console.log('Verifying customer was created...');
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Small delay to ensure consistency
+      
+      const customers = await firstValueFrom(httpClient.get<any[]>('http://localhost:5200/api/Customer'));
+      const foundCustomer = customers.find(c => c.email === testEmail);
+      
+      console.log('Found created customer:', foundCustomer ? 'Yes' : 'No');
+      expect(foundCustomer).toBeTruthy('Created customer should be found in GET results');
+    } catch (err) {
+      console.error('Verification GET failed:', err);
+      fail('Verification GET request failed: ' + JSON.stringify(err));
+    }
+    
+    // Now test the component itself separately
+    console.log('Testing form submission via component...');
+    
+    const formData = {
+      firstName: 'Component',
+      lastName: `Test${timestamp}`,
+      email: `component${timestamp}@example.com`,
+      salutation: 'Ms',
+      postalAddress: '789 Component St',
+      mobile: '9876543210',
+      dateOfBirth: '1995-05-05T00:00:00Z',
+      gender: 'F',
+      customerType: 'Individual'
+    };
+    
+    // Set form data
+    component.customerForm.patchValue(formData);
+    component.submitForm();
+    
+    // Wait for form submission to complete
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    
+    // Check if submission was successful
+    expect(component.isSubmitting).toBeFalse();
+  });
+});
+      
+      const postResult: any = await new Promise((resolve, reject) => {
+        http.post(apiUrl, testCustomer).subscribe({
+          next: (data) => resolve(data),
+          error: (err) => reject(err)
+        });
+      });
+      
+      console.log('POST result:', postResult ? 'Success' : 'Failed');
+      console.log('POST response:', JSON.stringify(postResult));
+      
+      // Successful if we got here
+      expect(true).toBe(true);
+    } catch (error: any) {
+      console.error('Direct API test failed:', error);
+      if (error.status) console.error('Error status:', error.status);
+      if (error.message) console.error('Error message:', error.message);
+      console.error('Full error:', JSON.stringify(error));
+      
+      // This will fail the test
+      expect(false).toBe(true, 'Direct API test failed: ' + JSON.stringify(error));
+    }
+  });
+});

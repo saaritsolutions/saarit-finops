@@ -1,0 +1,45 @@
++-------------------+         +-------------------+         +-------------------+
+|                   |         |                   |         |                   |
+|  Digital Channel  |<------->|  API Gateway /    |<------->|  Notification     |
+|  (Web/Mobile/API) |         |  BFF Layer        |         |  Service          |
+|                   |         |                   |         |                   |
++-------------------+         +-------------------+         +-------------------+
+                                      |
+                                      v
++-------------------+   +-------------------+   +-------------------+   +-------------------+
+|                   |   |                   |   |                   |   |                   |
+| Customer Service  |   | Account Service   |   | Deposit Service   |   | Loan Service      |
+| (KYC, Profile,    |   | (Open/Close,      |   | (TD, RD, Renewal, |   | (Origination,     |
+| AML, Hierarchy)   |   | Status, Flags)    |   | Interest, Penalty)|   | Disbursement, NPA)|
++-------------------+   +-------------------+   +-------------------+   +-------------------+
+        |                       |                       |                       |
+        +-----------------------+-----------------------+-----------------------+
+                                      |
+                                      v
++-------------------+   +-------------------+   +-------------------+   +-------------------+
+|                   |   |                   |   |                   |   |                   |
+| Transaction       |   | Cheque & Clearing |   | Remittance &      |   | Card & ATM        |
+| Service           |   | Service           |   | Payment Service   |   | Service           |
+| (Ledger, Posting, |   | (CTS, ECS, NACH)  |   | (NEFT, RTGS,      |   | (Limits, Alerts)  |
+| EOD/EOM)          |   |                   |   | IMPS, UPI, etc.)  |   |                   |
++-------------------+   +-------------------+   +-------------------+   +-------------------+
+        |                       |                       |                       |
+        +-----------------------+-----------------------+-----------------------+
+                                      |
+                                      v
++-------------------+   +-------------------+   +-------------------+   +-------------------+
+|                   |   |                   |   |                   |   |                   |
+| GL & Accounting   |   | Interest & Fee    |   | Regulatory &      |   | Reporting & MIS   |
+| Service           |   | Service           |   | Compliance        |   | Service           |
+| (Trial Balance,   |   | (TDS, Tax,        |   | Service           |   | (Dashboards,      |
+| P&L, Reconciliation)| | Certificates)     |   | (Statutory, Audit)|   | Reports)          |
++-------------------+   +-------------------+   +-------------------+   +-------------------+
+
++-------------------+   +-------------------+   +-------------------+   +-------------------+
+|                   |   |                   |   |                   |   |                   |
+| User & Access     |   | Product & Param   |   | Document          |   | HRMS              |
+| Management        |   | Management        |   | Management        |   | Service           |
+| Service           |   | Service           |   | Service           |   |                   |
++-------------------+   +-------------------+   +-------------------+   +-------------------+
+
+------------------- Cross-cutting: Audit, Logging, Notification, API Gateway, Security -------------------
