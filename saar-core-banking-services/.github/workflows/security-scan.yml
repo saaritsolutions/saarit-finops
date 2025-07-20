@@ -1,0 +1,141 @@
+name: Security Scan
+
+on:
+  schedule:
+    - cron: '0 2 * * 1' # Weekly on Monday at 2 AM UTC
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  dependency-scan:
+    name: Dependency Security Scan
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        component: [backend, frontend]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Backend - Setup .NET
+      if: matrix.component == 'backend'
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Backend - Restore dependencies
+      if: matrix.component == 'backend'
+      run: dotnet restore SaaRCoreBankingMicroservices.sln
+
+    - name: Backend - Security scan
+      if: matrix.component == 'backend'
+      run: |
+        dotnet list SaaRCoreBankingMicroservices.sln package --vulnerable --include-transitive || true
+        dotnet list SaaRCoreBankingMicroservices.sln package --outdated || true
+
+    - name: Frontend - Setup Node.js
+      if: matrix.component == 'frontend'
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+        cache-dependency-path: frontend-ui/package-lock.json
+
+    - name: Frontend - Install dependencies
+      if: matrix.component == 'frontend'
+      run: |
+        cd frontend-ui
+        npm ci
+
+    - name: Frontend - Security audit
+      if: matrix.component == 'frontend'
+      run: |
+        cd frontend-ui
+        npm audit --audit-level=moderate || true
+
+  code-security-scan:
+    name: Code Security Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: csharp, javascript
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Build backend
+      run: |
+        dotnet restore SaaRCoreBankingMicroservices.sln
+        dotnet build SaaRCoreBankingMicroservices.sln --no-restore --configuration Release
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:csharp"
+
+  container-security-scan:
+    name: Container Security Scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    
+    strategy:
+      matrix:
+        dockerfile:
+          - AccountService/Dockerfile
+          - CustomerService/Dockerfile
+          - APIGateway/Dockerfile
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Build Docker image
+      run: |
+        docker build -t security-scan:latest -f ${{ matrix.dockerfile }} .
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'security-scan:latest'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  secret-scan:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: TruffleHog OSS
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: main
+        head: HEAD
+        extra_args: --debug --only-verified

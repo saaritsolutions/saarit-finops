@@ -1,0 +1,271 @@
+name: Performance Tests
+
+on:
+  schedule:
+    - cron: '0 3 * * 0' # Weekly on Sunday at 3 AM UTC
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: 'Target environment for performance testing'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      duration:
+        description: 'Test duration in minutes'
+        required: true
+        default: '10'
+        type: string
+
+env:
+  TEST_DURATION: ${{ github.event.inputs.duration || '10' }}
+  TARGET_ENV: ${{ github.event.inputs.target_environment || 'staging' }}
+
+jobs:
+  api-performance-test:
+    name: API Performance Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Build and start services
+      run: |
+        dotnet restore SaaRCoreBankingMicroservices.sln
+        dotnet build SaaRCoreBankingMicroservices.sln --no-restore --configuration Release
+        
+        # Start core services
+        cd CustomerService
+        nohup dotnet run --configuration Release --urls="http://localhost:5200" &
+        cd ../AccountService  
+        nohup dotnet run --configuration Release --urls="http://localhost:5217" &
+        cd ../TransactionService
+        nohup dotnet run --configuration Release --urls="http://localhost:5201" &
+        
+        sleep 45
+
+    - name: Wait for services to be ready
+      run: |
+        timeout 120 bash -c 'until curl -f http://localhost:5200/api/Customer; do sleep 5; done'
+        timeout 120 bash -c 'until curl -f http://localhost:5217/health || curl -f http://localhost:5217; do sleep 5; done'
+
+    - name: Setup K6
+      run: |
+        sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+        echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+        sudo apt-get update
+        sudo apt-get install k6
+
+    - name: Create K6 performance test script
+      run: |
+        cat > performance-test.js << 'EOF'
+        import http from 'k6/http';
+        import { check, sleep } from 'k6';
+        import { Rate } from 'k6/metrics';
+
+        const errorRate = new Rate('errors');
+
+        export let options = {
+          stages: [
+            { duration: '2m', target: 10 }, // Ramp up
+            { duration: '${TEST_DURATION}m', target: 50 }, // Stay at 50 users
+            { duration: '2m', target: 0 }, // Ramp down
+          ],
+          thresholds: {
+            http_req_duration: ['p(95)<500'], // 95% of requests must complete below 500ms
+            errors: ['rate<0.1'], // Error rate must be below 10%
+          },
+        };
+
+        const BASE_URL = 'http://localhost:5200';
+
+        export default function() {
+          // Test Customer API
+          let customerResponse = http.get(`${BASE_URL}/api/Customer`);
+          check(customerResponse, {
+            'Customer API status is 200': (r) => r.status === 200,
+            'Customer API response time < 500ms': (r) => r.timings.duration < 500,
+          });
+          errorRate.add(customerResponse.status !== 200);
+
+          // Test Customer creation
+          let newCustomer = {
+            firstName: `PerfTest${Math.random().toString(36).substr(2, 9)}`,
+            lastName: 'User',
+            email: `perftest${Date.now()}@example.com`,
+            dateOfBirth: '1990-01-01T00:00:00Z',
+            gender: 'M',
+            customerType: 'Individual',
+            postalAddress: '123 Performance Test St',
+            mobile: '9876543210'
+          };
+
+          let createResponse = http.post(
+            `${BASE_URL}/api/Customer`,
+            JSON.stringify(newCustomer),
+            {
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+          
+          check(createResponse, {
+            'Customer creation status is 200 or 201': (r) => r.status === 200 || r.status === 201,
+            'Customer creation response time < 1000ms': (r) => r.timings.duration < 1000,
+          });
+          errorRate.add(createResponse.status !== 200 && createResponse.status !== 201);
+
+          sleep(1);
+        }
+        EOF
+
+    - name: Run K6 performance tests
+      run: |
+        k6 run --out json=performance-results.json performance-test.js
+
+    - name: Upload performance test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: performance-test-results
+        path: performance-results.json
+        retention-days: 30
+
+  frontend-performance-test:
+    name: Frontend Performance Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+        cache-dependency-path: frontend-ui/package-lock.json
+
+    - name: Install dependencies and build
+      run: |
+        cd frontend-ui
+        npm ci
+        npm run build --prod
+
+    - name: Start frontend server
+      run: |
+        cd frontend-ui
+        nohup npm start &
+        sleep 15
+
+    - name: Wait for frontend to be ready
+      run: |
+        timeout 60 bash -c 'until curl -f http://localhost:4200; do sleep 2; done'
+
+    - name: Install Lighthouse CI
+      run: npm install -g @lhci/cli
+
+    - name: Run Lighthouse performance audit
+      run: |
+        lhci autorun --upload.target=temporary-public-storage || lhci autorun
+      env:
+        LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+    - name: Upload Lighthouse results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: lighthouse-results
+        path: .lighthouseci/
+        retention-days: 30
+
+  load-test:
+    name: Load Test
+    runs-on: ubuntu-latest
+    if: github.event.inputs.target_environment == 'staging' || github.event_name == 'schedule'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Create comprehensive load test
+      run: |
+        cat > load-test.js << 'EOF'
+        import http from 'k6/http';
+        import { check, sleep } from 'k6';
+        import { Rate, Trend } from 'k6/metrics';
+
+        const errorRate = new Rate('errors');
+        const customTrend = new Trend('custom_metric');
+
+        export let options = {
+          scenarios: {
+            stress_test: {
+              executor: 'ramping-vus',
+              startVUs: 0,
+              stages: [
+                { duration: '5m', target: 100 },  // Ramp up to 100 users
+                { duration: '10m', target: 100 }, // Stay at 100 users
+                { duration: '5m', target: 200 },  // Ramp up to 200 users  
+                { duration: '10m', target: 200 }, // Stay at 200 users
+                { duration: '5m', target: 0 },    // Ramp down to 0 users
+              ],
+            },
+          },
+          thresholds: {
+            http_req_duration: ['p(99)<1000'], // 99% of requests must complete below 1s
+            errors: ['rate<0.05'], // Error rate must be below 5%
+          },
+        };
+
+        export default function() {
+          // Simulate realistic user behavior
+          let endpoints = [
+            '/api/Customer',
+            '/api/Account', 
+            '/api/Transaction'
+          ];
+          
+          let endpoint = endpoints[Math.floor(Math.random() * endpoints.length)];
+          let response = http.get(`http://localhost:5200${endpoint}`);
+          
+          check(response, {
+            'status is 200': (r) => r.status === 200,
+            'response time < 1000ms': (r) => r.timings.duration < 1000,
+          });
+          
+          errorRate.add(response.status !== 200);
+          customTrend.add(response.timings.duration);
+          
+          sleep(Math.random() * 3); // Random think time
+        }
+        EOF
+
+    - name: Create deployment notification
+      run: |
+        echo "Load test would run against ${{ env.TARGET_ENV }} environment"
+        echo "Test duration: ${{ env.TEST_DURATION }} minutes"
+        echo "This is a placeholder for actual load testing against deployed services"
