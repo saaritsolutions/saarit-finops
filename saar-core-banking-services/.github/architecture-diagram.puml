@@ -1,0 +1,67 @@
+@startuml
+
+!theme spacelab
+
+' Digital Channel and API Gateway
+rectangle "Digital Channel\n(Web/Mobile/API)" as Digital
+rectangle "API Gateway /\nBFF Layer" as APIGW
+rectangle "Notification\nService" as Notification
+
+Digital -left-> APIGW
+APIGW -right-> Notification
+
+' Core Banking Microservices
+package "Core Banking Services" {
+  rectangle "Customer Service\n(KYC, Profile, AML, Hierarchy)" as Customer
+  rectangle "Account Service\n(Open/Close, Status, Flags)" as Account
+  rectangle "Deposit Service\n(TD, RD, Renewal, Interest, Penalty)" as Deposit
+  rectangle "Loan Service\n(Origination, Disbursement, NPA)" as Loan
+  rectangle "Transaction Service\n(Ledger, Posting, EOD/EOM)" as Transaction
+  rectangle "Cheque & Clearing Service\n(CTS, ECS, NACH)" as Cheque
+  rectangle "Remittance & Payment Service\n(NEFT, RTGS, IMPS, UPI, etc.)" as Remittance
+  rectangle "Card & ATM Service\n(Limits, Alerts)" as CardATM
+  rectangle "GL & Accounting Service\n(Trial Balance, P&L, Reconciliation)" as GL
+  rectangle "Interest & Fee Service\n(TDS, Tax, Certificates)" as Interest
+  rectangle "Regulatory & Compliance Service\n(Statutory, Audit)" as Compliance
+  rectangle "Reporting & MIS Service\n(Dashboards, Reports)" as Reporting
+  rectangle "User & Access Management Service" as UserAccess
+  rectangle "Product & Param Management Service" as ProductParam
+  rectangle "Document Management Service" as Document
+  rectangle "HRMS Service" as HRMS
+}
+
+' Service relationships
+APIGW -down-> Customer
+APIGW -down-> Account
+APIGW -down-> Deposit
+APIGW -down-> Loan
+APIGW -down-> Transaction
+APIGW -down-> Cheque
+APIGW -down-> Remittance
+APIGW -down-> CardATM
+APIGW -down-> GL
+APIGW -down-> Interest
+APIGW -down-> Compliance
+APIGW -down-> Reporting
+
+' Cross-cutting concerns
+cloud "Audit, Logging, Notification, API Gateway, Security" as CrossCutting
+CrossCutting ..> APIGW
+CrossCutting ..> Customer
+CrossCutting ..> Account
+CrossCutting ..> Deposit
+CrossCutting ..> Loan
+CrossCutting ..> Transaction
+CrossCutting ..> Cheque
+CrossCutting ..> Remittance
+CrossCutting ..> CardATM
+CrossCutting ..> GL
+CrossCutting ..> Interest
+CrossCutting ..> Compliance
+CrossCutting ..> Reporting
+CrossCutting ..> UserAccess
+CrossCutting ..> ProductParam
+CrossCutting ..> Document
+CrossCutting ..> HRMS
+
+@enduml

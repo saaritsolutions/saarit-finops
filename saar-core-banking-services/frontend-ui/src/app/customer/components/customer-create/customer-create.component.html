@@ -1,0 +1,181 @@
+<div class="customer-form-container">
+  <mat-card class="customer-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar>person_add</mat-icon>
+      <mat-card-title>Customer Registration</mat-card-title>
+      <mat-card-subtitle>Create a new customer profile</mat-card-subtitle>
+    </mat-card-header>
+    
+    <mat-card-content>
+      <form [formGroup]="customerForm" (ngSubmit)="submitForm()" class="customer-form">
+        <mat-tab-group animationDuration="300ms" mat-stretch-tabs>
+          <mat-tab label="Personal Details">
+            <div class="tab-content">
+              <div class="form-row">
+                <mat-form-field appearance="outline">
+                  <mat-label>Salutation</mat-label>
+                  <mat-select formControlName="salutation">
+                    <mat-option value="Mr">Mr</mat-option>
+                    <mat-option value="Mrs">Mrs</mat-option>
+                    <mat-option value="Ms">Ms</mat-option>
+                    <mat-option value="Dr">Dr</mat-option>
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>First Name</mat-label>
+                  <input matInput formControlName="firstName" required>
+                  <mat-icon matSuffix>person</mat-icon>
+                  <mat-error *ngIf="customerForm.get('firstName')?.errors?.['required']">First name is required</mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Middle Name</mat-label>
+                  <input matInput formControlName="middleName">
+                </mat-form-field>
+              </div>
+              
+              <div class="form-row">
+                <mat-form-field appearance="outline">
+                  <mat-label>Last Name</mat-label>
+                  <input matInput formControlName="lastName" required>
+                  <mat-error *ngIf="customerForm.get('lastName')?.errors?.['required']">Last name is required</mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Father/Husband Name</mat-label>
+                  <input matInput formControlName="fatherOrHusbandName">
+                </mat-form-field>
+              </div>
+              
+              <div class="form-row">
+                <mat-form-field appearance="outline">
+                  <mat-label>Date of Birth</mat-label>
+                  <input matInput [matDatepicker]="picker" formControlName="dateOfBirth" required>
+                  <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+                  <mat-datepicker #picker></mat-datepicker>
+                  <mat-error *ngIf="customerForm.get('dateOfBirth')?.errors?.['required']">Date of birth is required</mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Gender</mat-label>
+                  <mat-select formControlName="gender" required>
+                    <mat-option value="M">Male</mat-option>
+                    <mat-option value="F">Female</mat-option>
+                    <mat-option value="O">Other</mat-option>
+                  </mat-select>
+                  <mat-error *ngIf="customerForm.get('gender')?.errors?.['required']">Gender is required</mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Customer Type</mat-label>
+                  <mat-select formControlName="customerType" required>
+                    <mat-option value="Individual">Individual</mat-option>
+                    <mat-option value="Corporate">Corporate</mat-option>
+                    <mat-option value="Joint">Joint</mat-option>
+                  </mat-select>
+                  <mat-error *ngIf="customerForm.get('customerType')?.errors?.['required']">Customer type is required</mat-error>
+                </mat-form-field>
+              </div>
+            </div>
+          </mat-tab>
+          
+          <mat-tab label="Contact Information">
+            <div class="tab-content">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Postal Address</mat-label>
+                <textarea matInput formControlName="postalAddress" required rows="3"></textarea>
+                <mat-icon matSuffix>home</mat-icon>
+                <mat-error *ngIf="customerForm.get('postalAddress')?.errors?.['required']">Address is required</mat-error>
+              </mat-form-field>
+              
+              <div class="form-row">
+                <mat-form-field appearance="outline">
+                  <mat-label>Mobile</mat-label>
+                  <input matInput formControlName="mobile" required>
+                  <mat-icon matSuffix>phone_android</mat-icon>
+                  <mat-hint>10-digit mobile number</mat-hint>
+                  <mat-error *ngIf="customerForm.get('mobile')?.errors?.['required']">Mobile number is required</mat-error>
+                  <mat-error *ngIf="customerForm.get('mobile')?.errors?.['pattern']">Enter a valid 10-digit mobile number</mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Telephone</mat-label>
+                  <input matInput formControlName="telephone">
+                  <mat-icon matSuffix>call</mat-icon>
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Email</mat-label>
+                  <input matInput formControlName="email" type="email">
+                  <mat-icon matSuffix>email</mat-icon>
+                  <mat-error *ngIf="customerForm.get('email')?.errors?.['email']">Enter a valid email address</mat-error>
+                </mat-form-field>
+              </div>
+            </div>
+          </mat-tab>
+          
+          <mat-tab label="Identification">
+            <div class="tab-content">
+              <div class="form-row">
+                <mat-form-field appearance="outline">
+                  <mat-label>PAN</mat-label>
+                  <input matInput formControlName="pan">
+                  <mat-icon matSuffix>credit_card</mat-icon>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>UID/Aadhar</mat-label>
+                  <input matInput formControlName="uid">
+                  <mat-icon matSuffix>badge</mat-icon>
+                </mat-form-field>
+              </div>
+              
+              <div class="form-row">
+                <mat-form-field appearance="outline">
+                  <mat-label>Passport</mat-label>
+                  <input matInput formControlName="passport">
+                  <mat-icon matSuffix>book</mat-icon>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Driving License</mat-label>
+                  <input matInput formControlName="drivingLicense">
+                  <mat-icon matSuffix>drive_eta</mat-icon>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Voter ID</mat-label>
+                  <input matInput formControlName="voterId">
+                  <mat-icon matSuffix>how_to_vote</mat-icon>
+                </mat-form-field>
+              </div>
+              
+              <div class="form-row">
+                <mat-form-field appearance="outline">
+                  <mat-label>Introducer Account Number</mat-label>
+                  <input matInput formControlName="introducerAccountNumber">
+                  <mat-icon matSuffix>person_add</mat-icon>
+                </mat-form-field>
+              </div>
+            </div>
+          </mat-tab>
+        </mat-tab-group>
+      </form>
+    </mat-card-content>
+    
+    <mat-card-actions align="end">
+      <button mat-button type="button" (click)="resetForm()">Cancel</button>
+      <button mat-raised-button color="primary" [disabled]="customerForm.invalid || isSubmitting" (click)="submitForm()">
+        <mat-icon>save</mat-icon>
+        {{ isSubmitting ? 'Saving...' : 'Save Customer' }}
+      </button>
+    </mat-card-actions>
+    
+    <mat-card-footer *ngIf="isSubmitting">
+      <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+    </mat-card-footer>
+  </mat-card>
+</div>

@@ -1,0 +1,72 @@
+<!-- ============================================================== -->
+<!-- Main wrapper - style you can find in pages.scss -->
+<!-- ============================================================== -->
+<div class="main-container"> 
+    <!-- ============================================================== -->
+    <!-- Topbar - style you can find in header.scss -->
+    <!-- ============================================================== -->
+    <mat-toolbar color="primary" class="topbar telative" style="overflow: visible; min-width: 0;">
+        <!-- ============================================================== -->
+        <!-- Logo - style you can find in header.scss -->
+        <!-- ============================================================== -->
+        <div class="navbar-header" style="flex: 1 1 auto; min-width: 0; max-width: 100%;">
+            <a class="navbar-brand" href="index.html" style="display: flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; flex-shrink: 1; flex-grow: 1;">
+                <!-- Logo icon -->
+                <b>
+                    <img src="assets/images/logo-icon.svg" alt="SAAR FINOPS logo" class="dark-logo" style="height: 40px;">
+                    <img src="assets/images/logo-light-icon.svg" alt="SAAR FINOPS logo" class="light-logo" style="height: 40px;">
+                </b>
+                <!-- Logo text -->
+                <span class="text-logo-icon" style="display: flex; align-items: center; white-space: nowrap; min-width: 0; max-width: 100%; font-size: 1.7rem; font-weight: bold; color: #12326b; letter-spacing: 2px; flex: 1 1 auto;">
+                  <img src="assets/images/logo-text.svg" alt="SAAR FINOPS" class="dark-logo" style="height: 32px; width: auto; margin-left: 0; max-width: 100%; min-width: 0;">
+                  <img src="assets/images/logo-light-text.svg" class="light-logo" alt="SAAR FINOPS" style="height: 32px; width: auto; margin-left: 0; max-width: 100%; min-width: 0;">
+                </span>
+            </a>
+        </div>
+        <!-- ============================================================== -->
+        <!-- sidebar toggle -->
+        <!-- ============================================================== -->
+        <div style="flex: 0 0 auto; margin-left: 32px; display: flex; align-items: center;">
+          <button mat-icon-button (click)="snav.toggle()" value="sidebarclosed" aria-label="Toggle sidebar">
+              <mat-icon>menu</mat-icon>
+          </button>
+        </div>
+        <!-- ============================================================== -->
+        <!-- app header component - style you can find in header.scss / header.component.ts-->
+        <!-- ============================================================== -->
+        <app-header class="d-flex align-items-center ml-auto"></app-header>
+    </mat-toolbar>
+    <!-- ============================================================== -->
+    <!-- End Topbar - style you can find in pages.scss -->
+    <!-- ============================================================== -->
+    <mat-sidenav-container class="example-sidenav-container" [style.marginTop.px]="mobileQuery.matches ? 0 : 0">
+        <!-- ============================================================== -->
+        <!-- Sidebar - style you can find in sidebar.scss -->
+        <!-- ============================================================== -->
+        <mat-sidenav #snav id="snav" class="dark-sidebar pl-xs" [mode]="mobileQuery.matches ? 'side' : 'over'" fixedTopGap="0" [opened]="mobileQuery.matches" [disableClose]="mobileQuery.matches"  >
+            
+                <app-sidebar></app-sidebar>
+               
+            
+        </mat-sidenav>
+        <!-- ============================================================== -->
+        <!-- Sidebar - style you can find in sidebar.scss -->
+        <!-- ============================================================== -->
+        
+        <!-- ============================================================== -->
+        <!-- Page container - style you can find in pages.scss -->
+        <!-- ============================================================== -->
+        <mat-sidenav-content class="page-wrapper">
+                 
+                <div class="page-content">
+                   
+                        <router-outlet><app-spinner></app-spinner></router-outlet>
+                    
+                </div>    
+               
+        </mat-sidenav-content>
+        <!-- ============================================================== -->
+        <!-- Page container - style you can find in pages.scss -->
+        <!-- ============================================================== -->
+    </mat-sidenav-container>
+</div>

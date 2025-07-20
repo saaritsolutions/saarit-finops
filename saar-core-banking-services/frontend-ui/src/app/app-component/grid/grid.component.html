@@ -1,0 +1,87 @@
+<div class="mat-elevation-z8">
+  <!-- Search Bar -->
+  <mat-form-field class="search-bar" appearance="fill">
+    <mat-label>Search</mat-label>
+    <input matInput (keyup)="applyFilter($event)" placeholder="Search by any column" />
+  </mat-form-field>
+
+  <!-- Table -->
+  <table mat-table [dataSource]="dataSource" matSort class="mat-table" multiTemplateDataRows>
+    <!-- Customer No Column -->
+    <ng-container matColumnDef="customerNo">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>Customer No</th>
+      <td mat-cell *matCellDef="let element">{{ element.customerNo }}</td>
+    </ng-container>
+
+    <!-- Category Column -->
+    <ng-container matColumnDef="category">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>Category</th>
+      <td mat-cell *matCellDef="let element">{{ element.category }}</td>
+    </ng-container>
+
+    <!-- Name Column -->
+    <ng-container matColumnDef="name">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>Name</th>
+      <td mat-cell *matCellDef="let element">{{ element.name }}</td>
+    </ng-container>
+
+    <!-- Gender Column -->
+    <ng-container matColumnDef="gender">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>Gender</th>
+      <td mat-cell *matCellDef="let element">{{ element.gender }}</td>
+    </ng-container>
+
+    <!-- Date of Birth Column -->
+    <ng-container matColumnDef="dateOfBirth">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>Date of Birth</th>
+      <td mat-cell *matCellDef="let element">{{ element.dateOfBirth }}</td>
+    </ng-container>
+
+    <!-- Status Column -->
+    <ng-container matColumnDef="status">
+      <th mat-header-cell *matHeaderCellDef>Status</th>
+      <td mat-cell *matCellDef="let element">{{ element.status }}</td>
+    </ng-container>
+    <ng-container matColumnDef="expand">
+      <th mat-header-cell *matHeaderCellDef>Expand</th>
+      <td mat-cell *matCellDef="let element">
+        <button mat-icon-button (click)="toggleExpand(element)">
+          <mat-icon *ngIf="expandedElement !== element">expand_more</mat-icon>
+          <mat-icon *ngIf="expandedElement === element">expand_less</mat-icon>
+        </button>
+      </td>
+    </ng-container>
+    <!-- Actions Column -->
+    <ng-container matColumnDef="actions"> 
+      <th mat-header-cell *matHeaderCellDef>Actions</th>
+      <td mat-cell *matCellDef="let element">
+        <button mat-icon-button color="primary" (click)="editRow(element)">
+          <mat-icon>edit</mat-icon>
+        </button>
+        <button mat-icon-button color="warn" (click)="deleteRow(element)">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </td>
+    </ng-container>
+
+    <!-- Expandable Details -->
+    <ng-container matColumnDef="expandedDetail">
+      <td mat-cell *matCellDef="let row" [attr.colspan]="displayedColumns.length">
+        <div *ngIf="expandedElement === row" class="expanded-detail">
+          <p><b>Full Details:</b> {{ row | json }}</p>
+        </div>
+      </td>
+    </ng-container>
+
+    <!-- Header & Row Definitions -->
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns;" (click)="toggleExpand(row)"></tr>
+    <!-- <tr mat-row *matRowDef="let row; columns: ['expandedDetail'];; when: !isExpandedRow"></tr> -->
+  </table>
+
+  <!-- Paginator -->
+  <mat-paginator [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons></mat-paginator>
+
+  <!-- Export Button -->
+  <button mat-raised-button color="accent" (click)="exportTable()">Export to Excel</button>
+</div>

@@ -1,0 +1,35 @@
+"mcp": {
+
+  "servers": {
+
+    "atlassian": {
+
+       "url": "https://mcp.atlassian.com/v1/sse",
+
+       "transport": "sse",
+
+       "command": "mcp-atlassian",
+
+       "args": [
+
+           "--jira-url", "https://renjithmac.atlassian.net",
+
+           "--jira-username", "renjithmac@gmail.com",
+
+           "--jira-token", "ATATT3xFfGF0OgkPhbWCotB9tsCZuCsNa7jtpozOdd4KOLoCVO3RzKJgBIDYOJAldNIs2IR6S5N_1RosBUD6tu7gQToEcUbSKP5M6DmOJRSINizTQIcvp-KMcVF_BR_7X6YFOtknisIftF_q4rap8sFelw7ZoLYDPgklp85jK8eRc2PswywxnEM=F871F141",
+
+           "--confluence-url", "https://renjithmac.atlassian.net//wiki",
+
+           "--confluence-username", "renjithmac@gmail.com,
+
+           "--confluence-token", "ATATT3xFfGF0OgkPhbWCotB9tsCZuCsNa7jtpozOdd4KOLoCVO3RzKJgBIDYOJAldNIs2IR6S5N_1RosBUD6tu7gQToEcUbSKP5M6DmOJRSINizTQIcvp-KMcVF_BR_7X6YFOtknisIftF_q4rap8sFelw7ZoLYDPgklp85jK8eRc2PswywxnEM=F871F141"
+
+        ],
+
+      "env": {},
+
+      "disabled": false
+
+       }
+   }
+}

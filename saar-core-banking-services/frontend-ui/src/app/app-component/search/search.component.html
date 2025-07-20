@@ -1,0 +1,37 @@
+
+<div class="search-container">
+ 
+    <!-- Search Bar -->
+    <div class="search-bar">
+      <mat-form-field appearance="outline" class="search-box">
+        <mat-label>Search</mat-label>
+        <input
+          type="text"
+          matInput
+          [(ngModel)]="query"
+          [matAutocomplete]="auto"
+          (input)="onQueryChange()"
+        />
+        <mat-icon matPrefix>search</mat-icon>
+        <mat-autocomplete #auto="matAutocomplete">
+          <mat-option
+            *ngFor="let suggestion of suggestions"
+            (click)="onSuggestionSelect(suggestion)"
+          >
+            {{ suggestion }}
+          </mat-option>
+        </mat-autocomplete> 
+      </mat-form-field>
+  
+      <!-- Search Button --> 
+      <button mat-raised-button color="primary" class="search-button" (click)="onSearch()">Search</button>
+    </div>
+  </div>
+  <!-- <div class="search-results" *ngIf="results.length"> -->
+  <div >
+    <!-- <h3>Search Results</h3> -->
+     <!-- The AG Grid component -->
+
+    <!-- <pre>{{ results | json }}</pre> -->
+  </div>
+  

@@ -1,0 +1,6 @@
+@ChequeClearingService_HostAddress = http://localhost:5232
+
+GET {{ChequeClearingService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

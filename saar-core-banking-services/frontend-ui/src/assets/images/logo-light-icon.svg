@@ -1,0 +1,18 @@
+<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+  <!-- Bank building base -->
+  <rect x="8" y="20" width="24" height="16" fill="white"/>
+  <!-- Bank roof/top -->
+  <polygon points="20,4 4,20 36,20" fill="white"/>
+  <!-- Bank columns -->
+  <rect x="12" y="24" width="3" height="12" fill="#1565c0"/>
+  <rect x="18.5" y="24" width="3" height="12" fill="#1565c0"/>
+  <rect x="25" y="24" width="3" height="12" fill="#1565c0"/>
+  <!-- Steps -->
+  <rect x="10" y="36" width="20" height="2" fill="#e3f2fd"/>
+  <rect x="12" y="38" width="16" height="2" fill="#e3f2fd"/>
+  <!-- Digital circuit lines to represent fintech -->
+  <line x1="3" y1="10" x2="10" y2="10" stroke="white" stroke-width="1"/>
+  <line x1="30" y1="10" x2="37" y2="10" stroke="white" stroke-width="1"/>
+  <line x1="3" y1="15" x2="15" y2="15" stroke="white" stroke-width="1"/>
+  <line x1="25" y1="15" x2="37" y2="15" stroke="white" stroke-width="1"/>
+</svg>
