@@ -1,0 +1,2 @@
+# saarit-finops
+core banking 
