@@ -80,20 +80,28 @@ jobs:
       matrix:
         include:
           - service: AccountService
+            tag: account-service
             dockerfile: ./saar-core-banking-services/AccountService/Dockerfile
-          - service: LoanService  
+          - service: LoanService
+            tag: loan-service
             dockerfile: ./saar-core-banking-services/LoanService/Dockerfile
           - service: APIGateway
+            tag: api-gateway
             dockerfile: ./saar-core-banking-services/APIGateway/Dockerfile
           - service: GLAccountingService
+            tag: gl-accounting-service
             dockerfile: ./saar-core-banking-services/GLAccountingService/Dockerfile
           - service: DocumentManagementService
+            tag: document-management-service
             dockerfile: ./saar-core-banking-services/DocumentManagementService/Dockerfile
           - service: UserAccessManagementService
+            tag: user-access-management-service
             dockerfile: ./saar-core-banking-services/UserAccessManagementService/Dockerfile
           - service: NotificationService
+            tag: notification-service
             dockerfile: ./saar-core-banking-services/NotificationService/Dockerfile
           - service: ReportingMISService
+            tag: reporting-mis-service
             dockerfile: ./saar-core-banking-services/ReportingMISService/Dockerfile
 
     steps:
@@ -107,7 +115,7 @@ jobs:
       run: |
         echo "Testing Docker build for ${{ matrix.service }}"
         if [ -f "${{ matrix.dockerfile }}" ]; then
-          docker build -t test-${{ matrix.service }}:latest -f ${{ matrix.dockerfile }} ./saar-core-banking-services
+          docker build -t test-${{ matrix.tag }}:latest -f ${{ matrix.dockerfile }} ./saar-core-banking-services
           echo "✅ Docker build successful for ${{ matrix.service }}"
         else
           echo "⚠️ Dockerfile not found: ${{ matrix.dockerfile }}"
