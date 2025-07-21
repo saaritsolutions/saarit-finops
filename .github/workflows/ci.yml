@@ -16,10 +16,10 @@ jobs:
     - name: Restore dependencies
       run: cd saar-core-banking-services && dotnet restore ./AccountService/AccountService.csproj
     - name: Build
-      run: dotnet build ./AccountService/AccountService.csproj --configuration Release --no-restore
+      run: cd saar-core-banking-services && dotnet build ./AccountService/AccountService.csproj --configuration Release --no-restore
     - name: Test
-      run: dotnet test ./AccountService.Tests/AccountService.Tests.csproj --no-restore --verbosity normal
+      run: cd saar-core-banking-services && dotnet test ./AccountService.Tests/AccountService.Tests.csproj --no-restore --verbosity normal
     - name: Publish
-      run: dotnet publish ./AccountService/AccountService.csproj --configuration Release --no-restore --output ./publish
+      run: cd saar-core-banking-services && dotnet publish ./AccountService/AccountService.csproj --configuration Release --no-restore --output ./publish
     - name: Docker Build
-      run: docker build -t accountservice ./AccountService
+      run: cd saar-core-banking-services && docker build -t accountservice ./AccountService
