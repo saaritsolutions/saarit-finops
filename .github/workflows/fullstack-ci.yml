@@ -1,5 +1,11 @@
 name: Full Stack CI/CD
 
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+  actions: read
+
 on:
   push:
     branches: [ main ]
