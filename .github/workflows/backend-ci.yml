@@ -18,7 +18,7 @@ on:
 
 env:
   DOTNET_VERSION: '8.0.x'
-  SOLUTION_FILE: 'SaaRCoreBankingMicroservices.sln'
+  SOLUTION_FILE: 'saar-core-banking-services/SaaRCoreBankingMicroservices.sln'
 
 jobs:
   test:
