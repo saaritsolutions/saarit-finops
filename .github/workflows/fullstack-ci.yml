@@ -130,6 +130,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [frontend-tests, backend-tests]
     if: always() && (needs.frontend-tests.result == 'success' || needs.frontend-tests.result == 'skipped') && (needs.backend-tests.result == 'success' || needs.backend-tests.result == 'skipped')
+    env:
+      ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=testdb;Username=postgres"
+
     
     services:
       postgres:
@@ -169,8 +172,8 @@ jobs:
         dotnet build SaaRCoreBankingMicroservices.sln --no-restore --configuration Release
 
     - name: Start backend services
-      env:
-        ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=testdb;Username=postgres;Password=postgres"
+      
+        
       run: |
         cd saar-core-banking-services/CustomerService
         nohup dotnet run --configuration Release --urls="http://localhost:5200" &
