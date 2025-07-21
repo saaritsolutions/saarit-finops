@@ -53,6 +53,7 @@ jobs:
 
     - name: Build and start services
       run: |
+        cd saar-core-banking-services
         dotnet restore SaaRCoreBankingMicroservices.sln
         dotnet build SaaRCoreBankingMicroservices.sln --no-restore --configuration Release
         
@@ -61,7 +62,7 @@ jobs:
         nohup dotnet run --configuration Release --urls="http://localhost:5200" &
         cd ../AccountService  
         nohup dotnet run --configuration Release --urls="http://localhost:5217" &
-        cd ../TransactionService
+        cd ../LoanService
         nohup dotnet run --configuration Release --urls="http://localhost:5201" &
         
         sleep 45
@@ -167,17 +168,17 @@ jobs:
       with:
         node-version: '18.x'
         cache: 'npm'
-        cache-dependency-path: frontend-ui/package-lock.json
+        cache-dependency-path: saar-core-banking-services/frontend-ui/package-lock.json
 
     - name: Install dependencies and build
       run: |
-        cd frontend-ui
+        cd saar-core-banking-services/frontend-ui
         npm ci
         npm run build --prod
 
     - name: Start frontend server
       run: |
-        cd frontend-ui
+        cd saar-core-banking-services/frontend-ui
         nohup npm start &
         sleep 15
 
