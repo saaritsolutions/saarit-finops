@@ -56,6 +56,8 @@ jobs:
         dotnet-version: '8.0.x'
 
     - name: Build and start services
+      env:
+        ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=testdb;Username=postgres;Password=postgres"
       run: |
         cd saar-core-banking-services
         dotnet restore SaaRCoreBankingMicroservices.sln
