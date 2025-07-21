@@ -19,6 +19,10 @@ on:
         default: '10'
         type: string
 
+permissions:
+  contents: read
+  actions: read
+
 env:
   TEST_DURATION: ${{ github.event.inputs.duration || '10' }}
   TARGET_ENV: ${{ github.event.inputs.target_environment || 'staging' }}
@@ -74,8 +78,8 @@ jobs:
 
     - name: Setup K6
       run: |
-        sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
-        echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+        curl -s https://dl.k6.io/key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/k6-archive-keyring.gpg
+        echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
         sudo apt-get update
         sudo apt-get install k6
 
@@ -91,7 +95,7 @@ jobs:
         export let options = {
           stages: [
             { duration: '2m', target: 10 }, // Ramp up
-            { duration: '${TEST_DURATION}m', target: 50 }, // Stay at 50 users
+            { duration: '${{ env.TEST_DURATION }}m', target: 50 }, // Stay at 50 users
             { duration: '2m', target: 0 }, // Ramp down
           ],
           thresholds: {
