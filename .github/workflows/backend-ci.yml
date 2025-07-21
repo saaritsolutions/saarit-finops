@@ -72,25 +72,25 @@ jobs:
     strategy:
       matrix:
         service:
-          - AccountService
-          - CustomerService
-          - TransactionService
-          - LoanService
-          - APIGateway
-          - InterestFeeService
-          - LockerService
-          - RemittancePaymentService
-          - ChequeClearingService
-          - GLAccountingService
-          - RegulatoryComplianceService
-          - UserAccessManagementService
-          - NotificationService
-          - DocumentManagementService
-          - ReportingMISService
-          - HRMSService
-          - CardATMService
-          - ProductParamManagementService
-          - AuditLoggingService
+          - saar-core-banking-services/AccountService
+          - saar-core-banking-services/CustomerService
+          - saar-core-banking-services/TransactionService
+          - saar-core-banking-services/LoanService
+          - saar-core-banking-services/APIGateway
+          - saar-core-banking-services/InterestFeeService
+          - saar-core-banking-services/LockerService
+          - saar-core-banking-services/RemittancePaymentService
+          - saar-core-banking-services/ChequeClearingService
+          - saar-core-banking-services/GLAccountingService
+          - saar-core-banking-services/RegulatoryComplianceService
+          - saar-core-banking-services/UserAccessManagementService
+          - saar-core-banking-services/NotificationService
+          - saar-core-banking-services/DocumentManagementService
+          - saar-core-banking-services/ReportingMISService
+          - saar-core-banking-services/HRMSService
+          - saar-core-banking-services/CardATMService
+          - saar-core-banking-services/ProductParamManagementService
+          - saar-core-banking-services/AuditLoggingService
 
     steps:
     - name: Checkout code
