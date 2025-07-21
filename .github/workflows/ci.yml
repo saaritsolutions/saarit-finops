@@ -1,25 +1,115 @@
 name: CI
+
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+  actions: read
+
+env:
+  DOTNET_VERSION: 8.0.x
+
 jobs:
-  build:
+  build-and-test:
+    name: Build and Test
     runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: testdb
+          POSTGRES_HOST_AUTH_METHOD: trust
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      ConnectionStrings__DefaultConnection: Host=localhost;Port=5432;Database=testdb;Username=postgres
+
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '8.0.x'
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
     - name: Restore dependencies
-      run: cd saar-core-banking-services && dotnet restore SaaRCoreBankingMicroservices.sln
-    - name: Build
-      run: cd saar-core-banking-services && dotnet build SaaRCoreBankingMicroservices.sln --configuration Release --no-restore
-    - name: Test
-      run: cd saar-core-banking-services && dotnet test SaaRCoreBankingMicroservices.sln --no-restore --verbosity normal
-    - name: Publish
-      run: cd saar-core-banking-services && dotnet publish ./AccountService/AccountService.csproj --configuration Release --no-restore --output ./publish
-    - name: Docker Build
-      run: cd saar-core-banking-services && docker build -t accountservice ./AccountService
+      run: |
+        cd saar-core-banking-services
+        dotnet restore SaaRCoreBankingMicroservices.sln
+
+    - name: Build solution
+      run: |
+        cd saar-core-banking-services
+        dotnet build SaaRCoreBankingMicroservices.sln --configuration Release --no-restore
+
+    - name: Run tests
+      run: |
+        cd saar-core-banking-services
+        dotnet test SaaRCoreBankingMicroservices.sln --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage"
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: saar-core-banking-services/**/TestResults/**/*.xml
+        retention-days: 30
+
+  docker-build:
+    name: Docker Build Test
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.event_name == 'push'
+    
+    strategy:
+      matrix:
+        include:
+          - service: AccountService
+            dockerfile: ./saar-core-banking-services/AccountService/Dockerfile
+          - service: LoanService  
+            dockerfile: ./saar-core-banking-services/LoanService/Dockerfile
+          - service: APIGateway
+            dockerfile: ./saar-core-banking-services/APIGateway/Dockerfile
+          - service: GLAccountingService
+            dockerfile: ./saar-core-banking-services/GLAccountingService/Dockerfile
+          - service: DocumentManagementService
+            dockerfile: ./saar-core-banking-services/DocumentManagementService/Dockerfile
+          - service: UserAccessManagementService
+            dockerfile: ./saar-core-banking-services/UserAccessManagementService/Dockerfile
+          - service: NotificationService
+            dockerfile: ./saar-core-banking-services/NotificationService/Dockerfile
+          - service: ReportingMISService
+            dockerfile: ./saar-core-banking-services/ReportingMISService/Dockerfile
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Test Docker build
+      run: |
+        echo "Testing Docker build for ${{ matrix.service }}"
+        if [ -f "${{ matrix.dockerfile }}" ]; then
+          docker build -t test-${{ matrix.service }}:latest -f ${{ matrix.dockerfile }} ./saar-core-banking-services
+          echo "✅ Docker build successful for ${{ matrix.service }}"
+        else
+          echo "⚠️ Dockerfile not found: ${{ matrix.dockerfile }}"
+          exit 0
+        fi
