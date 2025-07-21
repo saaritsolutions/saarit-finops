@@ -29,7 +29,7 @@ jobs:
 
     - name: Backend - Restore dependencies
       if: matrix.component == 'backend'
-      run: dotnet restore SaaRCoreBankingMicroservices.sln
+      run: cd saar-core-banking-services && dotnet restore SaaRCoreBankingMicroservices.sln
 
     - name: Backend - Security scan
       if: matrix.component == 'backend'
@@ -81,7 +81,7 @@ jobs:
 
     - name: Build backend
       run: |
-        dotnet restore SaaRCoreBankingMicroservices.sln
+        cd saar-core-banking-services && dotnet restore SaaRCoreBankingMicroservices.sln
         dotnet build SaaRCoreBankingMicroservices.sln --no-restore --configuration Release
 
     - name: Perform CodeQL Analysis
