@@ -4,21 +4,21 @@ on:
   push:
     branches: [ main, develop ]
     paths:
-      - 'saar-core-banking-services/**/*.cs'
-      - 'saar-core-banking-services/**/*.csproj'
-      - 'saar-core-banking-services/**/appsettings*.json'
+      - '**/*.cs'
+      - '**/*.csproj'
+      - '**/appsettings*.json'
       - '.github/workflows/backend-ci.yml'
   pull_request:
     branches: [ main, develop ]
     paths:
-      - 'saar-core-banking-services/**/*.cs'
-      - 'saar-core-banking-services/**/*.csproj'
-      - 'saar-core-banking-services/**/appsettings*.json'
+      - '**/*.cs'
+      - '**/*.csproj'
+      - '**/appsettings*.json'
       - '.github/workflows/backend-ci.yml'
 
 env:
   DOTNET_VERSION: '8.0.x'
-  SOLUTION_FILE: 'saar-core-banking-services/SaaRCoreBankingMicroservices.sln'
+  SOLUTION_FILE: 'SaaRCoreBankingMicroservices.sln'
 
 jobs:
   test:
@@ -71,31 +71,26 @@ jobs:
     
     strategy:
       matrix:
-        include:
-          - service: AccountService
-            context: ./saar-core-banking-services
-            dockerfile: ./saar-core-banking-services/AccountService/Dockerfile
-          - service: LoanService
-            context: ./saar-core-banking-services
-            dockerfile: ./saar-core-banking-services/LoanService/Dockerfile
-          - service: APIGateway
-            context: ./saar-core-banking-services
-            dockerfile: ./saar-core-banking-services/APIGateway/Dockerfile
-          - service: GLAccountingService
-            context: ./saar-core-banking-services
-            dockerfile: ./saar-core-banking-services/GLAccountingService/Dockerfile
-          - service: DocumentManagementService
-            context: ./saar-core-banking-services
-            dockerfile: ./saar-core-banking-services/DocumentManagementService/Dockerfile
-          - service: UserAccessManagementService
-            context: ./saar-core-banking-services
-            dockerfile: ./saar-core-banking-services/UserAccessManagementService/Dockerfile
-          - service: NotificationService
-            context: ./saar-core-banking-services
-            dockerfile: ./saar-core-banking-services/NotificationService/Dockerfile
-          - service: ReportingMISService
-            context: ./saar-core-banking-services
-            dockerfile: ./saar-core-banking-services/ReportingMISService/Dockerfile
+        service:
+          - AccountService
+          - CustomerService
+          - TransactionService
+          - LoanService
+          - APIGateway
+          - InterestFeeService
+          - LockerService
+          - RemittancePaymentService
+          - ChequeClearingService
+          - GLAccountingService
+          - RegulatoryComplianceService
+          - UserAccessManagementService
+          - NotificationService
+          - DocumentManagementService
+          - ReportingMISService
+          - HRMSService
+          - CardATMService
+          - ProductParamManagementService
+          - AuditLoggingService
 
     steps:
     - name: Checkout code
@@ -125,8 +120,8 @@ jobs:
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
-        context: ${{ matrix.context }}
-        file: ${{ matrix.dockerfile }}
+        context: .
+        file: ${{ matrix.service }}/Dockerfile
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
@@ -146,7 +141,7 @@ jobs:
       uses: aquasecurity/trivy-action@master
       with:
         scan-type: 'fs'
-        scan-ref: './saar-core-banking-services'
+        scan-ref: '.'
         format: 'sarif'
         output: 'trivy-results.sarif'
 
@@ -155,7 +150,6 @@ jobs:
       if: always()
       with:
         sarif_file: 'trivy-results.sarif'
-      continue-on-error: true
 
   deploy-staging:
     name: Deploy to Staging
@@ -171,12 +165,6 @@ jobs:
     - name: Deploy to staging
       run: |
         echo "Deploying to staging environment..."
-        echo "Built Docker images:"
-        echo "- ghcr.io/${{ github.repository_owner }}/accountservice:latest"
-        echo "- ghcr.io/${{ github.repository_owner }}/loanservice:latest"
-        echo "- ghcr.io/${{ github.repository_owner }}/apigateway:latest"
-        echo "- ghcr.io/${{ github.repository_owner }}/glaccountingservice:latest"
-        echo "- ghcr.io/${{ github.repository_owner }}/documentmanagementservice:latest"
         # Add your staging deployment commands here
         # Example: kubectl apply -f k8s/staging/
         
@@ -194,15 +182,5 @@ jobs:
     - name: Deploy to production
       run: |
         echo "Deploying to production environment..."
-        echo "All tests passed and security scans completed successfully!"
-        echo "Docker images ready for production deployment:"
-        echo "- ghcr.io/${{ github.repository_owner }}/accountservice:latest"
-        echo "- ghcr.io/${{ github.repository_owner }}/loanservice:latest"
-        echo "- ghcr.io/${{ github.repository_owner }}/apigateway:latest"
-        echo "- ghcr.io/${{ github.repository_owner }}/glaccountingservice:latest"
-        echo "- ghcr.io/${{ github.repository_owner }}/documentmanagementservice:latest"
-        echo "- ghcr.io/${{ github.repository_owner }}/useraccessmanagementservice:latest"
-        echo "- ghcr.io/${{ github.repository_owner }}/notificationservice:latest"
-        echo "- ghcr.io/${{ github.repository_owner }}/reportingmisservice:latest"
         # Add your production deployment commands here
         # Example: kubectl apply -f k8s/production/
