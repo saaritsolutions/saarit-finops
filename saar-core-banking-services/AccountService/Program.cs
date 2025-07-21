@@ -14,6 +14,13 @@ builder.Services.AddDbContext<AccountDbContext>(options =>
 
 var app = builder.Build();
 
+// Apply migrations on startup for CI environment
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<AccountDbContext>();
+    context.Database.Migrate();
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
