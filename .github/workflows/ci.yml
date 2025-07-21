@@ -14,11 +14,11 @@ jobs:
       with:
         dotnet-version: '8.0.x'
     - name: Restore dependencies
-      run: cd saar-core-banking-services && dotnet restore ./AccountService/AccountService.csproj
+      run: cd saar-core-banking-services && dotnet restore SaaRCoreBankingMicroservices.sln
     - name: Build
-      run: cd saar-core-banking-services && dotnet build ./AccountService/AccountService.csproj --configuration Release --no-restore
+      run: cd saar-core-banking-services && dotnet build SaaRCoreBankingMicroservices.sln --configuration Release --no-restore
     - name: Test
-      run: cd saar-core-banking-services && dotnet test ./AccountService.Tests/AccountService.Tests.csproj --no-restore --verbosity normal
+      run: cd saar-core-banking-services && dotnet test SaaRCoreBankingMicroservices.sln --no-restore --verbosity normal
     - name: Publish
       run: cd saar-core-banking-services && dotnet publish ./AccountService/AccountService.csproj --configuration Release --no-restore --output ./publish
     - name: Docker Build
