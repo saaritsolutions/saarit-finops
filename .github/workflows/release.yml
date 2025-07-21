@@ -94,7 +94,7 @@ jobs:
     - name: Backend - Restore and build
       if: matrix.component == 'backend'
       run: |
-        dotnet restore SaaRCoreBankingMicroservices.sln
+        cd saar-core-banking-services && dotnet restore SaaRCoreBankingMicroservices.sln
         dotnet build SaaRCoreBankingMicroservices.sln --no-restore --configuration Release
 
     - name: Backend - Run tests

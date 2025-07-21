@@ -14,7 +14,7 @@ jobs:
       with:
         dotnet-version: '8.0.x'
     - name: Restore dependencies
-      run: dotnet restore ./AccountService/AccountService.csproj
+      run: cd saar-core-banking-services && dotnet restore ./AccountService/AccountService.csproj
     - name: Build
       run: dotnet build ./AccountService/AccountService.csproj --configuration Release --no-restore
     - name: Test

@@ -62,7 +62,7 @@ jobs:
         nohup dotnet run --configuration Release --urls="http://localhost:5200" &
         cd ../AccountService  
         nohup dotnet run --configuration Release --urls="http://localhost:5217" &
-        cd ../LoanService
+        cd ../TransactionService
         nohup dotnet run --configuration Release --urls="http://localhost:5201" &
         
         sleep 45
@@ -81,7 +81,7 @@ jobs:
 
     - name: Create K6 performance test script
       run: |
-        cat > performance-test.js << 'EOF'
+        cat > performance-test.js << 'EOT'
         import http from 'k6/http';
         import { check, sleep } from 'k6';
         import { Rate } from 'k6/metrics';
@@ -141,7 +141,7 @@ jobs:
 
           sleep(1);
         }
-        EOF
+        EOT
 
     - name: Run K6 performance tests
       run: |
@@ -214,7 +214,7 @@ jobs:
 
     - name: Create comprehensive load test
       run: |
-        cat > load-test.js << 'EOF'
+        cat > load-test.js << 'EOT'
         import http from 'k6/http';
         import { check, sleep } from 'k6';
         import { Rate, Trend } from 'k6/metrics';
@@ -263,7 +263,7 @@ jobs:
           
           sleep(Math.random() * 3); // Random think time
         }
-        EOF
+        EOT
 
     - name: Create deployment notification
       run: |
