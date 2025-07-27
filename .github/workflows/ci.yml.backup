@@ -1,0 +1,25 @@
+name: CI
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+    - name: Restore dependencies
+      run: cd saar-core-banking-services && dotnet restore SaaRCoreBankingMicroservices.sln
+    - name: Build
+      run: cd saar-core-banking-services && dotnet build SaaRCoreBankingMicroservices.sln --configuration Release --no-restore
+    - name: Test
+      run: cd saar-core-banking-services && dotnet test SaaRCoreBankingMicroservices.sln --no-restore --verbosity normal
+    - name: Publish
+      run: cd saar-core-banking-services && dotnet publish ./AccountService/AccountService.csproj --configuration Release --no-restore --output ./publish
+    - name: Docker Build
+      run: cd saar-core-banking-services && docker build -t accountservice ./AccountService
