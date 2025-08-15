@@ -10,9 +10,9 @@ import Sidebar from './Sidebar';
 import Footer from './Footer';
 
 // Shared constants
-export const DRAWER_WIDTH = 280;
-export const HEADER_HEIGHT = 64;
-export const FOOTER_HEIGHT = 60;
+export const DRAWER_WIDTH = 200; // Reduced from 240 to 200
+export const HEADER_HEIGHT = 56; // Reduced from 64 to 56
+export const FOOTER_HEIGHT = 48; // Reduced from 60 to 48
 
 /**
  * Main layout component for the banking application
@@ -41,21 +41,11 @@ const Layout: React.FC = () => {
       
       {/* Main Content Area */}
       <Box
-        component="main"
         sx={{
-          flexGrow: 1,
           display: 'flex',
           flexDirection: 'column',
-          // On desktop, account for sidebar width when open
-          ml: { 
-            xs: 0, 
-            md: sidebarOpen ? `${DRAWER_WIDTH}px` : 0 
-          },
-          // Smooth transition when sidebar opens/closes
-          transition: theme.transitions.create(['margin'], {
-            easing: theme.transitions.easing.easeInOut,
-            duration: theme.transitions.duration.standard,
-          }),
+          flex: 1,
+          width: '100%',
         }}
       >
         {/* Header spacing */}
@@ -65,11 +55,14 @@ const Layout: React.FC = () => {
         <Box
           sx={{
             flexGrow: 1,
-            p: { xs: 2, sm: 3 }, // Responsive padding
+            p: { xs: 0.5, sm: 1, md: 1.5 }, // Even more compact padding
             backgroundColor: 'background.default',
             minHeight: `calc(100vh - ${HEADER_HEIGHT}px - ${FOOTER_HEIGHT}px)`,
             // Ensure content doesn't overflow on mobile
             overflow: 'auto',
+            // Add max-width and center content for very wide screens
+            maxWidth: '100%',
+            width: '100%',
           }}
         >
           <Outlet />

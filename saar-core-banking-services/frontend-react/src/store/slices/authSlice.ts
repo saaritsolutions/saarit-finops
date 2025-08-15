@@ -12,15 +12,57 @@ interface AuthState {
   sessionExpiry: Date | null;
 }
 
+// Get stored token and check if it's valid (or auto-authenticate in development)
+const storedToken = localStorage.getItem('auth-token');
+const isDevelopment = process.env.NODE_ENV === 'development';
+const isValidToken = Boolean(storedToken && storedToken.startsWith('mock-jwt-token-')) || isDevelopment;
+
 // Initial state
 const initialState: AuthState = {
-  user: null,
-  token: localStorage.getItem('auth-token'),
-  isAuthenticated: false,
+  user: isValidToken ? {
+    id: '1',
+    userId: 'admin001',
+    username: 'admin@saarbanking.com',
+    firstName: 'Admin',
+    lastName: 'User',
+    email: 'admin@saarbanking.com',
+    roles: [{
+      id: 'admin-role',
+      name: 'Administrator',
+      description: 'Full system access',
+      permissions: []
+    }],
+    permissions: [],
+    status: 'active' as any,
+    lastLoginAt: new Date(),
+    department: 'IT',
+    branch: 'Head Office',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  } : null,
+  token: storedToken || (isDevelopment ? 'mock-jwt-token-dev' : null),
+  isAuthenticated: isValidToken,
   isLoading: false,
   error: null,
-  permissions: [],
-  sessionExpiry: null,
+  permissions: isValidToken ? [
+    'dashboard.view',
+    'customers.view',
+    'customers.create',
+    'customers.edit',
+    'accounts.view',
+    'accounts.create',
+    'accounts.edit',
+    'transactions.view',
+    'transactions.create',
+    'loans.view',
+    'loans.create',
+    'loans.approve',
+    'reports.view',
+    'admin.users',
+    'admin.settings',
+    'admin.expressions',
+  ] : [],
+  sessionExpiry: isValidToken ? new Date(Date.now() + 8 * 60 * 60 * 1000) : null,
 };
 
 // Async thunks for authentication
@@ -67,6 +109,7 @@ export const loginUser = createAsyncThunk(
         'reports.view',
         'admin.users',
         'admin.settings',
+        'admin.expressions',
       ];
 
       // Validate demo credentials

@@ -187,6 +187,7 @@ export interface User extends BaseEntity {
   roles: Role[];
   permissions: Permission[];
   status: UserStatus;
+  tenantId?: string; // Added for multi-tenant support
   lastLoginAt?: Date;
   department?: string;
   branch?: string;

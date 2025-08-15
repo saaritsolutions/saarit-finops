@@ -14,6 +14,10 @@ const LoanManagement = lazy(() => import('../features/loan/LoanManagement'));
 const Reports = lazy(() => import('../features/reports/Reports'));
 const UserManagement = lazy(() => import('../features/admin/UserManagement'));
 const Settings = lazy(() => import('../features/settings/Settings'));
+const ExpressionBuilder = lazy(() => import('../pages/ExpressionBuilder'));
+const TestExpressions = lazy(() => import('../pages/TestExpressions'));
+const SimpleExpressionBuilder = lazy(() => import('../pages/SimpleExpressionBuilder'));
+const WorldClassExpressionBuilder = lazy(() => import('../pages/WorldClassExpressionBuilder'));
 const Unauthorized = lazy(() => import('../components/common/Unauthorized'));
 const NotFound = lazy(() => import('../components/common/NotFound'));
 
@@ -158,6 +162,26 @@ export const AppRouter: React.FC = () => {
             }
           />
           
+          {/* Expression Builder */}
+          <Route
+            path="expressions"
+            element={
+              <ProtectedRoute requiredPermission={BANKING_PERMISSIONS.EXPRESSION_BUILDER}>
+                <WorldClassExpressionBuilder />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Simple Expression Builder (legacy) */}
+          <Route
+            path="expressions/simple"
+            element={
+              <ProtectedRoute requiredPermission={BANKING_PERMISSIONS.EXPRESSION_BUILDER}>
+                <SimpleExpressionBuilder />
+              </ProtectedRoute>
+            }
+          />
+          
           {/* Admin Routes */}
           <Route
             path="admin/*"
@@ -214,6 +238,12 @@ export const MICRO_FRONTEND_ROUTES = {
     name: 'reports',
     permission: BANKING_PERMISSIONS.REPORTS_VIEW,
     remoteEntry: process.env.REACT_APP_REPORTS_MF_URL,
+  },
+  EXPRESSION_BUILDER: {
+    path: '/expressions',
+    name: 'expression-builder',
+    permission: BANKING_PERMISSIONS.EXPRESSION_BUILDER,
+    remoteEntry: process.env.REACT_APP_EXPRESSIONS_MF_URL,
   },
 } as const;
 

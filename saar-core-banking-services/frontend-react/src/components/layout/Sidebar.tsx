@@ -13,6 +13,7 @@ import {
   useTheme,
   useMediaQuery,
 } from '@mui/material';
+import { BANKING_PERMISSIONS } from '../../router/ProtectedRoute';
 import {
   Dashboard as DashboardIcon,
   People as CustomersIcon,
@@ -32,6 +33,7 @@ import {
   TrendingUp as TrendingUpIcon,
   Description as DocumentIcon,
   AccountTree as WorkflowIcon,
+  Code as ExpressionBuilderIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
@@ -245,6 +247,13 @@ const menuItems: MenuItem[] = [
         path: '/admin/workflow',
         permission: 'admin.workflow',
       },
+      {
+        id: 'expression-builder',
+        title: 'Expression Builder',
+        icon: <ExpressionBuilderIcon />,
+        path: '/expressions',
+        permission: BANKING_PERMISSIONS.EXPRESSION_BUILDER,
+      },
     ],
   },
 ];
@@ -428,8 +437,9 @@ const Sidebar: React.FC = () => {
 
       {/* Desktop drawer */}
       <Drawer
-        variant="persistent"
+        variant="temporary"
         open={sidebarOpen}
+        onClose={() => dispatch(setSidebarOpen(false))}
         sx={{
           display: { xs: 'none', md: 'block' },
           '& .MuiDrawer-paper': {
