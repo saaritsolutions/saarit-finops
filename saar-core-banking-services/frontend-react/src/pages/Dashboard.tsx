@@ -237,7 +237,7 @@ const Dashboard: React.FC = () => {
   return (
     <Box>
       {/* Page Header */}
-      <Box sx={{ mb: 4 }}>
+      <Box sx={{ mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
           Dashboard
         </Typography>
@@ -251,8 +251,8 @@ const Dashboard: React.FC = () => {
         sx={{
           display: 'grid',
           gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: '1fr 1fr 1fr 1fr' },
-          gap: 3,
-          mb: 4,
+          gap: 2, // Reduced from 3 to 2
+          mb: 3, // Reduced from 4 to 3
         }}
       >
         {stats.map((stat, index) => (
@@ -265,7 +265,7 @@ const Dashboard: React.FC = () => {
         sx={{
           display: 'grid',
           gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' },
-          gap: 3,
+          gap: 2, // Reduced from 3 to 2
         }}
       >
         {/* Recent Transactions */}

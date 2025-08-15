@@ -1,0 +1,9 @@
+{
+  "name": "Loan Eligibility Check",
+  "description": "Comprehensive loan eligibility check",
+  "expression": "IF(AND(customer.creditScore >= 650, customer.monthlyIncome >= 3000, customer.debtToIncomeRatio < 0.4), 'APPROVED', IF(customer.creditScore >= 600, 'MANUAL_REVIEW', 'REJECTED'))",
+  "contextType": "customer",
+  "returnType": "string",
+  "category": "loan",
+  "subCategory": "eligibility"
+}

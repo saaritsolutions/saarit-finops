@@ -1,4 +1,5 @@
 using LoanService.Data;
+using LoanService.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,6 +9,16 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Register HttpClient for Expression Builder Service
+builder.Services.AddHttpClient<IExpressionEvaluationService, ExpressionEvaluationService>(client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5001/");
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
+
+// Register Expression Evaluation Service
+builder.Services.AddScoped<IExpressionEvaluationService, ExpressionEvaluationService>();
 
 // Add DbContext
 builder.Services.AddDbContext<LoanDbContext>(options =>
