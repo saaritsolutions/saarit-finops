@@ -1,44 +1,43 @@
 # UI Development Guidelines for Saar Core Banking Solution
 
 ## 1. Project Structure & Organization
-- Use feature-based modules (e.g., Customer, Account, Transaction, etc.)
-- Each feature module should contain its own components, services, and models.
-- Shared/reusable components and services should be placed in a `shared` module.
+- Use feature-based folders (e.g., Customer, Account, Transaction, etc.) for components, hooks, and context.
+- Shared/reusable components and hooks should be placed in a `shared` or `common` directory.
 
 ## 2. API Integration
-- Use Angular services for all HTTP communication with backend microservices.
-- Each microservice should have a dedicated Angular service (e.g., `CustomerService`).
-- Use environment variables for API base URLs.
-- Handle all API errors in services and provide user feedback in components.
+- Use Axios or Fetch for HTTP communication with backend microservices.
+- Each microservice should have a dedicated service module (e.g., `customerApi.js`).
+- Use environment variables for API base URLs (e.g., `.env`).
+- Handle all API errors in service modules and provide user feedback in components.
 
 ## 3. State Management
-- Use Angular services and RxJS for simple state management.
-- For complex flows or shared state, consider NgRx or Akita.
+- Use React Context and hooks for shared state.
+- For complex flows or shared state, consider Redux Toolkit, Zustand, or Jotai.
 
 ## 4. UI Components & Layout
-- Use Angular Material for consistent, modern UI components.
-- Build reusable form controls, tables, dialogs, etc.
+- Use Material-UI (MUI) for consistent, modern UI components.
+- Build reusable form controls, tables, dialogs, etc., as function components.
 - Keep layout and navigation consistent across modules.
 
 ## 5. Forms & Validation
-- Use Reactive Forms for all data entry.
-- Implement strong validation and error messages.
-- Keep business logic in services, not components.
+- Use React Hook Form or Formik for all data entry.
+- Implement strong validation and error messages using Yup or built-in validators.
+- Keep business logic in hooks or service modules, not in component bodies.
 
 ## 6. Error Handling & User Feedback
-- Centralize error handling in services.
-- Use snack bars, dialogs, or notifications for user feedback.
+- Centralize error handling in service modules or error boundaries.
+- Use snackbars, dialogs, or notifications for user feedback (e.g., MUI Snackbar).
 
 ## 7. Security
 - Sanitize all user input.
-- Use Angular’s built-in security features (HttpClient, DomSanitizer).
+- Use React’s built-in security features (avoid `dangerouslySetInnerHTML`, etc.).
 
 ## 8. Testing
-- Write unit tests for components and services.
-- Use end-to-end tests for critical user flows.
+- Write unit tests for components and service modules using Jest and React Testing Library.
+- Use end-to-end tests for critical user flows (e.g., Cypress).
 
 ## 9. Documentation
-- Document all components, services, and APIs.
+- Document all components, hooks, and APIs.
 - Use clear naming conventions and keep code self-explanatory.
 
 ## 10. Incremental Integration
