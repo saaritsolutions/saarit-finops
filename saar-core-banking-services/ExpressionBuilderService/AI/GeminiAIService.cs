@@ -279,7 +279,10 @@ RESPONSE FORMAT (return as JSON):
         var content = new StringContent(json, Encoding.UTF8, "application/json");
         
         var url = $"{_settings.BaseUrl}/v1beta/models/{_settings.Model}:generateContent?key={_settings.ApiKey}";
-        var response = await _httpClient.PostAsync(url, content);
+        
+        // Set a reasonable timeout for the HTTP request
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var response = await _httpClient.PostAsync(url, content, cts.Token);
 
         if (!response.IsSuccessStatusCode)
         {

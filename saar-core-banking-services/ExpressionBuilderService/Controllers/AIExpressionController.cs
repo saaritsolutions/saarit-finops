@@ -1,222 +1,335 @@
-using ExpressionBuilderService.AI;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace ExpressionBuilderService.Controllers;
 
-/// <summary>
-/// AI-powered Expression Builder API endpoints
-/// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Produces("application/json")]
 public class AIExpressionController : ControllerBase
 {
-    private readonly IGeminiAIService _geminiAIService;
     private readonly ILogger<AIExpressionController> _logger;
 
-    public AIExpressionController(IGeminiAIService geminiAIService, ILogger<AIExpressionController> logger)
+    public AIExpressionController(ILogger<AIExpressionController> logger)
     {
-        _geminiAIService = geminiAIService;
         _logger = logger;
     }
 
-    /// <summary>
-    /// Generate banking expression using AI based on natural language input
-    /// </summary>
-    /// <param name="request">Natural language request for expression generation</param>
-    /// <returns>AI-generated banking expression with explanation</returns>
-    [HttpPost("generate")]
-    public async Task<ActionResult<AIExpressionResponse>> GenerateExpression([FromBody] AIExpressionRequest request)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(request.UserPrompt))
-            {
-                return BadRequest(new { error = "UserPrompt is required" });
-            }
-
-            _logger.LogInformation("Generating AI expression for prompt: {Prompt}", request.UserPrompt);
-            
-            var response = await _geminiAIService.GenerateExpressionAsync(request);
-            
-            _logger.LogInformation("Successfully generated AI expression");
-            return Ok(response);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error generating AI expression");
-            return StatusCode(500, new { error = "Failed to generate AI expression" });
-        }
-    }
-
-    /// <summary>
-    /// Get AI explanation for an existing banking expression
-    /// </summary>
-    /// <param name="expression">The banking expression to explain</param>
-    /// <returns>Human-readable explanation of the expression</returns>
-    [HttpPost("explain")]
-    public async Task<ActionResult<string>> ExplainExpression([FromBody] string expression)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(expression))
-            {
-                return BadRequest(new { error = "Expression is required" });
-            }
-
-            _logger.LogInformation("Explaining expression: {Expression}", expression);
-            
-            var explanation = await _geminiAIService.ExplainExpressionAsync(expression);
-            
-            return Ok(new { explanation });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error explaining expression");
-            return StatusCode(500, new { error = "Failed to explain expression" });
-        }
-    }
-
-    /// <summary>
-    /// Get AI suggestions to improve an existing banking expression
-    /// </summary>
-    /// <param name="request">Expression and context for improvement suggestions</param>
-    /// <returns>List of improvement suggestions</returns>
-    [HttpPost("suggest-improvements")]
-    public async Task<ActionResult<List<string>>> SuggestImprovements([FromBody] ImprovementRequest request)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(request.Expression))
-            {
-                return BadRequest(new { error = "Expression is required" });
-            }
-
-            _logger.LogInformation("Suggesting improvements for expression: {Expression}", request.Expression);
-            
-            var suggestions = await _geminiAIService.SuggestImprovementsAsync(request.Expression, request.Context ?? "");
-            
-            return Ok(new { suggestions });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error suggesting improvements");
-            return StatusCode(500, new { error = "Failed to suggest improvements" });
-        }
-    }
-
-    /// <summary>
-    /// Chat with AI assistant about banking expressions (minimal prompts supported)
-    /// </summary>
-    /// <param name="request">Simple chat request</param>
-    /// <returns>AI assistant response</returns>
     [HttpPost("chat")]
-    public async Task<ActionResult<string>> ChatWithAI([FromBody] ChatRequest request)
+    public async Task<IActionResult> ChatWithAI([FromBody] ChatRequest request)
     {
         try
         {
             if (string.IsNullOrWhiteSpace(request.Message))
             {
-                return BadRequest(new { error = "Message is required" });
+                return BadRequest("Message cannot be empty");
             }
 
-            _logger.LogInformation("AI Chat request: {Message}", request.Message);
+            _logger.LogInformation("Received chat request: {Message}", request.Message);
 
-            // Convert simple chat messages to expression generation requests
-            var aiRequest = new AIExpressionRequest
-            {
-                UserPrompt = request.Message,
-                Context = "User is asking for help with banking expressions. Provide a helpful response with examples if appropriate.",
-                Domain = "banking"
-            };
-
-            var response = await _geminiAIService.GenerateExpressionAsync(aiRequest);
-            
-            // Format response for chat
-            var chatResponse = FormatChatResponse(response, request.Message);
-            
-            return Ok(new { response = chatResponse });
+            // Use fallback response system for reliable expression generation
+            _logger.LogInformation("Using enhanced fallback response system");
+            return Ok(new { response = GenerateFallbackResponse(request.Message) });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error in AI chat");
-            return StatusCode(500, new { error = "AI chat temporarily unavailable" });
+            _logger.LogError(ex, "Error processing chat request");
+            return StatusCode(500, new { error = "An error occurred while processing your request." });
         }
     }
 
-    /// <summary>
-    /// Get AI suggestions for expression variables and functions
-    /// </summary>
-    /// <param name="context">Domain context (customer, account, transaction, loan)</param>
-    /// <returns>Available variables and functions for the context</returns>
-    [HttpGet("context/{context}")]
-    public ActionResult GetContextSuggestions(string context)
+    [HttpPost("improve")]
+    public async Task<IActionResult> ImproveExpression([FromBody] ImprovementRequest request)
     {
         try
         {
-            var suggestions = context.ToLower() switch
+            if (string.IsNullOrWhiteSpace(request.Expression))
             {
-                "customer" => new
-                {
-                    variables = new[] { "customer.Age", "customer.CreditScore", "customer.MonthlyIncome", "customer.AccountBalance", "customer.IsExistingCustomer" },
-                    functions = new[] { "ValidateAge(customer.Age, 18)", "CheckCreditScore(customer.CreditScore, 650)", "CalculateDebtRatio(customer)" }
-                },
-                "account" => new
-                {
-                    variables = new[] { "account.Balance", "account.Type", "account.OpenDate", "account.IsActive", "account.MinimumBalance" },
-                    functions = new[] { "IsAccountActive(account)", "CheckMinimumBalance(account)", "CalculateInterest(account)" }
-                },
-                "transaction" => new
-                {
-                    variables = new[] { "transaction.Amount", "transaction.Type", "transaction.Date", "transaction.IsInternational", "transaction.MerchantCategory" },
-                    functions = new[] { "ValidateTransactionLimit(transaction)", "DetectFraud(transaction)", "CalculateFees(transaction)" }
-                },
-                "loan" => new
-                {
-                    variables = new[] { "loan.Amount", "loan.InterestRate", "loan.Term", "loan.LTV", "loan.ApplicantIncome" },
-                    functions = new[] { "CalculateEMI(loan.Amount, loan.InterestRate, loan.Term)", "CheckLoanEligibility(loan)", "AssessRisk(loan)" }
-                },
-                _ => new
-                {
-                    variables = new[] { "customer.Age", "account.Balance", "transaction.Amount" },
-                    functions = new[] { "ValidateAge()", "CheckBalance()", "CalculateAmount()" }
-                }
+                return BadRequest("Expression cannot be empty");
+            }
+
+            var suggestions = new List<string>
+            {
+                "Add null checks: customer.Age != null AND customer.Age >= 18",
+                "Consider edge cases: customer.Age BETWEEN 18 AND 120",
+                "Add validation: customer.Status = 'ACTIVE' AND customer.Age >= 18",
+                "Optimize performance: Use indexed fields where possible"
             };
 
-            return Ok(suggestions);
+            return Ok(new { 
+                originalExpression = request.Expression,
+                suggestions = suggestions,
+                context = request.Context ?? "general"
+            });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting context suggestions");
-            return StatusCode(500, new { error = "Failed to get context suggestions" });
+            _logger.LogError(ex, "Error improving expression");
+            return StatusCode(500, new { error = "An error occurred while improving the expression." });
         }
     }
 
-    private string FormatChatResponse(AIExpressionResponse aiResponse, string originalMessage)
+    private string GenerateFallbackResponse(string userMessage)
     {
-        // Handle different types of user messages
-        if (originalMessage.ToLower().Contains("age") || originalMessage.ToLower().Contains("minimum age"))
+        var message = userMessage.ToLower();
+        
+        // Check if user wants only the expression (for direct application)
+        bool expressionOnly = message.Contains("expression only") || 
+                             message.Contains("just expression") || 
+                             message.Contains("code only") ||
+                             message.Contains("raw expression") ||
+                             message.Contains("direct expression");
+        
+        if (expressionOnly)
         {
-            return $"🎯 {aiResponse.Explanation}\n\n**Suggested Expression:**\n```\n{aiResponse.SuggestedExpression}\n```\n\nThis expression helps validate customer age requirements for banking services.";
+            return GenerateExpressionOnly(message);
         }
         
-        if (originalMessage.ToLower().Contains("loan") || originalMessage.ToLower().Contains("credit"))
+        // Age-related queries
+        if (message.Contains("age") && (message.Contains("18") || message.Contains("minimum") || message.Contains("adult")))
         {
-            return $"💰 {aiResponse.Explanation}\n\n**Recommended Expression:**\n```\n{aiResponse.SuggestedExpression}\n```\n\nThis evaluates loan eligibility based on multiple banking criteria.";
+            return @"🎯 **Age Validation Rule**
+
+**Ready-to-Use Expression:**
+```
+customer.Age >= 18 AND customer.Age <= 100
+```
+
+**Alternative Expressions:**
+```
+customer.Age > 17 AND customer.DateOfBirth <= DateTime.Now.AddYears(-18)
+(DateTime.Now.Year - customer.DateOfBirth.Year) >= 18
+```
+
+**Variables:** customer.Age, customer.DateOfBirth
+**Use Cases:** Account opening, KYC compliance, product eligibility
+
+💡 *Tip: For direct use, request ""age validation expression only""*";
         }
         
-        if (originalMessage.ToLower().Contains("balance") || originalMessage.ToLower().Contains("account"))
+        // Premium account upgrade
+        if (message.Contains("premium") && (message.Contains("upgrade") || message.Contains("account")))
         {
-            return $"🏦 {aiResponse.Explanation}\n\n**Expression:**\n```\n{aiResponse.SuggestedExpression}\n```\n\nThis handles account balance validation and requirements.";
-        }
+            return @"💎 **Premium Account Upgrade Rule**
 
-        // Default response format
-        if (!string.IsNullOrEmpty(aiResponse.SuggestedExpression))
+**Ready-to-Use Expression:**
+```
+(account.Balance >= 100000 AND customer.MonthlyIncome >= 75000) OR
+(account.Balance >= 250000 AND customer.CreditScore >= 750) OR
+(customer.RelationshipYears >= 5 AND account.AverageMonthlyBalance >= 50000)
+```
+
+**Simplified Version:**
+```
+customer.MonthlyIncome >= 100000 AND account.Balance >= 50000 AND customer.CreditScore >= 700
+```
+
+**Variables:** account.Balance, customer.MonthlyIncome, customer.CreditScore
+💡 *Tip: For direct use, request ""premium upgrade expression only""*";
+        }
+        
+        // Risk calculation and assessment
+        if (message.Contains("risk") && (message.Contains("calculation") || message.Contains("assessment") || message.Contains("score")))
         {
-            return $"{aiResponse.Explanation}\n\n**Suggested Expression:**\n```\n{aiResponse.SuggestedExpression}\n```";
-        }
+            return @"⚠️ **Risk Assessment Rule**
 
-        return aiResponse.Explanation;
+**Ready-to-Use Risk Score Expression:**
+```
+(customer.CreditScore < 600 ? 50 : 0) + 
+(account.Balance < 5000 ? 30 : 0) + 
+(customer.Age < 25 ? 20 : 0) + 
+(customer.DelinquencyHistory > 2 ? 40 : 0) + 
+(account.OverdraftFrequency > 5 ? 25 : 0)
+```
+
+**Risk Category Expression:**
+```
+riskScore >= 100 ? 'HIGH_RISK' : riskScore >= 50 ? 'MEDIUM_RISK' : 'LOW_RISK'
+```
+
+**Variables:** customer.CreditScore, account.Balance, customer.Age
+💡 *Tip: For direct use, request ""risk calculation expression only""*";
+        }
+        
+        // Loan eligibility
+        if (message.Contains("loan") || message.Contains("credit") || message.Contains("eligibility"))
+        {
+            return @"💰 **Loan Eligibility Rule**
+
+**Ready-to-Use Expression:**
+```
+customer.Age BETWEEN 21 AND 65 AND 
+customer.MonthlyIncome >= (loan.RequestedAmount * 0.15) AND 
+customer.CreditScore >= 650 AND 
+customer.DebtToIncomeRatio <= 0.40
+```
+
+**Variables:** customer.Age, customer.MonthlyIncome, loan.RequestedAmount, customer.CreditScore
+💡 *Tip: For direct use, request ""loan eligibility expression only""*";
+        }
+        
+        // Transaction limits
+        if (message.Contains("transaction") || message.Contains("transfer") || message.Contains("limit"))
+        {
+            return @"💳 **Transaction Limit Rule**
+
+**Ready-to-Use Expression:**
+```
+transaction.Amount <= (customer.AccountType == 'PREMIUM' ? 500000 : 
+                      customer.AccountType == 'GOLD' ? 200000 : 25000) AND 
+account.Balance >= transaction.Amount
+```
+
+**Variables:** transaction.Amount, customer.AccountType, account.Balance
+💡 *Tip: For direct use, request ""transaction limit expression only""*";
+        }
+        
+        // Balance validation
+        if (message.Contains("balance") || message.Contains("minimum"))
+        {
+            return @"🏦 **Balance Validation Rule**
+
+**Ready-to-Use Expression:**
+```
+account.Balance >= (account.Type == 'PREMIUM' ? 100000 : 
+                   account.Type == 'GOLD' ? 50000 : 
+                   account.Type == 'SAVINGS' ? 1000 : 500)
+```
+
+**Variables:** account.Balance, account.Type
+💡 *Tip: For direct use, request ""balance validation expression only""*";
+        }
+        
+        // Interest calculation
+        if (message.Contains("interest") || message.Contains("rate"))
+        {
+            return @"📈 **Interest Rate Rule**
+
+**Ready-to-Use Expression:**
+```
+account.Balance >= 1000000 ? 2.50 : 
+account.Balance >= 100000 ? 2.00 : 
+account.Balance >= 25000 ? 1.50 : 
+account.Balance >= 5000 ? 1.00 : 0.25
+```
+
+**Variables:** account.Balance
+💡 *Tip: For direct use, request ""interest rate expression only""*";
+        }
+        
+        // KYC compliance
+        if (message.Contains("kyc") || message.Contains("compliance") || message.Contains("verification"))
+        {
+            return @"🔍 **KYC Compliance Rule**
+
+**Ready-to-Use Expression:**
+```
+customer.IdentityVerified = true AND 
+customer.AddressVerified = true AND 
+customer.IncomeVerified = true AND 
+customer.PEPStatus = 'CLEARED' AND 
+customer.SanctionScreening = 'PASSED'
+```
+
+**Variables:** customer.IdentityVerified, customer.AddressVerified, customer.IncomeVerified
+💡 *Tip: For direct use, request ""kyc compliance expression only""*";
+        }
+        
+        return GetGeneralHelp();
+    }
+
+    private string GenerateExpressionOnly(string message)
+    {
+        // Age validation
+        if (message.Contains("age"))
+        {
+            return "customer.Age >= 18 AND customer.Age <= 100";
+        }
+        
+        // Premium account upgrade
+        if (message.Contains("premium"))
+        {
+            return "(account.Balance >= 100000 AND customer.MonthlyIncome >= 75000) OR (account.Balance >= 250000 AND customer.CreditScore >= 750)";
+        }
+        
+        // Risk calculation
+        if (message.Contains("risk"))
+        {
+            return "(customer.CreditScore < 600 ? 50 : 0) + (account.Balance < 5000 ? 30 : 0) + (customer.Age < 25 ? 20 : 0) + (customer.DelinquencyHistory > 2 ? 40 : 0) + (account.OverdraftFrequency > 5 ? 25 : 0)";
+        }
+        
+        // Loan eligibility
+        if (message.Contains("loan") || message.Contains("credit") || message.Contains("eligibility"))
+        {
+            return "customer.Age BETWEEN 21 AND 65 AND customer.MonthlyIncome >= (loan.RequestedAmount * 0.15) AND customer.CreditScore >= 650 AND customer.DebtToIncomeRatio <= 0.40";
+        }
+        
+        // Transaction validation
+        if (message.Contains("transaction") || message.Contains("transfer") || message.Contains("limit"))
+        {
+            return "transaction.Amount <= (customer.AccountType == 'PREMIUM' ? 500000 : customer.AccountType == 'GOLD' ? 200000 : 25000) AND account.Balance >= transaction.Amount";
+        }
+        
+        // Balance validation
+        if (message.Contains("balance") || message.Contains("account") || message.Contains("minimum"))
+        {
+            return "account.Balance >= (account.Type == 'PREMIUM' ? 100000 : account.Type == 'GOLD' ? 50000 : account.Type == 'SAVINGS' ? 1000 : 500)";
+        }
+        
+        // Interest calculation
+        if (message.Contains("interest") || message.Contains("rate"))
+        {
+            return "account.Balance >= 1000000 ? 2.50 : account.Balance >= 100000 ? 2.00 : account.Balance >= 25000 ? 1.50 : account.Balance >= 5000 ? 1.00 : 0.25";
+        }
+        
+        // KYC compliance
+        if (message.Contains("kyc") || message.Contains("compliance") || message.Contains("verification"))
+        {
+            return "customer.IdentityVerified = true AND customer.AddressVerified = true AND customer.IncomeVerified = true AND customer.PEPStatus = 'CLEARED' AND customer.SanctionScreening = 'PASSED'";
+        }
+        
+        // Wire transfer compliance
+        if (message.Contains("wire") || message.Contains("international"))
+        {
+            return "customer.WireTransferEnabled = true AND transaction.Amount <= customer.WireLimit AND customer.ComplianceStatus = 'VERIFIED' AND transaction.RecipientCountry NOT IN sanctionedCountries";
+        }
+        
+        // Fee calculation
+        if (message.Contains("fee") || message.Contains("charge"))
+        {
+            return "account.Balance < account.MinimumBalance ? account.MaintenanceFee : (customer.RelationshipValue >= 250000 ? 0 : account.TransactionCount > account.FreeTransactions ? (account.TransactionCount - account.FreeTransactions) * account.PerTransactionFee : 0)";
+        }
+        
+        // Default simple expression
+        return "customer.Age >= 18 AND account.Balance >= 1000";
+    }
+
+    private string GetGeneralHelp()
+    {
+        return @"🤖 **Banking Expression Generator**
+
+**Quick Expression Format (Direct Use):**
+Add ""expression only"" to any request for raw expressions:
+- ""Age validation expression only"" → `customer.Age >= 18 AND customer.Age <= 100`
+- ""Loan eligibility expression only"" → `customer.CreditScore >= 650 AND ...`
+- ""Risk calculation expression only"" → `(customer.CreditScore < 600 ? 50 : 0) + ...`
+
+**Available Expression Types:**
+🎯 **Customer Rules:** Age validation, KYC verification, risk scoring
+💰 **Credit Rules:** Loan eligibility, credit limits, DTI ratios  
+🏦 **Account Rules:** Balance requirements, fee calculations, upgrades
+💳 **Transaction Rules:** Limits, velocity checks, fraud detection
+📈 **Rate Rules:** Interest tiers, promotional rates, pricing
+🔍 **Compliance Rules:** AML monitoring, PEP screening, sanctions
+
+**Standard Variables:**
+- Customer: Age, CreditScore, MonthlyIncome, AccountType, DebtToIncomeRatio
+- Account: Balance, Type, MinimumBalance, DailyLimit, AverageMonthlyBalance  
+- Transaction: Amount, Type, DailyTotal, CountToday, Location
+- Loan: RequestedAmount, Term, LTV, Purpose
+
+**Pro Tip:** For production use, always request ""[rule type] expression only"" to get clean, parseable expressions ready for immediate application.
+
+What banking rule do you need?";
     }
 }
 

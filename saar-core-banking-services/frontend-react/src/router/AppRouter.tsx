@@ -18,6 +18,7 @@ const ExpressionBuilder = lazy(() => import('../pages/ExpressionBuilder'));
 const TestExpressions = lazy(() => import('../pages/TestExpressions'));
 const SimpleExpressionBuilder = lazy(() => import('../pages/SimpleExpressionBuilder'));
 const WorldClassExpressionBuilder = lazy(() => import('../pages/WorldClassExpressionBuilder'));
+const EndToEndDemo = lazy(() => import('../pages/EndToEndDemo'));
 const Unauthorized = lazy(() => import('../components/common/Unauthorized'));
 const NotFound = lazy(() => import('../components/common/NotFound'));
 
@@ -168,6 +169,16 @@ export const AppRouter: React.FC = () => {
             element={
               <ProtectedRoute requiredPermission={BANKING_PERMISSIONS.EXPRESSION_BUILDER}>
                 <WorldClassExpressionBuilder />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* End-to-End Demo */}
+          <Route
+            path="demo"
+            element={
+              <ProtectedRoute requiredPermission={BANKING_PERMISSIONS.EXPRESSION_BUILDER}>
+                <EndToEndDemo />
               </ProtectedRoute>
             }
           />

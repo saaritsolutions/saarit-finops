@@ -501,8 +501,151 @@ namespace DynamicExpression
 
     private object CreateContextFromVariables(Dictionary<string, object> variables)
     {
-        // This would be enhanced to create proper context objects based on the variables
-        return new CustomerData(); // Placeholder
+        // Try to construct a domain context object from provided variables
+        try
+        {
+            if (variables.TryGetValue("customer", out var cust))
+            {
+                return BuildCustomerContext(cust, variables);
+            }
+
+            if (variables.TryGetValue("account", out var acc))
+            {
+                return BuildAccountContext(acc, variables);
+            }
+
+            // Fallback: infer from flat variables
+            if (variables.ContainsKey("age") || variables.ContainsKey("creditScore") || variables.ContainsKey("monthlyIncome"))
+            {
+                return BuildCustomerContext(null, variables);
+            }
+
+            if (variables.ContainsKey("balance") || variables.ContainsKey("accountBalance"))
+            {
+                return BuildAccountContext(null, variables);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to build strong context from variables; falling back to object context");
+        }
+
+        // Last resort
+        return new object();
+    }
+
+    private CustomerData BuildCustomerContext(object? customerSource, Dictionary<string, object> flat)
+    {
+        var cd = new CustomerData();
+
+        // Helper to read from nested source first, then flat vars
+        int? age = TryGetInt(customerSource, "age") ?? TryGetInt(flat, "age");
+        if (age.HasValue && age.Value > 0)
+        {
+            // Set DateOfBirth so that alias property 'age' computes correctly
+            cd.DateOfBirth = DateTime.UtcNow.AddYears(-age.Value);
+        }
+
+        var creditScore = TryGetInt(customerSource, "creditScore") ?? TryGetInt(flat, "creditScore");
+        if (creditScore.HasValue) cd.CreditScore = creditScore.Value;
+
+        var monthlyIncome = TryGetDecimal(customerSource, "monthlyIncome") ?? TryGetDecimal(flat, "monthlyIncome");
+        if (monthlyIncome.HasValue) cd.MonthlyIncome = monthlyIncome.Value;
+
+        var hasDefaultHistory = TryGetBool(customerSource, "hasDefaultHistory") ?? TryGetBool(flat, "hasDefaultHistory");
+        if (hasDefaultHistory.HasValue) cd.HasDefaultHistory = hasDefaultHistory.Value;
+
+        return cd;
+    }
+
+    private AccountData BuildAccountContext(object? accountSource, Dictionary<string, object> flat)
+    {
+        var ad = new AccountData();
+
+        var balance = TryGetDecimal(accountSource, "balance") ?? TryGetDecimal(flat, "balance") ?? TryGetDecimal(flat, "accountBalance");
+        if (balance.HasValue) ad.Balance = balance.Value;
+
+        var type = TryGetString(accountSource, "type") ?? TryGetString(flat, "accountType");
+        if (!string.IsNullOrWhiteSpace(type)) ad.AccountType = type!;
+
+        return ad;
+    }
+
+    private int? TryGetInt(object? container, string key)
+    {
+        if (container == null) return null;
+        try
+        {
+            if (container is Dictionary<string, object> dict && dict.TryGetValue(key, out var val))
+                return Convert.ToInt32(Unwrap(val));
+            if (container is System.Text.Json.JsonElement el && el.ValueKind == System.Text.Json.JsonValueKind.Object && el.TryGetProperty(key, out var prop))
+                return prop.TryGetInt32(out var i) ? i : (int?)Convert.ToInt32(Unwrap(prop));
+        }
+        catch { }
+        return null;
+    }
+
+    private decimal? TryGetDecimal(object? container, string key)
+    {
+        if (container == null) return null;
+        try
+        {
+            if (container is Dictionary<string, object> dict && dict.TryGetValue(key, out var val))
+                return Convert.ToDecimal(Unwrap(val));
+            if (container is System.Text.Json.JsonElement el && el.ValueKind == System.Text.Json.JsonValueKind.Object && el.TryGetProperty(key, out var prop))
+                return prop.TryGetDecimal(out var d) ? d : (decimal?)Convert.ToDecimal(Unwrap(prop));
+        }
+        catch { }
+        return null;
+    }
+
+    private bool? TryGetBool(object? container, string key)
+    {
+        if (container == null) return null;
+        try
+        {
+            if (container is Dictionary<string, object> dict && dict.TryGetValue(key, out var val))
+                return Convert.ToBoolean(Unwrap(val));
+            if (container is System.Text.Json.JsonElement el && el.ValueKind == System.Text.Json.JsonValueKind.Object && el.TryGetProperty(key, out var prop))
+                return prop.ValueKind == System.Text.Json.JsonValueKind.True || (prop.ValueKind == System.Text.Json.JsonValueKind.String && bool.TryParse(prop.GetString(), out var b) && b);
+        }
+        catch { }
+        return null;
+    }
+
+    private string? TryGetString(object? container, string key)
+    {
+        if (container == null) return null;
+        try
+        {
+            if (container is Dictionary<string, object> dict && dict.TryGetValue(key, out var val))
+                return Convert.ToString(Unwrap(val));
+            if (container is System.Text.Json.JsonElement el && el.ValueKind == System.Text.Json.JsonValueKind.Object && el.TryGetProperty(key, out var prop))
+                return prop.GetString();
+        }
+        catch { }
+        return null;
+    }
+
+    private object? Unwrap(object? value)
+    {
+        if (value is System.Text.Json.JsonElement je)
+        {
+            switch (je.ValueKind)
+            {
+                case System.Text.Json.JsonValueKind.Number:
+                    if (je.TryGetInt64(out var l)) return l;
+                    if (je.TryGetDouble(out var d)) return d;
+                    break;
+                case System.Text.Json.JsonValueKind.String:
+                    return je.GetString();
+                case System.Text.Json.JsonValueKind.True:
+                    return true;
+                case System.Text.Json.JsonValueKind.False:
+                    return false;
+            }
+        }
+        return value;
     }
 
     private string GenerateCacheKey(string expressionText, string contextType)
