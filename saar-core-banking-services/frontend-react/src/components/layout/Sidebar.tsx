@@ -254,6 +254,13 @@ const menuItems: MenuItem[] = [
         path: '/expressions',
         permission: BANKING_PERMISSIONS.EXPRESSION_BUILDER,
       },
+      {
+        id: 'end-to-end-demo',
+        title: 'End-to-End Demo',
+        icon: <TrendingUpIcon />,
+        path: '/demo',
+        permission: BANKING_PERMISSIONS.EXPRESSION_BUILDER,
+      },
     ],
   },
 ];

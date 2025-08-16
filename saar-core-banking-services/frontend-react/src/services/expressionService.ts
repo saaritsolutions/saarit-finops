@@ -93,7 +93,141 @@ class ExpressionService {
   }
 
   // Utility Methods
+  // Lightweight, safe fallback evaluator for very simple boolean expressions like
+  // "customer.age >= 18" or "age >= 18". It supports a single comparison or simple AND/OR of such.
+  private evalSimpleBoolean(expr: string, variables: Record<string, any>): boolean | null {
+    if (!expr) return null;
+
+    // Normalize whitespace and operators
+    const text = expr.replace(/\s+/g, ' ').trim();
+
+    // Support simple conjunction/disjunction by splitting
+    const tryEvalClause = (clause: string): boolean | null => {
+      const m = clause.match(/^([a-zA-Z_][\w\.]*?)\s*(>=|<=|==|!=|>|<)\s*(-?\d+(?:\.\d+)?)$/);
+      if (!m) return null;
+      const [, left, op, rightStr] = m;
+      const right = Number(rightStr);
+      // Resolve left variable, support dot-paths like customer.age
+      const resolve = (path: string, obj: any): any => path.split('.').reduce((acc, k) => (acc != null ? acc[k] : undefined), obj);
+      let leftVal = resolve(left, variables);
+      if (leftVal === undefined) {
+        // also try flatten, e.g., age when customer.age provided
+        const last = left.split('.').pop()!;
+        leftVal = variables[last];
+      }
+      if (typeof leftVal !== 'number') {
+        // try to coerce
+        const n = Number(leftVal);
+        if (!Number.isFinite(n)) return null;
+        leftVal = n;
+      }
+      switch (op) {
+        case '>=': return leftVal >= right;
+        case '<=': return leftVal <= right;
+        case '>': return leftVal > right;
+        case '<': return leftVal < right;
+        case '==': return leftVal == right; // eslint-disable-line eqeqeq
+        case '!=': return leftVal != right; // eslint-disable-line eqeqeq
+        default: return null;
+      }
+    };
+
+    // Handle AND/OR (&&/|| or textual)
+    const orParts = text.split(/\s*(\|\||\bOR\b)\s*/i).filter(p => p && p !== '||' && !/^or$/i.test(p));
+    if (orParts.length > 1) {
+      for (const part of orParts) {
+        const v = this.evalSimpleBoolean(part.trim(), variables);
+        if (v === true) return true;
+      }
+      return false;
+    }
+
+    const andParts = text.split(/\s*(&&|\bAND\b)\s*/i).filter(p => p && p !== '&&' && !/^and$/i.test(p));
+    if (andParts.length > 1) {
+      for (const part of andParts) {
+        const v = this.evalSimpleBoolean(part.trim(), variables);
+        if (v === false) return false;
+        if (v === null) return null;
+      }
+      return true;
+    }
+
+    return tryEvalClause(text);
+  }
   async testExpression(
+    expressionText: string,
+    contextType: string,
+    returnType: string,
+    variables: Record<string, any>
+  ): Promise<{
+    validation: ExpressionValidationResponse;
+    execution?: ExpressionExecutionResponse;
+  }> {
+    // Use the simple test endpoint for quick testing
+    try {
+      const response = await this.apiClient.post('/api/expression-engine/test-simple', {
+        expression: expressionText,
+        contextType,
+        returnType,
+        variables
+      });
+
+      // If backend failed, try a very simple local evaluation as a UX fallback
+      if (!response.success) {
+        const local = this.evalSimpleBoolean(expressionText, variables);
+        if (typeof local === 'boolean') {
+          return {
+            validation: { isValid: true, errors: [], warnings: ['Evaluated locally (backend returned error): ' + (response.error || '')] },
+            execution: {
+              success: true,
+              result: local,
+              resultType: 'boolean',
+              executionTimeMs: 0,
+              memoryUsedKB: 0,
+              executedAt: new Date().toISOString()
+            }
+          };
+        }
+      }
+
+      // Transform the simple response to match expected interface
+      return {
+        validation: {
+          isValid: response.success,
+          errors: response.error ? [response.error] : [],
+          warnings: []
+        },
+        execution: response.success ? {
+          success: response.success,
+          result: response.result,
+          resultType: returnType,
+          executionTimeMs: response.executionTime,
+          memoryUsedKB: 0,
+          executedAt: new Date().toISOString()
+        } : undefined
+      };
+    } catch (error) {
+      // Fallback to original validation method
+      console.warn('Simple test endpoint failed, attempting client-side evaluation fallback:', error);
+      const local = this.evalSimpleBoolean(expressionText, variables);
+      if (typeof local === 'boolean') {
+        return {
+          validation: { isValid: true, errors: [], warnings: ['Evaluated locally (backend unavailable)'] },
+          execution: {
+            success: true,
+            result: local,
+            resultType: 'boolean',
+            executionTimeMs: 0,
+            memoryUsedKB: 0,
+            executedAt: new Date().toISOString()
+          }
+        };
+      }
+      return this.testExpressionFallback(expressionText, contextType, returnType, variables);
+    }
+  }
+
+  private async testExpressionFallback(
     expressionText: string,
     contextType: string,
     returnType: string,

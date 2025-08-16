@@ -142,10 +142,17 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Auto-migrate database on startup
+// Auto-migrate database on startup (non-fatal if DB not available)
 using var scope = app.Services.CreateScope();
 var context = scope.ServiceProvider.GetRequiredService<ExpressionDbContext>();
-await context.Database.EnsureCreatedAsync();
+try
+{
+    await context.Database.EnsureCreatedAsync();
+}
+catch (Exception dbEx)
+{
+    Log.Warning(dbEx, "Database ensure/create failed. Continuing startup as some endpoints don't require DB.");
+}
 
 Log.Information("Expression Builder Service starting up...");
 
