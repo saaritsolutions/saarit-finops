@@ -8,5 +8,6 @@ namespace LoanService.Data
         public LoanDbContext(DbContextOptions<LoanDbContext> options) : base(options) { }
 
         public DbSet<LoanAccount> LoanAccounts { get; set; }
+    public DbSet<LoanApplication> LoanApplications { get; set; }
     }
 }

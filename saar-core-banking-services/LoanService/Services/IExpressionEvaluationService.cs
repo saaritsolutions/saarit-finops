@@ -30,17 +30,32 @@ namespace LoanService.Services
                     Variables = context
                 };
 
-                var response = await _httpClient.PostAsJsonAsync(
-                    "http://localhost:5001/api/Expressions/execute", 
-                    request);
+                // Use configured BaseAddress when available, fall back to fixed demo port 5004
+                var url = _httpClient.BaseAddress != null
+                    ? new Uri(_httpClient.BaseAddress, "/api/Expressions/execute").ToString()
+                    : "http://localhost:5004/api/Expressions/execute";
+                var response = await _httpClient.PostAsJsonAsync(url, request);
 
                 response.EnsureSuccessStatusCode();
                 var result = await response.Content.ReadFromJsonAsync<ExpressionExecutionResponse>();
                 
                 if (!result.Success)
                     throw new Exception($"Expression execution failed: {result.ErrorMessage}");
-                
-                return (T)result.Result;
+
+                // Convert result.Result (object/JsonElement) to desired T
+                if (result.Result is null)
+                {
+                    return default!;
+                }
+
+                // Round-trip serialize to handle JsonElement/object -> T
+                var json = System.Text.Json.JsonSerializer.Serialize(result.Result);
+                var typed = System.Text.Json.JsonSerializer.Deserialize<T>(json);
+                if (typed == null)
+                {
+                    throw new InvalidCastException($"Unable to deserialize expression result to {typeof(T).Name}");
+                }
+                return typed;
             }
             catch (Exception ex)
             {

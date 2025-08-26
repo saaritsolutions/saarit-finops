@@ -1,16 +1,10 @@
 const CracoAlias = require("craco-alias");
 
 module.exports = {
-  plugins: [
-    {
-      plugin: CracoAlias,
-      options: {
-        source: "tsconfig",
-        baseUrl: "./src",
-        tsConfigPath: "./tsconfig.json",
-      },
-    },
-  ],
+  // Disable ESLint plugin handling to avoid CRACO attempting to find ESLintWebpackPlugin when CRA removes it via env
+  eslint: {
+    enable: false,
+  },
   webpack: {
     configure: (webpackConfig, { env, paths }) => {
       // Find and modify ForkTsCheckerWebpackPlugin
