@@ -210,7 +210,8 @@ const EndToEndDemo: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:5001/api/aiexpression/chat', {
+  const base = process.env.REACT_APP_EXPRESSION_API_URL || 'http://localhost:5004';
+  const response = await fetch(`${base}/api/aiexpression/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

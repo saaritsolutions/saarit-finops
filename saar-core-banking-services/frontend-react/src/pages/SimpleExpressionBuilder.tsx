@@ -62,6 +62,8 @@ const SimpleExpressionBuilder: React.FC = () => {
   const [expressions, setExpressions] = useState<Expression[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   
   // Form state for Create/Edit tab
   const [formData, setFormData] = useState({
@@ -117,7 +119,8 @@ const SimpleExpressionBuilder: React.FC = () => {
       setError(null);
     try {
       console.log('Fetching expressions from API...');
-      const response = await fetch('http://localhost:5001/api/expressions');        if (!response.ok) {
+  const base = process.env.REACT_APP_EXPRESSION_API_URL || 'http://localhost:5004';
+  const response = await fetch(`${base}/api/expressions`);        if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         
@@ -181,13 +184,14 @@ const SimpleExpressionBuilder: React.FC = () => {
     });
   };
 
-  const handleCreateExpression = async () => {
+  const handleSaveExpression = async () => {
     try {
-      const response = await fetch('http://localhost:5001/api/expressions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const base = process.env.REACT_APP_EXPRESSION_API_URL || 'http://localhost:5004';
+      const url = editMode && editId ? `${base}/api/expressions/${editId}` : `${base}/api/expressions`;
+      const method = editMode && editId ? 'PUT' : 'POST';
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           expressionId: formData.expressionId || `EXPR_${Date.now()}`,
           name: formData.name,
@@ -198,34 +202,61 @@ const SimpleExpressionBuilder: React.FC = () => {
           returnType: formData.returnType,
           contextType: formData.contextType,
           usageType: formData.usageType,
-          tags: [],
-          variables: {}
-        }),
+          isActive: formData.isActive
+        })
       });
 
-      if (response.ok) {
-        alert('Expression created successfully!');
-        clearForm();
-        // Reload expressions list
-        const loadExpressions = async () => {
-          setLoading(true);
-          try {
-            const response = await fetch('http://localhost:5001/api/expressions');
-            const data = await response.json();
-            setExpressions(data.expressions || []);
-          } catch (err) {
-            console.error('Error reloading expressions:', err);
-          } finally {
-            setLoading(false);
-          }
-        };
-        loadExpressions();
-        setActiveTab(0); // Switch back to list
-      } else {
-        throw new Error('Failed to create expression');
+      if (!response.ok) {
+        throw new Error(`Failed to ${editMode ? 'update' : 'create'} expression`);
       }
-    } catch (error) {
-      alert(`Error creating expression: ${error}`);
+
+      alert(`Expression ${editMode ? 'updated' : 'created'} successfully!`);
+      clearForm();
+
+      // Reload expressions list
+      setLoading(true);
+      try {
+        const reloadBase = process.env.REACT_APP_EXPRESSION_API_URL || 'http://localhost:5004';
+        const res = await fetch(`${reloadBase}/api/expressions`);
+        const data = await res.json();
+        setExpressions(data.expressions || []);
+      } catch (err) {
+        console.error('Error reloading expressions:', err);
+      } finally {
+        setLoading(false);
+      }
+
+      setActiveTab(0); // back to list
+    } catch (error: any) {
+      alert(`Error ${editMode ? 'updating' : 'creating'} expression: ${error?.message || error}`);
+    }
+  };
+
+  const handleEditClick = async (expr: Expression) => {
+    try {
+      setError(null);
+      const base = process.env.REACT_APP_EXPRESSION_API_URL || 'http://localhost:5004';
+      const resp = await fetch(`${base}/api/expressions/${expr.id}`);
+      const full = resp.ok ? await resp.json() : null;
+      const expressionId = (full && (full.expressionId || full.id)) || (expr as any).expressionId || expr.id;
+      const expressionText = full?.expressionText ?? (full as any)?.code ?? (expr as any).expression ?? '';
+      setFormData({
+        expressionId,
+        name: full?.name ?? (expr as any).name ?? '',
+        description: full?.description ?? (expr as any).description ?? '',
+        category: full?.category ?? (expr as any).category ?? '',
+        subCategory: full?.subCategory ?? (expr as any).subCategory ?? '',
+        expression: expressionText,
+        returnType: full?.returnType ?? 'string',
+        contextType: full?.contextType ?? 'customer',
+        usageType: full?.usageType ?? 'validation',
+        isActive: full?.isActive ?? (expr as any).isActive ?? true
+      });
+      setEditMode(true);
+      setEditId(full?.id ?? expr.id);
+      setActiveTab(1);
+    } catch (e: any) {
+      setError(`Failed to load expression for editing: ${e?.message || e}`);
     }
   };
 
@@ -241,10 +272,46 @@ const SimpleExpressionBuilder: React.FC = () => {
   const loadTestCase = (testCase: string, customData?: any) => {
     if (customData) {
       // If custom data is provided, use it
+            if (editMode) {
+              setEditMode(false);
+              setEditId(null);
+            }
       setTestData(JSON.stringify(customData, null, 2));
-      // Set a default expression based on test case type
+            alert(`Error ${editMode ? 'updating' : 'creating'} expression: ${error}`);
       if (testCase.includes('credit')) {
         setTestExpression(`IF(customer.creditScore >= 750, 'APPROVED', IF(customer.creditScore >= 650, 'MANUAL_REVIEW', 'REJECTED'))`);
+
+        const handleEditClick = async (expr: Expression) => {
+          try {
+            setError(null);
+            const base = process.env.REACT_APP_EXPRESSION_API_URL || 'http://localhost:5004';
+            // Fetch full details for robust mapping
+            const resp = await fetch(`${base}/api/expressions/${expr.id}`);
+            let full: any = null;
+            if (resp.ok) {
+              full = await resp.json();
+            }
+            const expressionId = (full && (full.expressionId || full.id)) || (expr as any).expressionId || expr.id;
+            const expressionText = full?.expressionText ?? (full as any)?.code ?? (expr as any).expression ?? '';
+            setFormData({
+              expressionId,
+              name: full?.name ?? (expr as any).name ?? '',
+              description: full?.description ?? (expr as any).description ?? '',
+              category: full?.category ?? (expr as any).category ?? '',
+              subCategory: full?.subCategory ?? (expr as any).subCategory ?? '',
+              expression: expressionText,
+              returnType: full?.returnType ?? 'string',
+              contextType: full?.contextType ?? 'customer',
+              usageType: full?.usageType ?? 'validation',
+              isActive: full?.isActive ?? (expr as any).isActive ?? true
+            });
+            setEditMode(true);
+            setEditId(full?.id ?? expr.id);
+            setActiveTab(1);
+          } catch (e: any) {
+            setError(`Failed to load expression for editing: ${e?.message || e}`);
+          }
+        };
       } else if (testCase.includes('transaction')) {
         setTestExpression(`IF(OR(transaction.amount > 10000, transaction.isInternational = true), 'HIGH_RISK', 'LOW_RISK')`);
       }
@@ -386,7 +453,7 @@ const SimpleExpressionBuilder: React.FC = () => {
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          <Button size="small" variant="outlined">
+                          <Button size="small" variant="outlined" onClick={() => handleEditClick(expr)}>
                             Edit
                           </Button>
                         </TableCell>
@@ -613,10 +680,10 @@ const SimpleExpressionBuilder: React.FC = () => {
                 <Button 
                   variant="contained" 
                   size="large"
-                  onClick={handleCreateExpression}
+                  onClick={handleSaveExpression}
                   disabled={!formData.name || !formData.expression}
                 >
-                  Create Expression
+                  {editMode ? 'Update Expression' : 'Create Expression'}
                 </Button>
                 <Button 
                   variant="outlined" 
@@ -630,7 +697,7 @@ const SimpleExpressionBuilder: React.FC = () => {
                   size="large"
                   onClick={clearForm}
                 >
-                  Clear Form
+                  {editMode ? 'Cancel Edit' : 'Clear Form'}
                 </Button>
               </Box>
             </Box>

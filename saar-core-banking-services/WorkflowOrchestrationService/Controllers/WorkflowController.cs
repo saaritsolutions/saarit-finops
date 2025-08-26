@@ -173,20 +173,52 @@ namespace WorkflowOrchestrationService.Controllers
 
                 var routingResult = await EvaluateExpressionAsync<dynamic>(routingExpressionId, routingContext);
 
+                // Convert dynamic collections safely to typed structures
+                List<string> autoActions = new();
+                if (routingResult.autoActions != null)
+                {
+                    try
+                    {
+                        // Attempt to serialize/deserialize to List<string>
+                        var json = System.Text.Json.JsonSerializer.Serialize(routingResult.autoActions);
+                        var parsed = System.Text.Json.JsonSerializer.Deserialize<List<string>>(json);
+                        if (parsed != null) autoActions = parsed;
+                    }
+                    catch { /* ignore and keep empty */ }
+                }
+
+                List<string> notifications = new();
+                if (routingResult.notifications != null)
+                {
+                    try
+                    {
+                        var json = System.Text.Json.JsonSerializer.Serialize(routingResult.notifications);
+                        var parsed = System.Text.Json.JsonSerializer.Deserialize<List<string>>(json);
+                        if (parsed != null) notifications = parsed;
+                    }
+                    catch { /* ignore and keep empty */ }
+                }
+
+                Dictionary<string, object> conditions = new();
+                if (routingResult.conditions != null)
+                {
+                    try
+                    {
+                        var json = System.Text.Json.JsonSerializer.Serialize(routingResult.conditions);
+                        var parsed = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(json);
+                        if (parsed != null) conditions = parsed;
+                    }
+                    catch { /* ignore and keep empty */ }
+                }
+
                 return new WorkflowRouting
                 {
                     NextStep = routingResult.nextStep?.ToString() ?? "ERROR",
                     WorkflowStatus = routingResult.status?.ToString() ?? "ERROR",
                     RequiresApproval = routingResult.requiresApproval ?? false,
-                    AutoActions = routingResult.autoActions != null ? 
-                        ((IEnumerable<dynamic>)routingResult.autoActions).Select(a => a.ToString()).ToList() : 
-                        new List<string>(),
-                    Notifications = routingResult.notifications != null ?
-                        ((IEnumerable<dynamic>)routingResult.notifications).Select(n => n.ToString()).ToList() :
-                        new List<string>(),
-                    Conditions = routingResult.conditions != null ?
-                        routingResult.conditions.ToObject<Dictionary<string, object>>() :
-                        new Dictionary<string, object>()
+                    AutoActions = autoActions,
+                    Notifications = notifications,
+                    Conditions = conditions
                 };
             }
             catch (Exception ex)
@@ -261,13 +293,24 @@ namespace WorkflowOrchestrationService.Controllers
 
                 var completionResult = await EvaluateExpressionAsync<dynamic>(completionExpressionId, completionContext);
 
+                // Convert dynamic list for requiredActions
+                List<string> requiredActions = new();
+                if (completionResult.requiredActions != null)
+                {
+                    try
+                    {
+                        var json = System.Text.Json.JsonSerializer.Serialize(completionResult.requiredActions);
+                        var parsed = System.Text.Json.JsonSerializer.Deserialize<List<string>>(json);
+                        if (parsed != null) requiredActions = parsed;
+                    }
+                    catch { /* ignore and keep default */ }
+                }
+
                 return new StepCompletionResult
                 {
                     CanProceed = completionResult.canProceed ?? false,
                     ErrorMessage = completionResult.errorMessage?.ToString(),
-                    RequiredActions = completionResult.requiredActions != null ?
-                        ((IEnumerable<dynamic>)completionResult.requiredActions).Select(a => a.ToString()).ToList() :
-                        new List<string>()
+                    RequiredActions = requiredActions
                 };
             }
             catch (Exception ex)

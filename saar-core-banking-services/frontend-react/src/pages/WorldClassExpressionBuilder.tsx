@@ -193,7 +193,8 @@ const WorldClassExpressionBuilder: React.FC = () => {
 
     try {
       // Call real Gemini AI API through backend
-      const response = await fetch('http://localhost:5001/api/aiexpression/chat', {
+  const base = process.env.REACT_APP_EXPRESSION_API_URL || 'http://localhost:5004';
+  const response = await fetch(`${base}/api/aiexpression/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -260,7 +261,8 @@ const WorldClassExpressionBuilder: React.FC = () => {
     setIsValidating(true);
     
     try {
-      const response = await fetch('http://localhost:5001/api/expressions/validate', {
+  const base = process.env.REACT_APP_EXPRESSION_API_URL || 'http://localhost:5004';
+  const response = await fetch(`${base}/api/expressions/validate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -294,7 +296,8 @@ const WorldClassExpressionBuilder: React.FC = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:5001/api/expressions', {
+  const base = process.env.REACT_APP_EXPRESSION_API_URL || 'http://localhost:5004';
+  const response = await fetch(`${base}/api/expressions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

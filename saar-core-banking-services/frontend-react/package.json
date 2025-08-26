@@ -39,11 +39,11 @@
     "zustand": "^5.0.6"
   },
   "scripts": {
-    "start": "BROWSER=none SKIP_PREFLIGHT_CHECK=true TSC_COMPILE_ON_ERROR=true DISABLE_ESLINT_PLUGIN=true NODE_OPTIONS=\"--max-old-space-size=8192\" react-scripts start",
-    "start-no-ts": "BROWSER=none SKIP_PREFLIGHT_CHECK=true TSC_COMPILE_ON_ERROR=true DISABLE_ESLINT_PLUGIN=true GENERATE_SOURCEMAP=false DISABLE_NEW_JSX_TRANSFORM=true NODE_OPTIONS=\"--max-old-space-size=4096\" REACT_APP_TS_NODE_PROJECT=false react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+  "start": "PORT=3001 BROWSER=none SKIP_PREFLIGHT_CHECK=true TSC_COMPILE_ON_ERROR=true DISABLE_ESLINT_PLUGIN=true NODE_OPTIONS=\"--max-old-space-size=8192\" craco start",
+  "start-no-ts": "PORT=3001 BROWSER=none SKIP_PREFLIGHT_CHECK=true TSC_COMPILE_ON_ERROR=true DISABLE_ESLINT_PLUGIN=true GENERATE_SOURCEMAP=false DISABLE_NEW_JSX_TRANSFORM=true NODE_OPTIONS=\"--max-old-space-size=4096\" REACT_APP_TS_NODE_PROJECT=false craco start",
+  "build": "craco build",
+  "test": "craco test",
+  "eject": "react-scripts eject"
   },
   "eslintConfig": {
     "extends": [
@@ -64,9 +64,11 @@
     ]
   },
   "devDependencies": {
+  "@craco/craco": "^7.1.0",
     "@tanstack/react-query-devtools": "^5.83.0",
     "@types/testing-library__jest-dom": "^5.14.9",
     "@types/uuid": "^10.0.0",
+  "craco-alias": "^3.0.1",
     "cypress": "^14.5.4",
     "jest-environment-jsdom": "^29.7.0",
     "msw": "^2.10.4"

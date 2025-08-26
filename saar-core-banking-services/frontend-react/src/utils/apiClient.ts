@@ -12,9 +12,9 @@ export class ApiClient {
   private baseURL: string;
 
   constructor(baseURL?: string) {
-  // Default to the ExpressionBuilderService running on http://localhost:5001
+  // Default to the ExpressionBuilderService running on http://localhost:5004
   // Can be overridden via REACT_APP_EXPRESSION_API_URL
-  this.baseURL = baseURL || process.env.REACT_APP_EXPRESSION_API_URL || 'http://localhost:5001';
+  this.baseURL = baseURL || process.env.REACT_APP_EXPRESSION_API_URL || 'http://localhost:5004';
     
     this.axiosInstance = axios.create({
       baseURL: this.baseURL,

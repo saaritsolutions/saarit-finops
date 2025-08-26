@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { CircularProgress, Box } from '@mui/material';
 import { ProtectedRoute, PublicRoute, BANKING_PERMISSIONS } from './ProtectedRoute';
 import Layout from '../components/layout/Layout';
@@ -12,6 +12,8 @@ const AccountManagement = lazy(() => import('../features/account/AccountManageme
 const TransactionManagement = lazy(() => import('../features/transaction/TransactionManagement'));
 const LoanManagement = lazy(() => import('../features/loan/LoanManagement'));
 const Reports = lazy(() => import('../features/reports/Reports'));
+const LoanOrigination = lazy(() => import('../pages/LoanOrigination'));
+const AdminConfig = lazy(() => import('../pages/AdminConfig'));
 const UserManagement = lazy(() => import('../features/admin/UserManagement'));
 const Settings = lazy(() => import('../features/settings/Settings'));
 const ExpressionBuilder = lazy(() => import('../pages/ExpressionBuilder'));
@@ -148,6 +150,17 @@ export const AppRouter: React.FC = () => {
               </MicroFrontendRoute>
             }
           />
+          <Route
+            path="loans/new"
+            element={
+              <ProtectedRoute requiredPermission={BANKING_PERMISSIONS.LOAN_CREATE}>
+                <LoanOrigination />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="admin/config"
+            element={<ProtectedRoute requiredPermission={BANKING_PERMISSIONS.SYSTEM_CONFIG}><AdminConfig /></ProtectedRoute>} />
           
           {/* Reports */}
           <Route

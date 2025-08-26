@@ -102,6 +102,14 @@ builder.Services.AddCors(options =>
                 "https://localhost:3000", 
                 "http://localhost:3001", 
                 "https://localhost:3001",
+                "http://localhost:3002",
+                "https://localhost:3002",
+                "http://127.0.0.1:3000",
+                "https://127.0.0.1:3000",
+                "http://127.0.0.1:3001",
+                "https://127.0.0.1:3001",
+                "http://127.0.0.1:3002",
+                "https://127.0.0.1:3002",
                 "http://192.168.1.10:3000",
                 "https://192.168.1.10:3000",
                 "http://192.168.1.10:3001",
@@ -156,4 +164,5 @@ catch (Exception dbEx)
 
 Log.Information("Expression Builder Service starting up...");
 
-app.Run("http://localhost:5001");
+// Honor hosting configuration/args (ASPNETCORE_URLS, --urls, etc.)
+app.Run();
