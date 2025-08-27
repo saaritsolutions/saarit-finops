@@ -66,9 +66,14 @@ namespace LoanService.Services
 
         public async Task<string> EvaluateLoanEligibilityAsync(string customerId, decimal loanAmount, Dictionary<string, object> customerData)
         {
-            // Use the loan eligibility expression we created
-            const string LOAN_ELIGIBILITY_EXPRESSION = "EXPR_1755237353842";
-            
+            // Fetch latest active eligibility rule from ExpressionBuilderService
+            var response = await _httpClient.GetAsync("http://localhost:5004/api/expressions?category=Validation&status=Active&usageType=Validation&page=1&pageSize=1");
+            response.EnsureSuccessStatusCode();
+            var data = await response.Content.ReadFromJsonAsync<ExpressionListResponse>();
+            var latestExpr = data?.expressions?.FirstOrDefault();
+            if (latestExpr == null)
+                throw new Exception("No active loan eligibility rule found");
+
             var context = new Dictionary<string, object>
             {
                 ["customer.creditScore"] = customerData["creditScore"],
@@ -78,7 +83,7 @@ namespace LoanService.Services
                 ["customer.id"] = customerId
             };
 
-            return await EvaluateExpressionAsync<string>(LOAN_ELIGIBILITY_EXPRESSION, context);
+            return await EvaluateExpressionAsync<string>(latestExpr.expressionId, context);
         }
 
         public async Task<decimal> CalculateInterestRateAsync(string productId, Dictionary<string, object> loanContext)
@@ -90,13 +95,26 @@ namespace LoanService.Services
         }
     }
 
-    public class ExpressionExecutionResponse
-    {
-        public bool Success { get; set; }
-        public object Result { get; set; }
-        public string ResultType { get; set; }
-        public int ExecutionTimeMs { get; set; }
-        public string ErrorMessage { get; set; }
-        public DateTime ExecutedAt { get; set; }
-    }
+// DTOs for expression list response
+public class ExpressionListResponse
+{
+    public List<ExpressionResponse> expressions { get; set; }
+}
+
+public class ExpressionResponse
+{
+    public string expressionId { get; set; }
+    // Add other fields as needed
+}
+
+public class ExpressionExecutionResponse
+{
+    public bool Success { get; set; }
+    public object Result { get; set; }
+    public string ResultType { get; set; }
+    public int ExecutionTimeMs { get; set; }
+    public string ErrorMessage { get; set; }
+    public DateTime ExecutedAt { get; set; }
+}
+
 }

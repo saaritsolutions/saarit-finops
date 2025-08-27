@@ -197,8 +197,8 @@ public class RoslynExpressionEngine : IExpressionEngine
         {
             _logger.LogInformation("Compiling expression for context: {ContextType}, return: {ReturnType}", contextType, returnType);
 
-            // Generate the wrapper class code
-            var generatedCode = GenerateWrapperCode(expressionText, contextType, returnType);
+            // Generate the wrapper class code (may analyze expression asynchronously)
+            var generatedCode = await GenerateWrapperCodeAsync(expressionText, contextType, returnType);
 
             // Create syntax tree
             var syntaxTree = CSharpSyntaxTree.ParseText(generatedCode);
@@ -233,6 +233,19 @@ public class RoslynExpressionEngine : IExpressionEngine
                     .Where(d => d.Severity == DiagnosticSeverity.Warning)
                     .Select(d => d.ToString())
                     .ToList();
+
+                // Log the generated code to help debug Roslyn errors in Development
+                try
+                {
+                    _logger.LogError("Expression compilation failed. Diagnostics: {Errors}", string.Join("; ", errors));
+                    _logger.LogDebug("Generated expression wrapper code:\n{Code}", generatedCode);
+                }
+                catch { /* ignore logging errors */ }
+
+                // Include generated code as an additional error entry for consumers in Development
+                errors.Add("--- Generated code start ---");
+                errors.Add(generatedCode);
+                errors.Add("--- Generated code end ---");
 
                 return new CompilationResult
                 {
@@ -275,6 +288,64 @@ public class RoslynExpressionEngine : IExpressionEngine
         }
     }
 
+    private string GenerateVariableDeclarations(IEnumerable<string> variableNames)
+    {
+        // Start with some common defaults
+        var sb = new StringBuilder();
+        sb.AppendLine("// Dynamic variables will be injected here");
+        sb.AppendLine("var amount = variables.ContainsKey(\"amount\") ? Convert.ToDecimal(variables[\"amount\"]) : 0m;");
+        sb.AppendLine("var rate = variables.ContainsKey(\"rate\") ? Convert.ToDecimal(variables[\"rate\"]) : 0m;");
+        sb.AppendLine("var days = variables.ContainsKey(\"days\") ? Convert.ToInt32(variables[\"days\"]) : 0;");
+
+        // Inject any discovered variables (avoid duplicates and known defaults)
+        // don't emit declarations that will collide with context variables
+        var defaults = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "amount", "rate", "days" };
+        var reservedContextNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "customer", "account", "transaction", "loan", "contextobj", "context" };
+        // Avoid creating locals that match available function names or logical operator helpers
+        var functionNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            foreach (var fn in _bankingFunctions.GetAvailableFunctions()) functionNames.Add(fn);
+        }
+        catch { }
+        // Add the built-in logical operator names
+        functionNames.Add("IF");
+        functionNames.Add("AND");
+        functionNames.Add("OR");
+        functionNames.Add("NOT");
+        foreach (var name in variableNames.Where(n => !string.IsNullOrWhiteSpace(n)))
+        {
+            if (defaults.Contains(name)) continue;
+            if (reservedContextNames.Contains(name))
+            {
+                // skip generating a local for a name that's already provided by the context
+                continue;
+            }
+            if (functionNames.Contains(name))
+            {
+                // skip generating a local for names that correspond to functions/operators
+                continue;
+            }
+            // Simple heuristics: integer-like names -> int, ratio/percent/income/balance -> decimal, otherwise object
+            var lower = name.ToLowerInvariant();
+            if (lower.Contains("count") || lower.Contains("age") || lower.Contains("score") || lower.EndsWith("id"))
+            {
+                sb.AppendLine($"var {name} = variables.ContainsKey(\"{name}\") ? Convert.ToInt32(variables[\"{name}\"]) : 0;");
+            }
+            else if (lower.Contains("ratio") || lower.Contains("income") || lower.Contains("amount") || lower.Contains("balance") || lower.Contains("rate") || lower.Contains("percent") || lower.Contains("decimal"))
+            {
+                sb.AppendLine($"var {name} = variables.ContainsKey(\"{name}\") ? Convert.ToDecimal(variables[\"{name}\"]) : 0m;");
+            }
+            else
+            {
+                // fallback to object/string
+                sb.AppendLine($"var {name} = variables.ContainsKey(\"{name}\") ? variables[\"{name}\"] : null;");
+            }
+        }
+
+        return sb.ToString();
+    }
+
     public async Task<ExpressionMetadata> AnalyzeExpressionAsync(string expressionText, string contextType)
     {
         try
@@ -300,13 +371,17 @@ public class RoslynExpressionEngine : IExpressionEngine
         }
     }
 
-    private string GenerateWrapperCode(string expressionText, string contextType, string returnType)
+    private async Task<string> GenerateWrapperCodeAsync(string expressionText, string contextType, string returnType)
     {
         var contextTypeName = GetContextTypeName(contextType);
         var returnTypeName = GetReturnTypeName(returnType);
 
         // Preprocess the expression text to handle string literals
         var processedExpression = PreprocessExpression(expressionText);
+
+        // Analyze expression to discover used variables so we can declare locals
+        var metadata = await AnalyzeExpressionAsync(expressionText, contextType);
+        var variableDecls = GenerateVariableDeclarations(metadata?.Variables?.Keys ?? Enumerable.Empty<string>());
 
         return $@"
 using System;
@@ -350,7 +425,7 @@ namespace DynamicExpression
             var banking = _banking;
 
             // Expression variables
-            {GenerateVariableDeclarations()}
+            {variableDecls}
 
             // The actual expression
             return ({returnTypeName})({processedExpression});
@@ -389,6 +464,10 @@ namespace DynamicExpression
             var amount = variables.ContainsKey(""amount"") ? Convert.ToDecimal(variables[""amount""]) : 0m;
             var rate = variables.ContainsKey(""rate"") ? Convert.ToDecimal(variables[""rate""]) : 0m;
             var days = variables.ContainsKey(""days"") ? Convert.ToInt32(variables[""days""]) : 0;
+                // Common loan/customer aliases injected from flat variables
+                var creditScore = variables.ContainsKey(""creditScore"") ? Convert.ToInt32(variables[""creditScore""]) : 0;
+                var monthlyIncome = variables.ContainsKey(""monthlyIncome"") ? Convert.ToDecimal(variables[""monthlyIncome""]) : 0m;
+                var debtToIncomeRatio = variables.ContainsKey(""debtToIncomeRatio"") ? Convert.ToDecimal(variables[""debtToIncomeRatio""]) : 0m;
         ";
     }
 

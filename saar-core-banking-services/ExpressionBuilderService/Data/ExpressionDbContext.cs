@@ -269,7 +269,8 @@ public class ExpressionDbContext : DbContext
                   .HasMaxLength(500);
 
             entity.Property(e => e.IPAddress)
-                  .HasMaxLength(45); // IPv6 max length
+                  .HasColumnName("IPAddress")
+                  .HasColumnType("inet");
 
             entity.Property(e => e.ExecutedAt)
                   .IsRequired()

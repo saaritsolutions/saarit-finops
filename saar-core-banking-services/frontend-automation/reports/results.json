@@ -1,0 +1,355 @@
+{
+  "config": {
+    "configFile": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/playwright.config.js",
+    "rootDir": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/tests",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "html",
+        {
+          "outputFolder": "reports/html-report"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "reports/results.json"
+        }
+      ],
+      [
+        "list",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "demo-full",
+        "name": "demo-full",
+        "testDir": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 120000
+      },
+      {
+        "outputDir": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "demo-rehearsal",
+        "name": "demo-rehearsal",
+        "testDir": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 120000
+      },
+      {
+        "outputDir": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 120000
+      },
+      {
+        "outputDir": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 120000
+      },
+      {
+        "outputDir": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "webkit",
+        "name": "webkit",
+        "testDir": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 120000
+      },
+      {
+        "outputDir": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "Mobile Chrome",
+        "name": "Mobile Chrome",
+        "testDir": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 120000
+      },
+      {
+        "outputDir": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "Mobile Safari",
+        "name": "Mobile Safari",
+        "testDir": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 120000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.55.0",
+    "workers": 4,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "production-ready-e2e.spec.js",
+      "file": "production-ready-e2e.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "SaaR Banking - Production Ready E2E Scenarios",
+          "file": "production-ready-e2e.spec.js",
+          "line": 6,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Production Scenario 1: Dynamic Credit Score Expression Changes",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 180000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 18103,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: not \u001b[32m\"pre-validate failed\"\u001b[39m\nReceived string:        \u001b[31m\"\u001b[7mpre-validate failed\u001b[27m\"\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: not \u001b[32m\"pre-validate failed\"\u001b[39m\nReceived string:        \u001b[31m\"\u001b[7mpre-validate failed\u001b[27m\"\u001b[39m\n    at /Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/tests/production-ready-e2e.spec.js:444:55\n    at /Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/tests/production-ready-e2e.spec.js:373:5",
+                        "location": {
+                          "file": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/tests/production-ready-e2e.spec.js",
+                          "column": 55,
+                          "line": 444
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 442 |\u001b[39m         \u001b[90m// Mark test as failed if the new rule did not apply (pre-validate still failed)\u001b[39m\n \u001b[90m 443 |\u001b[39m         \u001b[36mtry\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 444 |\u001b[39m           expect(eligibilityResult\u001b[33m.\u001b[39mtoLowerCase())\u001b[33m.\u001b[39mnot\u001b[33m.\u001b[39mtoContain(\u001b[32m'pre-validate failed'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                                       \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 445 |\u001b[39m         } \u001b[36mcatch\u001b[39m (err) {\n \u001b[90m 446 |\u001b[39m           console\u001b[33m.\u001b[39merror(\u001b[32m'   ❌ Step 3 failed: Pre-validate did not reflect new rule'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 447 |\u001b[39m           \u001b[36mthrow\u001b[39m err\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/tests/production-ready-e2e.spec.js",
+                            "column": 55,
+                            "line": 444
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: not \u001b[32m\"pre-validate failed\"\u001b[39m\nReceived string:        \u001b[31m\"\u001b[7mpre-validate failed\u001b[27m\"\u001b[39m\n\n\u001b[0m \u001b[90m 442 |\u001b[39m         \u001b[90m// Mark test as failed if the new rule did not apply (pre-validate still failed)\u001b[39m\n \u001b[90m 443 |\u001b[39m         \u001b[36mtry\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 444 |\u001b[39m           expect(eligibilityResult\u001b[33m.\u001b[39mtoLowerCase())\u001b[33m.\u001b[39mnot\u001b[33m.\u001b[39mtoContain(\u001b[32m'pre-validate failed'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                                       \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 445 |\u001b[39m         } \u001b[36mcatch\u001b[39m (err) {\n \u001b[90m 446 |\u001b[39m           console\u001b[33m.\u001b[39merror(\u001b[32m'   ❌ Step 3 failed: Pre-validate did not reflect new rule'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 447 |\u001b[39m           \u001b[36mthrow\u001b[39m err\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/tests/production-ready-e2e.spec.js:444:55\u001b[22m\n\u001b[2m    at /Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/tests/production-ready-e2e.spec.js:373:5\u001b[22m"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "🎯 PRODUCTION SCENARIO 1: Dynamic Credit Score Expression Impact\n"
+                        },
+                        {
+                          "text": "📋 Demonstrating real business rule changes with actual UI interactions\n"
+                        },
+                        {
+                          "text": "======================================================================\n"
+                        },
+                        {
+                          "text": "\n🏦 === STEP 1: INITIAL LOAN APPLICATION ===\n"
+                        },
+                        {
+                          "text": "   🔧 Attempted to close side navigation with Escape key\n"
+                        },
+                        {
+                          "text": "   📋 Michael Chen Profile: Credit Score 720, Income ₹60,000\n"
+                        },
+                        {
+                          "text": "   📊 Loan Amount: ₹5,00,000 for 24 months\n"
+                        },
+                        {
+                          "text": "   📊 Current Rule Result: Pre-validate failed\n"
+                        },
+                        {
+                          "text": "   ✅ Initial application completed under current rules\n"
+                        },
+                        {
+                          "text": "\n🔧 === STEP 2: BUSINESS RULE MODIFICATION ===\n"
+                        },
+                        {
+                          "text": "   🔧 Attempted to close side navigation with Escape key\n"
+                        },
+                        {
+                          "text": "   📋 Accessing Expression Builder for credit rules...\n"
+                        },
+                        {
+                          "text": "   📋 Current Rule: Credit Score > 750 for approval\n"
+                        },
+                        {
+                          "text": "   📋 New Rule: Credit Score > 700 for approval (More lenient)\n"
+                        },
+                        {
+                          "text": "   ✅ Save button Id: btn-save\n"
+                        },
+                        {
+                          "text": "   ✅ Save feedback: Expression saved successfully\n"
+                        },
+                        {
+                          "text": "   📋 Narrator: \"Credit score requirement lowered from 750 to 700\"\n"
+                        },
+                        {
+                          "text": "\n🏦 === STEP 3: NEW LOAN APPLICATION ===\n"
+                        },
+                        {
+                          "text": "   🔧 Attempted to close side navigation with Escape key\n"
+                        },
+                        {
+                          "text": "   📋 Same Profile: Michael Chen - Testing under new rules\n"
+                        },
+                        {
+                          "text": "   📊 New Rule Result: Pre-validate failed\n"
+                        }
+                      ],
+                      "stderr": [
+                        {
+                          "text": "   ❌ Step 3 failed: Pre-validate did not reflect new rule\n"
+                        }
+                      ],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "Step 1: Create initial loan application",
+                          "duration": 8458
+                        },
+                        {
+                          "title": "Step 2: Modify credit score business rules",
+                          "duration": 3306
+                        },
+                        {
+                          "title": "Step 3: Apply same profile under new rules",
+                          "duration": 6004,
+                          "error": {
+                            "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: not \u001b[32m\"pre-validate failed\"\u001b[39m\nReceived string:        \u001b[31m\"\u001b[7mpre-validate failed\u001b[27m\"\u001b[39m",
+                            "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: not \u001b[32m\"pre-validate failed\"\u001b[39m\nReceived string:        \u001b[31m\"\u001b[7mpre-validate failed\u001b[27m\"\u001b[39m\n    at /Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/tests/production-ready-e2e.spec.js:444:55\n    at /Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/tests/production-ready-e2e.spec.js:373:5",
+                            "location": {
+                              "file": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/tests/production-ready-e2e.spec.js",
+                              "column": 55,
+                              "line": 444
+                            },
+                            "snippet": "\u001b[0m \u001b[90m 442 |\u001b[39m         \u001b[90m// Mark test as failed if the new rule did not apply (pre-validate still failed)\u001b[39m\n \u001b[90m 443 |\u001b[39m         \u001b[36mtry\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 444 |\u001b[39m           expect(eligibilityResult\u001b[33m.\u001b[39mtoLowerCase())\u001b[33m.\u001b[39mnot\u001b[33m.\u001b[39mtoContain(\u001b[32m'pre-validate failed'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                                       \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 445 |\u001b[39m         } \u001b[36mcatch\u001b[39m (err) {\n \u001b[90m 446 |\u001b[39m           console\u001b[33m.\u001b[39merror(\u001b[32m'   ❌ Step 3 failed: Pre-validate did not reflect new rule'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 447 |\u001b[39m           \u001b[36mthrow\u001b[39m err\u001b[33m;\u001b[39m\u001b[0m"
+                          }
+                        }
+                      ],
+                      "startTime": "2025-08-27T08:46:29.226Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/test-results/production-ready-e2e-SaaR--e736c-it-Score-Expression-Changes-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/test-results/production-ready-e2e-SaaR--e736c-it-Score-Expression-Changes-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/test-results/production-ready-e2e-SaaR--e736c-it-Score-Expression-Changes-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/tests/production-ready-e2e.spec.js",
+                        "column": 55,
+                        "line": 444
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "d386f02d2102898fade5-1edc1796e0be1e259e22",
+              "file": "production-ready-e2e.spec.js",
+              "line": 202,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-08-27T08:46:28.850Z",
+    "duration": 18751.4,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 1,
+    "flaky": 0
+  }
+}

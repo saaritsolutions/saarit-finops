@@ -1,0 +1,47 @@
+{
+  "name": "saar-banking-demo-automation",
+  "version": "1.0.0",
+  "description": "Playwright-based frontend automation for SaaR Banking investor demo",
+  "scripts": {
+    "demo:full": "npx playwright test --config=playwright.config.js --project=demo-full --headed",
+    "demo:rehearsal": "npx playwright test tests/investor-rehearsal.spec.js --headed",
+    "demo:expressions": "npx playwright test tests/expression-builder.spec.js --headed",
+    "demo:loans": "npx playwright test tests/loan-application.spec.js --headed",
+    "demo:forms": "npx playwright test tests/dynamic-forms.spec.js --headed",
+    "demo:health": "npx playwright test tests/health-check.spec.js",
+    "demo:all": "npx playwright test --headed",
+    "demo:validate": "npx playwright test tests/health-check.spec.js tests/expression-builder.spec.js tests/loan-application.spec.js tests/dynamic-forms.spec.js",
+    "demo:investor": "npx playwright test tests/investor-demo-complete.spec.js --project=demo-full",
+    "demo:complete": "npx playwright test tests/complete-demo-suite.spec.js --project=demo-full",
+    "demo:working": "npx playwright test tests/loan-working-demo.spec.js --project=demo-full",
+    "demo:advanced": "npx playwright test tests/advanced-e2e-scenarios.spec.js --project=demo-full",
+    "demo:advanced:optimized": "npx playwright test tests/advanced-e2e-optimized.spec.js --project=demo-full",
+    "demo:advanced:credit": "npx playwright test tests/advanced-e2e-optimized.spec.js --project=demo-full --grep 'Credit Score Expression'",
+    "demo:advanced:forms": "npx playwright test tests/advanced-e2e-optimized.spec.js --project=demo-full --grep 'Form Configuration'",
+    "demo:advanced:workflow": "npx playwright test tests/advanced-e2e-optimized.spec.js --project=demo-full --grep 'Workflow Configuration'",
+    "demo:production": "npx playwright test tests/production-ready-e2e.spec.js --project=demo-full",
+    "demo:production:credit": "npx playwright test tests/production-ready-e2e.spec.js --project=demo-full --grep 'Credit Score Expression'",
+    "demo:production:forms": "npx playwright test tests/production-ready-e2e.spec.js --project=demo-full --grep 'Form Field Management'",
+    "demo:production:workflow": "npx playwright test tests/production-ready-e2e.spec.js --project=demo-full --grep 'Workflow Management'",
+    "demo:production:full": "npx playwright test tests/production-ready-e2e.spec.js --project=demo-full --grep 'Business Value Summary'",
+    "demo:production:clean": "npx playwright test tests/production-e2e-clean.spec.js --project=demo-full",
+    "demo:production:clean:credit": "npx playwright test tests/production-e2e-clean.spec.js --project=demo-full --grep 'Credit Score Expression'",
+    "demo:production:clean:summary": "npx playwright test tests/production-e2e-clean.spec.js --project=demo-full --grep 'Platform Agility Summary'",
+    "demo:record": "npx playwright codegen http://localhost:3001",
+    "test": "npx playwright test",
+    "test:headed": "npx playwright test --headed",
+    "test:ui": "npx playwright test --ui"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.40.0",
+    "chalk": "^4.1.2",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=16"
+  },
+  "keywords": ["demo", "automation", "banking", "playwright", "frontend"],
+  "author": "SaaR Banking Team",
+  "license": "ISC"
+}
