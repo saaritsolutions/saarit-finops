@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
+using System.Net;
 
 namespace ExpressionBuilderService.Models;
 
@@ -147,7 +148,7 @@ public class ExpressionExecutionLog
     [MaxLength(500)]
     public string? UserAgent { get; set; }
     
-    public string? IPAddress { get; set; }
+    public IPAddress? IPAddress { get; set; }
     
     // JSON properties
     private string _inputVariables = "{}";

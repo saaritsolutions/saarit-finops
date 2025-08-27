@@ -284,6 +284,9 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
         </Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
+            id="btn-help"
+            name="help"
+            data-testid="btn-help"
             startIcon={<Help />}
             onClick={() => setShowHelp(true)}
             variant="outlined"
@@ -294,6 +297,9 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
           {isEditing && (
             <>
               <LoadingButton
+                id="btn-validate"
+                name="validate"
+                data-testid="btn-validate"
                 startIcon={<PlayArrow />}
                 onClick={handleValidateExpression}
                 loading={validating}
@@ -303,6 +309,9 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
                 Validate
               </LoadingButton>
               <Button
+                id="btn-cancel"
+                name="cancel"
+                data-testid="btn-cancel"
                 onClick={onCancel}
                 variant="outlined"
                 size="small"
@@ -311,6 +320,9 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
                 Cancel
               </Button>
               <LoadingButton
+                id="btn-save"
+                name="save"
+                data-testid="btn-save"
                 onClick={handleSave}
                 loading={loading}
                 variant="contained"
@@ -481,7 +493,7 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
             
             <TextField
               id="expression-text"
-              label="Expression Text"
+              label="Expression Code"
               value={formData.expressionText}
               onChange={(e) => handleInputChange('expressionText', e.target.value)}
               disabled={!isEditing}
@@ -489,6 +501,10 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
               rows={8}
               fullWidth
               required
+              inputProps={{
+                'data-testid': 'expression-editor',
+                name: 'expression-text'
+              }}
               sx={{ 
                 mb: 2,
                 '& .MuiInputBase-input': { 

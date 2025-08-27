@@ -426,7 +426,7 @@ public class SecuritySyntaxWalker : CSharpSyntaxWalker
         if (!string.IsNullOrEmpty(namespaceName) && !_securityValidator.IsNamespaceAllowed(namespaceName))
         {
             _result.IsSecure = false;
-            _result.SecurityViolations.Add($"Blocked namespace: {namespaceName}");
+            _result.SecurityViolations.Add($"Blocked namespace: {namespaceName} -- node: {node.ToString()}");
         }
 
         base.VisitUsingDirective(node);
@@ -436,11 +436,18 @@ public class SecuritySyntaxWalker : CSharpSyntaxWalker
     {
         var identifier = node.Identifier.Text;
 
-        // Check for blocked type names
+        // If identifier appears to be a variable name (starts with lowercase), skip type checks
+        if (!string.IsNullOrEmpty(identifier) && char.IsLower(identifier[0]))
+        {
+            base.VisitIdentifierName(node);
+            return;
+        }
+
+        // Check for blocked type names (keep strict for types and globals)
         if (!_securityValidator.IsTypeAllowed(identifier))
         {
             _result.IsSecure = false;
-            _result.SecurityViolations.Add($"Blocked type: {identifier}");
+            _result.SecurityViolations.Add($"Blocked type: {identifier} -- node: {node.ToString()} (kind: {node.Kind()})");
         }
 
         base.VisitIdentifierName(node);
@@ -457,7 +464,7 @@ public class SecuritySyntaxWalker : CSharpSyntaxWalker
             if (!_securityValidator.IsMethodCallSafe(methodName, typeName))
             {
                 _result.IsSecure = false;
-                _result.SecurityViolations.Add($"Unsafe method call: {typeName}.{methodName}");
+                _result.SecurityViolations.Add($"Unsafe method call: {typeName}.{methodName} -- node: {memberAccess.ToString()}");
             }
         }
         else if (node.Expression is IdentifierNameSyntax identifier)
@@ -466,7 +473,7 @@ public class SecuritySyntaxWalker : CSharpSyntaxWalker
             if (!_securityValidator.IsMethodCallSafe(methodName, ""))
             {
                 _result.IsSecure = false;
-                _result.SecurityViolations.Add($"Unsafe method call: {methodName}");
+                _result.SecurityViolations.Add($"Unsafe method call: {methodName} -- node: {identifier.ToString()}");
             }
         }
 

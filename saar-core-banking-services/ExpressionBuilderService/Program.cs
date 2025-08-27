@@ -95,30 +95,46 @@ builder.Services.AddScoped<IGeminiAIService, GeminiAIService>();
 // CORS configuration for React frontend
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("ReactFrontend", policy =>
+    // In development allow all local origins to simplify testing (keeps AllowCredentials).
+    // In production/staging keep the explicit allow-list.
+    if (builder.Environment.IsDevelopment())
     {
-        policy.WithOrigins(
-                "http://localhost:3000", 
-                "https://localhost:3000", 
-                "http://localhost:3001", 
-                "https://localhost:3001",
-                "http://localhost:3002",
-                "https://localhost:3002",
-                "http://127.0.0.1:3000",
-                "https://127.0.0.1:3000",
-                "http://127.0.0.1:3001",
-                "https://127.0.0.1:3001",
-                "http://127.0.0.1:3002",
-                "https://127.0.0.1:3002",
-                "http://192.168.1.10:3000",
-                "https://192.168.1.10:3000",
-                "http://192.168.1.10:3001",
-                "https://192.168.1.10:3001"
-              )
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
-    });
+        options.AddPolicy("ReactFrontend", policy =>
+        {
+            policy
+                .SetIsOriginAllowed(origin => true)
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        });
+    }
+    else
+    {
+        options.AddPolicy("ReactFrontend", policy =>
+        {
+            policy.WithOrigins(
+                    "http://localhost:3000",
+                    "https://localhost:3000",
+                    "http://localhost:3001",
+                    "https://localhost:3001",
+                    "http://localhost:3002",
+                    "https://localhost:3002",
+                    "http://127.0.0.1:3000",
+                    "https://127.0.0.1:3000",
+                    "http://127.0.0.1:3001",
+                    "https://127.0.0.1:3001",
+                    "http://127.0.0.1:3002",
+                    "https://127.0.0.1:3002",
+                    "http://192.168.1.10:3000",
+                    "https://192.168.1.10:3000",
+                    "http://192.168.1.10:3001",
+                    "https://192.168.1.10:3001"
+                  )
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        });
+    }
 });
 
 // JWT Authentication (placeholder - integrate with your existing auth)

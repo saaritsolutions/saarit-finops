@@ -271,11 +271,35 @@ public class ExpressionService : IExpressionService
         {
             _logger.LogInformation("Validating expression for tenant {TenantId}", tenantId);
 
-            return await _expressionEngine.ValidateExpressionAsync(
+            // Run standard validation
+            var validation = await _expressionEngine.ValidateExpressionAsync(
                 request.ExpressionText,
                 request.ContextType,
                 request.ReturnType,
                 request.Variables);
+
+            // In Development, include generated code when validation failed to aid debugging
+            var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+            if (!validation.IsValid && env.Equals("Development", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var compile = await _expressionEngine.CompileExpressionAsync(request.ExpressionText, request.ContextType, request.ReturnType);
+                    if (compile != null && !string.IsNullOrEmpty(compile.GeneratedCode))
+                    {
+                        validation.Errors = validation.Errors ?? new List<string>();
+                        validation.Errors.Add("--- Generated code start ---");
+                        validation.Errors.Add(compile.GeneratedCode);
+                        validation.Errors.Add("--- Generated code end ---");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to compile expression for debug output");
+                }
+            }
+
+            return validation;
         }
         catch (Exception ex)
         {
@@ -316,7 +340,7 @@ public class ExpressionService : IExpressionService
                 expression.ContextType,
                 request.Variables);
 
-            // Log the execution
+            // Log the execution (capture JSON to help debug serialization issues)
             var executionLog = new ExpressionExecutionLog
             {
                 ExpressionDefinitionId = expression.Id,
@@ -332,8 +356,42 @@ public class ExpressionService : IExpressionService
                 Success = result.Success,
                 ErrorMessage = result.ErrorMessage,
                 InputVariables = request.Variables,
-                ExecutionResult = result.Result != null ? new Dictionary<string, object> { { "result", result.Result } } : new Dictionary<string, object>()
+                ExecutionResult = result.Result != null ? new Dictionary<string, object> { { "result", result.Result } } : new Dictionary<string, object>(),
+                IPAddress = GetValidIpAddress(request)
             };
+
+        // Helper to safely extract and validate IP address
+        static System.Net.IPAddress? GetValidIpAddress(ExpressionExecutionRequest req)
+        {
+            if (req == null) return null;
+
+            // Prefer explicit ExecutionContext if it looks like an IP
+            if (!string.IsNullOrWhiteSpace(req.ExecutionContext) && System.Net.IPAddress.TryParse(req.ExecutionContext, out var parsedFromContext))
+            {
+                return parsedFromContext;
+            }
+
+            // Sometimes IP may be provided in variables or metadata, try common keys
+            if (req.Variables != null)
+            {
+                try
+                {
+                    if (req.Variables.TryGetValue("ipAddress", out var ipObj) && ipObj != null)
+                    {
+                        var ipStr = ipObj.ToString();
+                        if (System.Net.IPAddress.TryParse(ipStr, out var parsed)) return parsed;
+                    }
+                    if (req.Variables.TryGetValue("ip", out var ipObj2) && ipObj2 != null)
+                    {
+                        var ipStr = ipObj2.ToString();
+                        if (System.Net.IPAddress.TryParse(ipStr, out var parsed2)) return parsed2;
+                    }
+                }
+                catch { /* ignore parsing errors */ }
+            }
+
+            return null;
+        }
 
             _context.ExpressionExecutionLogs.Add(executionLog);
 
@@ -346,7 +404,33 @@ public class ExpressionService : IExpressionService
             }
             expression.LastExecutionAt = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync();
+            // Try to persist execution and capture DB-level errors for debugging
+            try
+            {
+                // Attempt to serialize input variables & result for debug log (won't throw)
+                try
+                {
+                    var ivJson = System.Text.Json.JsonSerializer.Serialize(request.Variables);
+                    var erJson = System.Text.Json.JsonSerializer.Serialize(executionLog.ExecutionResult);
+                    _logger.LogDebug("Persisting execution log for {ExpressionId}. InputVariables: {InputVars}, ExecutionResult: {ExecResult}", request.ExpressionId, ivJson, erJson);
+                }
+                catch { /* ignore serialization debug failures */ }
+
+                await _context.SaveChangesAsync();
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException dbEx)
+            {
+                // Log full DB exception and return a helpful execution response for debugging
+                _logger.LogError(dbEx, "Failed to save execution log for expression {ExpressionId}. DbUpdateException", request.ExpressionId);
+                var inner = dbEx.InnerException?.Message;
+                return new ExpressionExecutionResponse
+                {
+                    Success = false,
+                    ErrorMessage = $"DbUpdateException saving execution log: {dbEx.Message}" + (inner != null ? $" | Inner: {inner}" : string.Empty),
+                    ExecutedAt = DateTime.UtcNow,
+                    ExecutionTimeMs = (int)(DateTime.UtcNow - executionStartTime).TotalMilliseconds
+                };
+            }
 
             _logger.LogInformation("Successfully executed expression {ExpressionId}. Success: {Success}, Time: {ExecutionTime}ms", 
                 request.ExpressionId, result.Success, result.ExecutionTimeMs);
