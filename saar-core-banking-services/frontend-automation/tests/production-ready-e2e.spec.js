@@ -290,7 +290,8 @@ test.describe('SaaR Banking - Production Ready E2E Scenarios', () => {
   const uniqueSuffix = Date.now() + '-' + Math.floor(Math.random() * 10000);
   const newExpressionName = `Credit Score Approval ${uniqueSuffix}`;
   const newExpressionDescription = 'Approves loans for credit score > 700, income > 50,000, DTI < 0.4';
-  const newExpressionCode = 'creditScore > 700 && monthlyIncome > 50000 && debtToIncomeRatio < 0.4';
+  // Expression must return string values that the LoanService expects (APPROVED/MANUAL_REVIEW/REJECTED)
+  const newExpressionCode = 'IF(customer.creditScore >= 700 && customer.monthlyIncome > 50000 && customer.debtToIncomeRatio < 0.4, "APPROVED", IF(customer.creditScore >= 650, "MANUAL_REVIEW", "REJECTED"))';
     let expressionModified = false;
 
     // Try to fill Expression Name
@@ -304,6 +305,13 @@ test.describe('SaaR Banking - Production Ready E2E Scenarios', () => {
     const descInput = page.getByLabel(/Description/i).first();
     if (await descInput.isVisible().catch(() => false)) {
       await descInput.fill(newExpressionDescription);
+      expressionModified = true;
+    }
+
+    // Ensure Expression ID is blank so server will auto-generate a unique id
+    const exprIdInput = page.getByLabel(/Expression ID|Expression Id|ExpressionId/i).first();
+    if (await exprIdInput.isVisible().catch(() => false)) {
+      await exprIdInput.fill('');
       expressionModified = true;
     }
 
