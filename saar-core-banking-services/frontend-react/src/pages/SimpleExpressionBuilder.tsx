@@ -196,7 +196,9 @@ const SimpleExpressionBuilder: React.FC = () => {
           expressionId: formData.expressionId || `EXPR_${Date.now()}`,
           name: formData.name,
           description: formData.description,
-          category: formData.category,
+          // If category is not provided, use usageType as the category so backend
+          // services that filter by category can find the expression.
+          category: formData.category && formData.category.trim() ? formData.category : (formData.usageType ? formData.usageType : ''),
           subCategory: formData.subCategory,
           expressionText: formData.expression,
           returnType: formData.returnType,

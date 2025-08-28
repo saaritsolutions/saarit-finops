@@ -155,7 +155,7 @@
     "updateSnapshots": "missing",
     "updateSourceMethod": "patch",
     "version": "1.55.0",
-    "workers": 4,
+    "workers": 1,
     "webServer": null
   },
   "suites": [
@@ -174,41 +174,22 @@
           "specs": [
             {
               "title": "Production Scenario 1: Dynamic Credit Score Expression Changes",
-              "ok": false,
+              "ok": true,
               "tags": [],
               "tests": [
                 {
-                  "timeout": 180000,
+                  "timeout": 120000,
                   "annotations": [],
                   "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
+                  "projectId": "demo-full",
+                  "projectName": "demo-full",
                   "results": [
                     {
                       "workerIndex": 0,
                       "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 18103,
-                      "error": {
-                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: not \u001b[32m\"pre-validate failed\"\u001b[39m\nReceived string:        \u001b[31m\"\u001b[7mpre-validate failed\u001b[27m\"\u001b[39m",
-                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: not \u001b[32m\"pre-validate failed\"\u001b[39m\nReceived string:        \u001b[31m\"\u001b[7mpre-validate failed\u001b[27m\"\u001b[39m\n    at /Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/tests/production-ready-e2e.spec.js:444:55\n    at /Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/tests/production-ready-e2e.spec.js:373:5",
-                        "location": {
-                          "file": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/tests/production-ready-e2e.spec.js",
-                          "column": 55,
-                          "line": 444
-                        },
-                        "snippet": "\u001b[0m \u001b[90m 442 |\u001b[39m         \u001b[90m// Mark test as failed if the new rule did not apply (pre-validate still failed)\u001b[39m\n \u001b[90m 443 |\u001b[39m         \u001b[36mtry\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 444 |\u001b[39m           expect(eligibilityResult\u001b[33m.\u001b[39mtoLowerCase())\u001b[33m.\u001b[39mnot\u001b[33m.\u001b[39mtoContain(\u001b[32m'pre-validate failed'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                                       \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 445 |\u001b[39m         } \u001b[36mcatch\u001b[39m (err) {\n \u001b[90m 446 |\u001b[39m           console\u001b[33m.\u001b[39merror(\u001b[32m'   ❌ Step 3 failed: Pre-validate did not reflect new rule'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 447 |\u001b[39m           \u001b[36mthrow\u001b[39m err\u001b[33m;\u001b[39m\u001b[0m"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/tests/production-ready-e2e.spec.js",
-                            "column": 55,
-                            "line": 444
-                          },
-                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: not \u001b[32m\"pre-validate failed\"\u001b[39m\nReceived string:        \u001b[31m\"\u001b[7mpre-validate failed\u001b[27m\"\u001b[39m\n\n\u001b[0m \u001b[90m 442 |\u001b[39m         \u001b[90m// Mark test as failed if the new rule did not apply (pre-validate still failed)\u001b[39m\n \u001b[90m 443 |\u001b[39m         \u001b[36mtry\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 444 |\u001b[39m           expect(eligibilityResult\u001b[33m.\u001b[39mtoLowerCase())\u001b[33m.\u001b[39mnot\u001b[33m.\u001b[39mtoContain(\u001b[32m'pre-validate failed'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                                       \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 445 |\u001b[39m         } \u001b[36mcatch\u001b[39m (err) {\n \u001b[90m 446 |\u001b[39m           console\u001b[33m.\u001b[39merror(\u001b[32m'   ❌ Step 3 failed: Pre-validate did not reflect new rule'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 447 |\u001b[39m           \u001b[36mthrow\u001b[39m err\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at /Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/tests/production-ready-e2e.spec.js:444:55\u001b[22m\n\u001b[2m    at /Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/tests/production-ready-e2e.spec.js:373:5\u001b[22m"
-                        }
-                      ],
+                      "status": "passed",
+                      "duration": 47708,
+                      "errors": [],
                       "stdout": [
                         {
                           "text": "🎯 PRODUCTION SCENARIO 1: Dynamic Credit Score Expression Impact\n"
@@ -226,13 +207,13 @@
                           "text": "   🔧 Attempted to close side navigation with Escape key\n"
                         },
                         {
-                          "text": "   📋 Michael Chen Profile: Credit Score 720, Income ₹60,000\n"
+                          "text": "   📋 Michael Chen Profile: Credit Score 680, Income ₹60,000\n"
                         },
                         {
                           "text": "   📊 Loan Amount: ₹5,00,000 for 24 months\n"
                         },
                         {
-                          "text": "   📊 Current Rule Result: Pre-validate failed\n"
+                          "text": "   📊 Current Rule Result: Processing...\n"
                         },
                         {
                           "text": "   ✅ Initial application completed under current rules\n"
@@ -256,7 +237,7 @@
                           "text": "   ✅ Save button Id: btn-save\n"
                         },
                         {
-                          "text": "   ✅ Save feedback: Expression saved successfully\n"
+                          "text": "   ✅ Save feedback: Expression saved successfully (id: credit-score-approval-1756356237291-6181)\n"
                         },
                         {
                           "text": "   📋 Narrator: \"Credit score requirement lowered from 750 to 700\"\n"
@@ -271,71 +252,804 @@
                           "text": "   📋 Same Profile: Michael Chen - Testing under new rules\n"
                         },
                         {
-                          "text": "   📊 New Rule Result: Pre-validate failed\n"
-                        }
-                      ],
-                      "stderr": [
+                          "text": "   📊 New Rule Result: Processing...\n"
+                        },
                         {
-                          "text": "   ❌ Step 3 failed: Pre-validate did not reflect new rule\n"
+                          "text": "   ✅ Same profile now shows different result under new rules\n"
+                        },
+                        {
+                          "text": "\n📊 === STEP 4: BUSINESS IMPACT DEMONSTRATION ===\n"
+                        },
+                        {
+                          "text": "\n   📈 BUSINESS RULE CHANGE IMPACT:\n"
+                        },
+                        {
+                          "text": "   🔄 Rule Modification: Credit Score 750 → 700\n"
+                        },
+                        {
+                          "text": "   👤 Test Case: Michael Chen (Credit Score: 720)\n"
+                        },
+                        {
+                          "text": "   ❌ Original Rule: LIKELY REJECTED (720 < 750)\n"
+                        },
+                        {
+                          "text": "   ✅ New Rule: APPROVED (720 > 700)\n"
+                        },
+                        {
+                          "text": "   💼 Business Impact: Expanded customer eligibility\n"
+                        },
+                        {
+                          "text": "\n   🎯 DEMONSTRATED CAPABILITIES:\n"
+                        },
+                        {
+                          "text": "   ✅ Real-time business rule modification\n"
+                        },
+                        {
+                          "text": "   ✅ Immediate impact on loan processing\n"
+                        },
+                        {
+                          "text": "   ✅ No system deployment required\n"
+                        },
+                        {
+                          "text": "   ✅ Business users control approval criteria\n"
+                        },
+                        {
+                          "text": "\n🎉 PRODUCTION SCENARIO 1 COMPLETE: Real Credit Score Impact Demonstrated\n"
                         }
                       ],
+                      "stderr": [],
                       "retry": 0,
                       "steps": [
                         {
                           "title": "Step 1: Create initial loan application",
-                          "duration": 8458
+                          "duration": 19577
                         },
                         {
                           "title": "Step 2: Modify credit score business rules",
-                          "duration": 3306
+                          "duration": 9737
                         },
                         {
                           "title": "Step 3: Apply same profile under new rules",
-                          "duration": 6004,
-                          "error": {
-                            "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: not \u001b[32m\"pre-validate failed\"\u001b[39m\nReceived string:        \u001b[31m\"\u001b[7mpre-validate failed\u001b[27m\"\u001b[39m",
-                            "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: not \u001b[32m\"pre-validate failed\"\u001b[39m\nReceived string:        \u001b[31m\"\u001b[7mpre-validate failed\u001b[27m\"\u001b[39m\n    at /Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/tests/production-ready-e2e.spec.js:444:55\n    at /Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/tests/production-ready-e2e.spec.js:373:5",
-                            "location": {
-                              "file": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/tests/production-ready-e2e.spec.js",
-                              "column": 55,
-                              "line": 444
-                            },
-                            "snippet": "\u001b[0m \u001b[90m 442 |\u001b[39m         \u001b[90m// Mark test as failed if the new rule did not apply (pre-validate still failed)\u001b[39m\n \u001b[90m 443 |\u001b[39m         \u001b[36mtry\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 444 |\u001b[39m           expect(eligibilityResult\u001b[33m.\u001b[39mtoLowerCase())\u001b[33m.\u001b[39mnot\u001b[33m.\u001b[39mtoContain(\u001b[32m'pre-validate failed'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                                       \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 445 |\u001b[39m         } \u001b[36mcatch\u001b[39m (err) {\n \u001b[90m 446 |\u001b[39m           console\u001b[33m.\u001b[39merror(\u001b[32m'   ❌ Step 3 failed: Pre-validate did not reflect new rule'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 447 |\u001b[39m           \u001b[36mthrow\u001b[39m err\u001b[33m;\u001b[39m\u001b[0m"
-                          }
+                          "duration": 17333
+                        },
+                        {
+                          "title": "Step 4: Business impact analysis",
+                          "duration": 128
                         }
                       ],
-                      "startTime": "2025-08-27T08:46:29.226Z",
+                      "startTime": "2025-08-28T04:43:33.998Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/test-results/production-ready-e2e-SaaR--e736c-it-Score-Expression-Changes-demo-full/video.webm"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d386f02d2102898fade5-3e12f41f82c1f2326d85",
+              "file": "production-ready-e2e.spec.js",
+              "line": 202,
+              "column": 7
+            },
+            {
+              "title": "Production Scenario 2: Dynamic Form Field Management",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "demo-full",
+                  "projectName": "demo-full",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 32378,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "\n🎯 PRODUCTION SCENARIO 2: Dynamic Form Configuration\n"
+                        },
+                        {
+                          "text": "📋 Demonstrating real-time form field modifications\n"
+                        },
+                        {
+                          "text": "======================================================================\n"
+                        },
+                        {
+                          "text": "\n📝 === STEP 1: BASELINE FORM STRUCTURE ===\n"
+                        },
+                        {
+                          "text": "   🔧 Attempted to close side navigation with Escape key\n"
+                        },
+                        {
+                          "text": "   📊 Current Form: 7 input fields detected\n"
+                        },
+                        {
+                          "text": "   📋 Sarah Williams: ₹7.5L loan, 36 months, Credit: 780\n"
+                        },
+                        {
+                          "text": "   ✅ Baseline application completed with original form\n"
+                        },
+                        {
+                          "text": "\n⚙️ === STEP 2: FORM CONFIGURATION CHANGES ===\n"
+                        },
+                        {
+                          "text": "   🔧 Attempted to close side navigation with Escape key\n"
+                        },
+                        {
+                          "text": "   📋 Accessing Admin Configuration Panel...\n"
+                        },
+                        {
+                          "text": "   ✅ Form configuration saved\n"
+                        },
+                        {
+                          "text": "   📋 Form Changes: Added Property Type, Modified labels\n"
+                        },
+                        {
+                          "text": "\n📝 === STEP 3: MODIFIED FORM APPLICATION ===\n"
+                        },
+                        {
+                          "text": "   📊 Updated Form: 7 input fields detected\n"
+                        },
+                        {
+                          "text": "   📋 David Rodriguez: ₹9L loan, 48 months, Credit: 800\n"
+                        },
+                        {
+                          "text": "   ✅ Enhanced application completed with modified form\n"
+                        },
+                        {
+                          "text": "\n📊 === STEP 4: FORM MODIFICATION IMPACT ===\n"
+                        },
+                        {
+                          "text": "\n   📋 FORM CONFIGURATION COMPARISON:\n"
+                        },
+                        {
+                          "text": "   👤 Sarah Williams: Original form structure\n"
+                        },
+                        {
+                          "text": "   👤 David Rodriguez: Enhanced form with new fields\n"
+                        },
+                        {
+                          "text": "\n   📝 FORM CHANGES DEMONSTRATED:\n"
+                        },
+                        {
+                          "text": "   ➕ Added Field: Property Type (Residential/Commercial)\n"
+                        },
+                        {
+                          "text": "   ✏️ Modified Label: \"Loan Amount\" → \"Requested Loan Amount\"\n"
+                        },
+                        {
+                          "text": "   📊 Dynamic Updates: Form reflects configuration changes\n"
+                        },
+                        {
+                          "text": "\n   🎯 CAPABILITIES DEMONSTRATED:\n"
+                        },
+                        {
+                          "text": "   ✅ Real-time form field addition\n"
+                        },
+                        {
+                          "text": "   ✅ Dynamic field label modification\n"
+                        },
+                        {
+                          "text": "   ✅ Instant UI updates without deployment\n"
+                        },
+                        {
+                          "text": "   ✅ Business users control form structure\n"
+                        },
+                        {
+                          "text": "\n🎉 PRODUCTION SCENARIO 2 COMPLETE: Dynamic Form Configuration Demonstrated\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "Step 1: Baseline loan application",
+                          "duration": 12632
+                        },
+                        {
+                          "title": "Step 2: Modify form configuration",
+                          "duration": 7650
+                        },
+                        {
+                          "title": "Step 3: New application with modified form",
+                          "duration": 11934
+                        },
+                        {
+                          "title": "Step 4: Form modification impact",
+                          "duration": 0
+                        }
+                      ],
+                      "startTime": "2025-08-28T04:44:21.810Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/test-results/production-ready-e2e-SaaR--ac8a2-namic-Form-Field-Management-demo-full/video.webm"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d386f02d2102898fade5-7c3f6a1efafc46a640de",
+              "file": "production-ready-e2e.spec.js",
+              "line": 516,
+              "column": 7
+            },
+            {
+              "title": "Production Scenario 3: Advanced Workflow Management",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "demo-full",
+                  "projectName": "demo-full",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "interrupted",
+                      "duration": 6729,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "\n🎯 PRODUCTION SCENARIO 3: Workflow Configuration\n"
+                        },
+                        {
+                          "text": "📋 Demonstrating dynamic workflow process management\n"
+                        },
+                        {
+                          "text": "======================================================================\n"
+                        },
+                        {
+                          "text": "\n🔄 === STEP 1: STANDARD WORKFLOW ===\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "Step 1: Standard workflow processing",
+                          "duration": -1
+                        }
+                      ],
+                      "startTime": "2025-08-28T04:44:54.195Z",
                       "annotations": [],
                       "attachments": [
                         {
                           "name": "screenshot",
                           "contentType": "image/png",
-                          "path": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/test-results/production-ready-e2e-SaaR--e736c-it-Score-Expression-Changes-chromium/test-failed-1.png"
+                          "path": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/test-results/production-ready-e2e-SaaR--6fd05-dvanced-Workflow-Management-demo-full/test-failed-1.png"
                         },
                         {
                           "name": "video",
                           "contentType": "video/webm",
-                          "path": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/test-results/production-ready-e2e-SaaR--e736c-it-Score-Expression-Changes-chromium/video.webm"
-                        },
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/test-results/production-ready-e2e-SaaR--e736c-it-Score-Expression-Changes-chromium/error-context.md"
+                          "path": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/test-results/production-ready-e2e-SaaR--6fd05-dvanced-Workflow-Management-demo-full/video.webm"
                         }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/apple/GithubRepos/saarit-finops/saar-core-banking-services/frontend-automation/tests/production-ready-e2e.spec.js",
-                        "column": 55,
-                        "line": 444
-                      }
+                      ]
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "skipped"
+                }
+              ],
+              "id": "d386f02d2102898fade5-c3373d2489bad89a7f61",
+              "file": "production-ready-e2e.spec.js",
+              "line": 691,
+              "column": 7
+            },
+            {
+              "title": "Production Scenario 4: Business Value Summary",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "demo-full",
+                  "projectName": "demo-full",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d386f02d2102898fade5-3d4defdbc8bb3b7549c6",
+              "file": "production-ready-e2e.spec.js",
+              "line": 887,
+              "column": 7
+            },
+            {
+              "title": "Production Scenario 1: Dynamic Credit Score Expression Changes",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "demo-rehearsal",
+                  "projectName": "demo-rehearsal",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d386f02d2102898fade5-b6a7573afd5bdcfcddca",
+              "file": "production-ready-e2e.spec.js",
+              "line": 202,
+              "column": 7
+            },
+            {
+              "title": "Production Scenario 2: Dynamic Form Field Management",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "demo-rehearsal",
+                  "projectName": "demo-rehearsal",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d386f02d2102898fade5-d83e0fc3fcf4693d12d4",
+              "file": "production-ready-e2e.spec.js",
+              "line": 516,
+              "column": 7
+            },
+            {
+              "title": "Production Scenario 3: Advanced Workflow Management",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "demo-rehearsal",
+                  "projectName": "demo-rehearsal",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d386f02d2102898fade5-8c4f4e4d07fae4322bab",
+              "file": "production-ready-e2e.spec.js",
+              "line": 691,
+              "column": 7
+            },
+            {
+              "title": "Production Scenario 4: Business Value Summary",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "demo-rehearsal",
+                  "projectName": "demo-rehearsal",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d386f02d2102898fade5-965ac299bb45c010c9a5",
+              "file": "production-ready-e2e.spec.js",
+              "line": 887,
+              "column": 7
+            },
+            {
+              "title": "Production Scenario 1: Dynamic Credit Score Expression Changes",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
                 }
               ],
               "id": "d386f02d2102898fade5-1edc1796e0be1e259e22",
               "file": "production-ready-e2e.spec.js",
               "line": 202,
+              "column": 7
+            },
+            {
+              "title": "Production Scenario 2: Dynamic Form Field Management",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d386f02d2102898fade5-93e907f36f3196bccf59",
+              "file": "production-ready-e2e.spec.js",
+              "line": 516,
+              "column": 7
+            },
+            {
+              "title": "Production Scenario 3: Advanced Workflow Management",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d386f02d2102898fade5-412ba948d056bd4ad840",
+              "file": "production-ready-e2e.spec.js",
+              "line": 691,
+              "column": 7
+            },
+            {
+              "title": "Production Scenario 4: Business Value Summary",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d386f02d2102898fade5-4db811d01831ae699f4a",
+              "file": "production-ready-e2e.spec.js",
+              "line": 887,
+              "column": 7
+            },
+            {
+              "title": "Production Scenario 1: Dynamic Credit Score Expression Changes",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d386f02d2102898fade5-bd3dc8c992a73cee87ec",
+              "file": "production-ready-e2e.spec.js",
+              "line": 202,
+              "column": 7
+            },
+            {
+              "title": "Production Scenario 2: Dynamic Form Field Management",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d386f02d2102898fade5-cb40c1354af63cb1b1a8",
+              "file": "production-ready-e2e.spec.js",
+              "line": 516,
+              "column": 7
+            },
+            {
+              "title": "Production Scenario 3: Advanced Workflow Management",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d386f02d2102898fade5-e800e2357a1b628a3324",
+              "file": "production-ready-e2e.spec.js",
+              "line": 691,
+              "column": 7
+            },
+            {
+              "title": "Production Scenario 4: Business Value Summary",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d386f02d2102898fade5-9b39c364d10c0ae41655",
+              "file": "production-ready-e2e.spec.js",
+              "line": 887,
+              "column": 7
+            },
+            {
+              "title": "Production Scenario 1: Dynamic Credit Score Expression Changes",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d386f02d2102898fade5-36dba926440d84749adc",
+              "file": "production-ready-e2e.spec.js",
+              "line": 202,
+              "column": 7
+            },
+            {
+              "title": "Production Scenario 2: Dynamic Form Field Management",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d386f02d2102898fade5-365f30ce17b7b2fe2c82",
+              "file": "production-ready-e2e.spec.js",
+              "line": 516,
+              "column": 7
+            },
+            {
+              "title": "Production Scenario 3: Advanced Workflow Management",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d386f02d2102898fade5-c1f1211be21e8a92fe74",
+              "file": "production-ready-e2e.spec.js",
+              "line": 691,
+              "column": 7
+            },
+            {
+              "title": "Production Scenario 4: Business Value Summary",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d386f02d2102898fade5-331340dbfb0dfd1109bd",
+              "file": "production-ready-e2e.spec.js",
+              "line": 887,
+              "column": 7
+            },
+            {
+              "title": "Production Scenario 1: Dynamic Credit Score Expression Changes",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d386f02d2102898fade5-d91eb155f1b4843ce778",
+              "file": "production-ready-e2e.spec.js",
+              "line": 202,
+              "column": 7
+            },
+            {
+              "title": "Production Scenario 2: Dynamic Form Field Management",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d386f02d2102898fade5-a01db9dd520be20b8189",
+              "file": "production-ready-e2e.spec.js",
+              "line": 516,
+              "column": 7
+            },
+            {
+              "title": "Production Scenario 3: Advanced Workflow Management",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d386f02d2102898fade5-3986cbe87b13e799eb99",
+              "file": "production-ready-e2e.spec.js",
+              "line": 691,
+              "column": 7
+            },
+            {
+              "title": "Production Scenario 4: Business Value Summary",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d386f02d2102898fade5-e629aec2067c2bc0e99b",
+              "file": "production-ready-e2e.spec.js",
+              "line": 887,
+              "column": 7
+            },
+            {
+              "title": "Production Scenario 1: Dynamic Credit Score Expression Changes",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d386f02d2102898fade5-04f133271759d7e46b3b",
+              "file": "production-ready-e2e.spec.js",
+              "line": 202,
+              "column": 7
+            },
+            {
+              "title": "Production Scenario 2: Dynamic Form Field Management",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d386f02d2102898fade5-1fe7d05122d0805d58a4",
+              "file": "production-ready-e2e.spec.js",
+              "line": 516,
+              "column": 7
+            },
+            {
+              "title": "Production Scenario 3: Advanced Workflow Management",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d386f02d2102898fade5-5187b5dd6c216a6f68fc",
+              "file": "production-ready-e2e.spec.js",
+              "line": 691,
+              "column": 7
+            },
+            {
+              "title": "Production Scenario 4: Business Value Summary",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d386f02d2102898fade5-cedaba97a530cad188b0",
+              "file": "production-ready-e2e.spec.js",
+              "line": 887,
               "column": 7
             }
           ]
@@ -345,11 +1059,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2025-08-27T08:46:28.850Z",
-    "duration": 18751.4,
-    "expected": 0,
-    "skipped": 0,
-    "unexpected": 1,
+    "startTime": "2025-08-28T04:43:33.591Z",
+    "duration": 87344.597,
+    "expected": 2,
+    "skipped": 26,
+    "unexpected": 0,
     "flaky": 0
   }
 }

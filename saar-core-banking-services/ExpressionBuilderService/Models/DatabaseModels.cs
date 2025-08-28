@@ -224,7 +224,7 @@ public class ExpressionTemplate
 /// </summary>
 public class CreateExpressionRequest
 {
-    [Required]
+    // ExpressionId is optional; if not provided the server will generate a unique one
     public string ExpressionId { get; set; } = string.Empty;
     
     [Required]

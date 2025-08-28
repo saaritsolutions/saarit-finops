@@ -303,23 +303,17 @@ const WorldClassExpressionBuilder: React.FC = () => {
   // legacy demo id used by LoanService so the runtime evaluation picks up the new rule.
   let computedExpressionId = expressionName.trim().toLowerCase().replace(/[^a-z0-9]+/gi, '-').replace(/(^-|-$)/g, '') || `expr-${Date.now()}`;
 
-  // Demo integration: LoanService currently evaluates a hard-coded expression id
-  // EXPR_1755237353842. If the user is saving a credit-score based eligibility rule,
-  // use that demo id so the LoanService evaluation reflects the change immediately.
-  try {
-    const nameLower = expressionName.trim().toLowerCase();
-    if (nameLower.includes('credit score') || (expressionCode && expressionCode.includes('creditScore'))) {
-      computedExpressionId = 'EXPR_1755237353842';
-    }
-  } catch (e) {
-    // ignore and fall back to computed slug
-  }
+  // Do not force a demo expression id here; allow server or user to provide expressionId.
+  // If an integration needs a specific id wired into LoanService, configure that outside
+  // of the UI. Keep computedExpressionId as a friendly slug by default.
 
   const payload = {
     ExpressionId: computedExpressionId,
     Name: expressionName,
     Description: description,
-    Category: 'General',
+    // Use the selected usageType as the Category when saving so backend services
+    // that currently filter by category (e.g. LoanService) will find the expression.
+    Category: usageType || 'General',
     ExpressionText: expressionCode,
     ReturnType: 'boolean',
     ContextType: contextType,
