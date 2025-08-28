@@ -291,11 +291,11 @@ public class RoslynExpressionEngine : IExpressionEngine
     private string GenerateVariableDeclarations(IEnumerable<string> variableNames)
     {
         // Start with some common defaults
-        var sb = new StringBuilder();
-        sb.AppendLine("// Dynamic variables will be injected here");
-        sb.AppendLine("var amount = variables.ContainsKey(\"amount\") ? Convert.ToDecimal(variables[\"amount\"]) : 0m;");
-        sb.AppendLine("var rate = variables.ContainsKey(\"rate\") ? Convert.ToDecimal(variables[\"rate\"]) : 0m;");
-        sb.AppendLine("var days = variables.ContainsKey(\"days\") ? Convert.ToInt32(variables[\"days\"]) : 0;");
+    var sb = new StringBuilder();
+    sb.AppendLine("// Dynamic variables will be injected here");
+    sb.AppendLine("var amount = variables.ContainsKey(\"amount\") ? SafeDecimal(variables[\"amount\"]) : 0m;");
+    sb.AppendLine("var rate = variables.ContainsKey(\"rate\") ? SafeDecimal(variables[\"rate\"]) : 0m;");
+    sb.AppendLine("var days = variables.ContainsKey(\"days\") ? SafeInt(variables[\"days\"]) : 0;");
 
         // Inject any discovered variables (avoid duplicates and known defaults)
         // don't emit declarations that will collide with context variables
@@ -330,16 +330,16 @@ public class RoslynExpressionEngine : IExpressionEngine
             var lower = name.ToLowerInvariant();
             if (lower.Contains("count") || lower.Contains("age") || lower.Contains("score") || lower.EndsWith("id"))
             {
-                sb.AppendLine($"var {name} = variables.ContainsKey(\"{name}\") ? Convert.ToInt32(variables[\"{name}\"]) : 0;");
+                sb.AppendLine($"var {name} = variables.ContainsKey(\"{name}\") ? SafeInt(variables[\"{name}\"]) : 0;");
             }
             else if (lower.Contains("ratio") || lower.Contains("income") || lower.Contains("amount") || lower.Contains("balance") || lower.Contains("rate") || lower.Contains("percent") || lower.Contains("decimal"))
             {
-                sb.AppendLine($"var {name} = variables.ContainsKey(\"{name}\") ? Convert.ToDecimal(variables[\"{name}\"]) : 0m;");
+                sb.AppendLine($"var {name} = variables.ContainsKey(\"{name}\") ? SafeDecimal(variables[\"{name}\"]) : 0m;");
             }
             else
             {
                 // fallback to object/string
-                sb.AppendLine($"var {name} = variables.ContainsKey(\"{name}\") ? variables[\"{name}\"] : null;");
+                sb.AppendLine($"var {name} = variables.ContainsKey(\"{name}\") ? SafeObject(variables[\"{name}\"]) : null;");
             }
         }
 
@@ -383,6 +383,77 @@ public class RoslynExpressionEngine : IExpressionEngine
         var metadata = await AnalyzeExpressionAsync(expressionText, contextType);
         var variableDecls = GenerateVariableDeclarations(metadata?.Variables?.Keys ?? Enumerable.Empty<string>());
 
+        // Helper methods injected into the generated wrapper to safely convert boxed values and JsonElement
+        var helperMethods = @"
+        private static int SafeInt(object? val, int defaultVal = 0)
+        {
+            if (val == null) return defaultVal;
+            if (val is System.Text.Json.JsonElement je)
+            {
+                if (je.ValueKind == System.Text.Json.JsonValueKind.Number)
+                {
+                    if (je.TryGetInt32(out var i)) return i;
+                    if (je.TryGetInt64(out var l)) return Convert.ToInt32(l);
+                    if (je.TryGetDouble(out var d)) return Convert.ToInt32(d);
+                }
+                if (je.ValueKind == System.Text.Json.JsonValueKind.String)
+                {
+                    if (int.TryParse(je.GetString(), out var s)) return s;
+                }
+                return defaultVal;
+            }
+            try { return Convert.ToInt32(val); } catch { return defaultVal; }
+        }
+
+        private static decimal SafeDecimal(object? val, decimal defaultVal = 0m)
+        {
+            if (val == null) return defaultVal;
+            if (val is System.Text.Json.JsonElement je)
+            {
+                if (je.ValueKind == System.Text.Json.JsonValueKind.Number)
+                {
+                    if (je.TryGetDecimal(out var d)) return d;
+                    if (je.TryGetDouble(out var dd)) return Convert.ToDecimal(dd);
+                    if (je.TryGetInt64(out var l)) return Convert.ToDecimal(l);
+                }
+                if (je.ValueKind == System.Text.Json.JsonValueKind.String)
+                {
+                    if (decimal.TryParse(je.GetString(), out var s)) return s;
+                }
+                return defaultVal;
+            }
+            try { return Convert.ToDecimal(val); } catch { return defaultVal; }
+        }
+
+        private static object? SafeObject(object? val)
+        {
+            if (val == null) return null;
+            if (val is System.Text.Json.JsonElement je)
+            {
+                switch (je.ValueKind)
+                {
+                    case System.Text.Json.JsonValueKind.Number:
+                        if (je.TryGetInt64(out var l)) return l;
+                        if (je.TryGetDecimal(out var d)) return d;
+                        if (je.TryGetDouble(out var dd)) return dd;
+                        return je.GetRawText();
+                    case System.Text.Json.JsonValueKind.String:
+                        return je.GetString();
+                    case System.Text.Json.JsonValueKind.True:
+                        return true;
+                    case System.Text.Json.JsonValueKind.False:
+                        return false;
+                    case System.Text.Json.JsonValueKind.Object:
+                    case System.Text.Json.JsonValueKind.Array:
+                        return val; // leave complex types to engine normalization path
+                    default:
+                        return null;
+                }
+            }
+            return val;
+        }
+";
+
         return $@"
 using System;
 using System.Collections.Generic;
@@ -415,6 +486,8 @@ namespace DynamicExpression
         {{
             _banking = new BankingFunctionLibrary();
         }}
+
+    {helperMethods}
 
         public {returnTypeName} Execute({contextTypeName} context, Dictionary<string, object> variables)
         {{
@@ -461,13 +534,13 @@ namespace DynamicExpression
         // This will be enhanced to generate variable declarations based on the context
         return @"
             // Dynamic variables will be injected here
-            var amount = variables.ContainsKey(""amount"") ? Convert.ToDecimal(variables[""amount""]) : 0m;
-            var rate = variables.ContainsKey(""rate"") ? Convert.ToDecimal(variables[""rate""]) : 0m;
-            var days = variables.ContainsKey(""days"") ? Convert.ToInt32(variables[""days""]) : 0;
+            var amount = variables.ContainsKey(""amount"") ? SafeDecimal(variables[""amount""]) : 0m;
+            var rate = variables.ContainsKey(""rate"") ? SafeDecimal(variables[""rate""]) : 0m;
+            var days = variables.ContainsKey(""days"") ? SafeInt(variables[""days""]) : 0;
                 // Common loan/customer aliases injected from flat variables
-                var creditScore = variables.ContainsKey(""creditScore"") ? Convert.ToInt32(variables[""creditScore""]) : 0;
-                var monthlyIncome = variables.ContainsKey(""monthlyIncome"") ? Convert.ToDecimal(variables[""monthlyIncome""]) : 0m;
-                var debtToIncomeRatio = variables.ContainsKey(""debtToIncomeRatio"") ? Convert.ToDecimal(variables[""debtToIncomeRatio""]) : 0m;
+                var creditScore = variables.ContainsKey(""creditScore"") ? SafeInt(variables[""creditScore""]) : 0;
+                var monthlyIncome = variables.ContainsKey(""monthlyIncome"") ? SafeDecimal(variables[""monthlyIncome""]) : 0m;
+                var debtToIncomeRatio = variables.ContainsKey(""debtToIncomeRatio"") ? SafeDecimal(variables[""debtToIncomeRatio""]) : 0m;
         ";
     }
 
@@ -527,6 +600,8 @@ namespace DynamicExpression
             MetadataReference.CreateFromFile(Path.Combine(runtimePath, "System.Collections.dll")),
             MetadataReference.CreateFromFile(Path.Combine(runtimePath, "System.Linq.dll")),
             MetadataReference.CreateFromFile(Path.Combine(runtimePath, "System.Text.RegularExpressions.dll"))
+            // Ensure System.Text.Json types (JsonElement) are available for generated wrappers
+            ,MetadataReference.CreateFromFile(Path.Combine(runtimePath, "System.Text.Json.dll"))
         });
 
         return references;
@@ -571,11 +646,13 @@ namespace DynamicExpression
             throw new InvalidOperationException("Execute method not found in compiled expression");
 
         var instance = Activator.CreateInstance(compilationResult.ExpressionType!);
-        
-        // Create context object based on variables
-        var context = CreateContextFromVariables(variables);
+    // Normalize incoming variables (convert JsonElement -> CLR primitives/objects)
+    var normalizedVariables = NormalizeVariables(variables);
 
-        return await Task.FromResult(compilationResult.ExecuteMethod.Invoke(instance, new object[] { context, variables }));
+    // Create context object based on normalized variables
+    var context = CreateContextFromVariables(normalizedVariables);
+
+    return await Task.FromResult(compilationResult.ExecuteMethod.Invoke(instance, new object[] { context, normalizedVariables }));
     }
 
     private object CreateContextFromVariables(Dictionary<string, object> variables)
@@ -710,20 +787,99 @@ namespace DynamicExpression
     {
         if (value is System.Text.Json.JsonElement je)
         {
+            try
+            {
+                switch (je.ValueKind)
+                {
+                    case System.Text.Json.JsonValueKind.Number:
+                        if (je.TryGetInt32(out var i32)) return i32;
+                        if (je.TryGetInt64(out var l)) return l;
+                        if (je.TryGetDecimal(out var dec)) return dec;
+                        if (je.TryGetDouble(out var d)) return d;
+                        break;
+                    case System.Text.Json.JsonValueKind.String:
+                        return je.GetString();
+                    case System.Text.Json.JsonValueKind.True:
+                        return true;
+                    case System.Text.Json.JsonValueKind.False:
+                        return false;
+                    case System.Text.Json.JsonValueKind.Object:
+                    case System.Text.Json.JsonValueKind.Array:
+                        // leave complex types as-is
+                        return je;
+                }
+            }
+            catch { /* fallthrough to return raw value if parsing fails */ }
+        }
+        return value;
+    }
+
+    private Dictionary<string, object> NormalizeVariables(Dictionary<string, object> variables)
+    {
+        var result = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+        foreach (var kv in variables)
+        {
+            result[kv.Key] = NormalizeValue(kv.Value);
+        }
+        return result;
+    }
+
+    private object? NormalizeValue(object? value)
+    {
+        if (value == null) return null;
+
+        // If it's a JsonElement, convert to CLR primitive, dictionary or list
+        if (value is System.Text.Json.JsonElement je)
+        {
             switch (je.ValueKind)
             {
+                case System.Text.Json.JsonValueKind.Object:
+                    var dict = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var prop in je.EnumerateObject())
+                    {
+                        dict[prop.Name] = NormalizeValue(prop.Value);
+                    }
+                    return dict;
+                case System.Text.Json.JsonValueKind.Array:
+                    var list = new List<object?>();
+                    foreach (var item in je.EnumerateArray()) list.Add(NormalizeValue(item));
+                    return list;
                 case System.Text.Json.JsonValueKind.Number:
                     if (je.TryGetInt64(out var l)) return l;
+                    if (je.TryGetDecimal(out var dec)) return dec;
                     if (je.TryGetDouble(out var d)) return d;
-                    break;
+                    return je.GetRawText();
                 case System.Text.Json.JsonValueKind.String:
                     return je.GetString();
                 case System.Text.Json.JsonValueKind.True:
                     return true;
                 case System.Text.Json.JsonValueKind.False:
                     return false;
+                case System.Text.Json.JsonValueKind.Null:
+                default:
+                    return null;
             }
         }
+
+        // If it's a dictionary with JsonElement values, normalize recursively
+        if (value is Dictionary<string, object> dictVal)
+        {
+            var normalized = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+            foreach (var kv in dictVal)
+            {
+                normalized[kv.Key] = NormalizeValue(kv.Value);
+            }
+            return normalized;
+        }
+
+        // If it's a JsonElement boxed as object via System.Text.Json.JsonElement (handled above)
+        // If it's an enumerable, normalize items
+        if (value is IEnumerable<object> enumObj)
+        {
+            return enumObj.Select(NormalizeValue).ToList();
+        }
+
+        // Primitive or already CLR-friendly
         return value;
     }
 

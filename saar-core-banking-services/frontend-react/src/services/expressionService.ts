@@ -50,7 +50,12 @@ class ExpressionService {
   }
 
   async createExpression(expression: CreateExpressionRequest): Promise<ExpressionDefinition> {
-    return this.apiClient.post(this.baseUrl, expression);
+    // If an expressionId is provided but empty, remove it so the server can generate one.
+    const payload: any = { ...expression };
+    if (payload.expressionId !== undefined && String(payload.expressionId).trim() === '') {
+      delete payload.expressionId;
+    }
+    return this.apiClient.post(this.baseUrl, payload);
   }
 
   async updateExpression(id: string, expression: UpdateExpressionRequest): Promise<ExpressionDefinition> {

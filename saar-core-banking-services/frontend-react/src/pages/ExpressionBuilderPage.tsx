@@ -185,10 +185,12 @@ const ExpressionBuilderPage: React.FC = () => {
             <ExpressionTester
               expression={selectedExpression}
               onCreateExpression={(expressionText) => {
+                const usageType = 'Validation'; // default for tester-created expressions
                 const newExpression: Partial<ExpressionDefinition> = {
                   name: 'New Expression from Test',
                   description: 'Created from expression tester',
-                  category: 'General',
+                  // derive category from usageType so backend filters will work
+                  category: usageType,
                   expressionText,
                   contextType: 'General',
                   returnType: 'boolean',

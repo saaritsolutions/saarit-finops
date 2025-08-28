@@ -26,7 +26,7 @@ export interface ExpressionDefinition {
 }
 
 export interface CreateExpressionRequest {
-  expressionId: string;
+  expressionId?: string;
   name: string;
   description?: string;
   category: string;

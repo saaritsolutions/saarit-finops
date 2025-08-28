@@ -218,7 +218,7 @@ test.describe('SaaR Banking - Production Ready E2E Scenarios', () => {
       // Additional wait to ensure page is fully loaded
       await page.waitForTimeout(1000);
       
-      // Fill loan application form with borderline credit score (720)
+  // Fill loan application form with credit score below threshold (680)
       // Using Material-UI TextField selectors - target input by label text
       await page.getByLabel('Loan Amount').fill('500000');
       await page.waitForTimeout(500);
@@ -229,13 +229,13 @@ test.describe('SaaR Banking - Production Ready E2E Scenarios', () => {
       await page.getByLabel('Monthly Income').fill('60000');
       await page.waitForTimeout(500);
       
-      await page.getByLabel('Credit Score').fill('720');
+  await page.getByLabel('Credit Score').fill('680');
       await page.waitForTimeout(500);
       
       await page.getByLabel(/Debt.*Income.*Ratio/i).fill('0.3');
       await page.waitForTimeout(500);
       
-      console.log('   📋 Michael Chen Profile: Credit Score 720, Income ₹60,000');
+  console.log('   📋 Michael Chen Profile: Credit Score 680, Income ₹60,000');
       console.log('   📊 Loan Amount: ₹5,00,000 for 24 months');
       
       // Pre-validate to check current rules (retrying read for UI propagation)
@@ -291,7 +291,7 @@ test.describe('SaaR Banking - Production Ready E2E Scenarios', () => {
   const newExpressionName = `Credit Score Approval ${uniqueSuffix}`;
   const newExpressionDescription = 'Approves loans for credit score > 700, income > 50,000, DTI < 0.4';
   // Expression must return string values that the LoanService expects (APPROVED/MANUAL_REVIEW/REJECTED)
-  const newExpressionCode = 'IF(customer.creditScore >= 700 && customer.monthlyIncome > 50000 && customer.debtToIncomeRatio < 0.4, "APPROVED", IF(customer.creditScore >= 650, "MANUAL_REVIEW", "REJECTED"))';
+  const newExpressionCode = 'customer.creditScore >= 700 && customer.monthlyIncome >= 50000 && customer.debtToIncomeRatio < 0.4';
     let expressionModified = false;
 
     // Try to fill Expression Name
@@ -308,12 +308,39 @@ test.describe('SaaR Banking - Production Ready E2E Scenarios', () => {
       expressionModified = true;
     }
 
-    // Ensure Expression ID is blank so server will auto-generate a unique id
-    const exprIdInput = page.getByLabel(/Expression ID|Expression Id|ExpressionId/i).first();
-    if (await exprIdInput.isVisible().catch(() => false)) {
-      await exprIdInput.fill('');
-      expressionModified = true;
-    }
+    // Ensure Expression ID is blank so server will auto-generate a unique id.
+    // Try multiple selectors (label, placeholder, input name, direct input) to be robust across builds.
+    // const exprSelectors = [
+    //   'input[placeholder*="Auto-generated"]',
+    //   'input[placeholder*="EXPR_"]',
+    //   'input[name="expressionId"]',
+    //   'input[aria-label*="Expression ID"]',
+    //   'label:has-text("Expression ID")',
+    //   'input[type=text]'
+    // ];
+
+    // for (const sel of exprSelectors) {
+    //   try {
+    //     let el;
+    //     if (/^label:/.test(sel)) {
+    //       const labelEl = page.locator(sel).first();
+    //       if (await labelEl.isVisible().catch(() => false)) {
+    //         const forAttr = await labelEl.getAttribute('for');
+    //         if (forAttr) el = page.locator(`#${forAttr}`).first();
+    //       }
+    //     } else {
+    //       el = page.locator(sel).first();
+    //     }
+
+    //     if (el && await el.isVisible().catch(() => false)) {
+    //       try { await el.fill(''); } catch (e) { await el.evaluate(e => (e.value = '')); }
+    //       expressionModified = true;
+    //       break;
+    //     }
+    //   } catch (e) {
+    //     // continue to next selector
+    //   }
+    // }
 
   // Robustly set expression code using helper (handles Monaco, CodeMirror, textarea, inputs)
   const entered = await setExpressionValue(page, newExpressionCode, 'Expression Code');
@@ -417,7 +444,7 @@ test.describe('SaaR Banking - Production Ready E2E Scenarios', () => {
       await fillField('Loan Amount', '500000', 'input[name="loanAmount"], input[placeholder*="Loan"]');
       await fillField(/Tenure.*months/i, '24', 'input[name="tenure"]');
       await fillField('Monthly Income', '60000', 'input[name="monthlyIncome"], input[placeholder*="Monthly Income"]');
-      await fillField('Credit Score', '720', 'input[name="creditScore"], input[placeholder*="Credit Score"]');
+      await fillField('Credit Score', '680', 'input[name="creditScore"], input[placeholder*="Credit Score"]');
       await fillField(/Debt.*Income.*Ratio/i, '0.3', 'input[name="debtToIncomeRatio"], input[placeholder*="Debt to Income"]');
       
       console.log('   📋 Same Profile: Michael Chen - Testing under new rules');

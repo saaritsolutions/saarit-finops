@@ -42,11 +42,25 @@ public class ExpressionService : IExpressionService
         _logger = logger;
     }
 
+    // Helper to truncate long strings to avoid DB column length limits
+    private static string? TruncateString(string? input, int maxLength)
+    {
+        if (string.IsNullOrEmpty(input)) return input;
+        return input.Length <= maxLength ? input : input.Substring(0, maxLength);
+    }
+
     public async Task<ExpressionResponse> CreateExpressionAsync(CreateExpressionRequest request, Guid tenantId, Guid userId)
     {
         try
         {
             _logger.LogInformation("Creating expression {ExpressionId} for tenant {TenantId}", request.ExpressionId, tenantId);
+
+            // If client did not provide an ExpressionId, generate a unique one
+            if (string.IsNullOrWhiteSpace(request.ExpressionId))
+            {
+                request.ExpressionId = $"EXPR_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}_{Guid.NewGuid().ToString().Split('-')[0].ToUpper()}";
+                _logger.LogInformation("No ExpressionId provided; generated {ExpressionId}", request.ExpressionId);
+            }
 
             // Check if expression ID already exists for this tenant
             var existingExpression = await _context.ExpressionDefinitions
@@ -340,6 +354,13 @@ public class ExpressionService : IExpressionService
                 expression.ContextType,
                 request.Variables);
 
+            // Helper to truncate long strings to avoid DB column length limits
+            static string? TruncateString(string? input, int maxLength)
+            {
+                if (string.IsNullOrEmpty(input)) return input;
+                return input.Length <= maxLength ? input : input.Substring(0, maxLength);
+            }
+
             // Log the execution (capture JSON to help debug serialization issues)
             var executionLog = new ExpressionExecutionLog
             {
@@ -354,9 +375,10 @@ public class ExpressionService : IExpressionService
                 ExecutionTimeMs = result.ExecutionTimeMs,
                 MemoryUsedKB = (int)result.MemoryUsedKB,
                 Success = result.Success,
-                ErrorMessage = result.ErrorMessage,
+                ErrorMessage = TruncateString(result.ErrorMessage, 1900),
                 InputVariables = request.Variables,
-                ExecutionResult = result.Result != null ? new Dictionary<string, object> { { "result", result.Result } } : new Dictionary<string, object>(),
+                // Avoid storing very large execution results that can exceed DB column limits
+                ExecutionResult = result.Result != null ? new Dictionary<string, object> { { "result", TruncateString(result.Result?.ToString(), 1800) as object } } : new Dictionary<string, object>(),
                 IPAddress = GetValidIpAddress(request)
             };
 
@@ -461,8 +483,8 @@ public class ExpressionService : IExpressionService
                         ExecutionEndTime = DateTime.UtcNow,
                         ExecutionTimeMs = (int)(DateTime.UtcNow - executionStartTime).TotalMilliseconds,
                         Success = false,
-                        ErrorMessage = ex.Message,
-                        StackTrace = ex.StackTrace,
+                        ErrorMessage = TruncateString(ex.Message, 1900),
+                        StackTrace = TruncateString(ex.StackTrace, 1900),
                         InputVariables = request.Variables
                     };
 

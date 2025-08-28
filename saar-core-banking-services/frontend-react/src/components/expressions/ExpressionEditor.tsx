@@ -200,7 +200,9 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
       expressionId: formData.expressionId,
       name: formData.name,
       description: formData.description,
-      category: formData.category,
+  // If category is empty, derive it from usageType so backend filters that rely
+  // on category (like LoanService) will correctly discover expressions.
+  category: formData.category && formData.category.trim() ? formData.category : formData.usageType,
       subCategory: formData.subCategory,
       expressionText: formData.expressionText,
       returnType: formData.returnType,
@@ -259,10 +261,13 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
   };
 
   const isFormValid = () => {
-    return formData.name.trim() && 
-           formData.expressionText.trim() && 
-           formData.category && 
-           (!expression || formData.expressionId.trim());
+    // For new expressions, don't require an expressionId (server will generate one if omitted).
+    if (!expression) {
+  // Allow saving when category is empty because we'll default category from usageType.
+  return Boolean(formData.name.trim() && formData.expressionText.trim());
+    }
+    // For editing existing expression, keep validation same as before.
+    return Boolean(formData.name.trim() && formData.expressionText.trim() && formData.category && formData.expressionId.trim());
   };
 
   if (!isEditing && !expression) {
