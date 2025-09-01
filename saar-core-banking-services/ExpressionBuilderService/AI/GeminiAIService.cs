@@ -97,7 +97,8 @@ public interface IGeminiAIService
     Task<List<string>> SuggestImprovementsAsync(string expression, string context);
 }
 
-public class GeminiAIService : IGeminiAIService
+// Backwards-compatible: GeminiAIService now implements the generic ILLMService via IGeminiAIService
+public class GeminiAIService : ILLMService, IGeminiAIService
 {
     private readonly HttpClient _httpClient;
     private readonly GeminiAISettings _settings;

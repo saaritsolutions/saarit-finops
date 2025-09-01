@@ -8,10 +8,12 @@ namespace ExpressionBuilderService.Controllers;
 public class AIExpressionController : ControllerBase
 {
     private readonly ILogger<AIExpressionController> _logger;
+    private readonly ExpressionBuilderService.AI.ILlmSelectorService _llmSelector;
 
-    public AIExpressionController(ILogger<AIExpressionController> logger)
+    public AIExpressionController(ILogger<AIExpressionController> logger, ExpressionBuilderService.AI.ILlmSelectorService llmSelector)
     {
         _logger = logger;
+        _llmSelector = llmSelector;
     }
 
     [HttpPost("chat")]
@@ -24,9 +26,33 @@ public class AIExpressionController : ControllerBase
                 return BadRequest("Message cannot be empty");
             }
 
-            _logger.LogInformation("Received chat request: {Message}", request.Message);
+            _logger.LogInformation("Received chat request: {Message} (category: {Category})", request.Message, request.Category);
 
-            // Use fallback response system for reliable expression generation
+            // Use configured LLM provider when available
+            try
+            {
+                var provider = _llmSelector.GetProvider();
+                if (provider != null)
+                {
+                    var aiReq = new ExpressionBuilderService.AI.AIExpressionRequest
+                    {
+                        UserPrompt = request.Message,
+                        Context = request.Category // small hint for provider to know domain: expression|form|workflow
+                    };
+
+                    var aiResp = await provider.GenerateExpressionAsync(aiReq);
+                    if (aiResp != null && aiResp.IsValid)
+                    {
+                        return Ok(new { response = aiResp });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "LLM provider failed, falling back to canned responses");
+            }
+
+            // Fallback response system for reliable expression generation
             _logger.LogInformation("Using enhanced fallback response system");
             return Ok(new { response = GenerateFallbackResponse(request.Message) });
         }
@@ -348,4 +374,6 @@ public class ImprovementRequest
 public class ChatRequest
 {
     public string Message { get; set; } = string.Empty;
+    // Optional domain/category hint: "expression" | "form" | "workflow"
+    public string? Category { get; set; }
 }

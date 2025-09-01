@@ -17,90 +17,57 @@
 
 ---
 
-## 🎬 **Story Arc 1: The Banking Challenge** (2 minutes)
-
-### **Opening Statement:**
-*"In today's banking landscape, financial institutions face a critical challenge: How do you deploy new loan products, change eligibility criteria, or implement regulatory requirements without waiting weeks for IT development cycles?"*
-
-### **The Problem:**
-- Traditional banks take 3-6 months to launch new loan products
-- Business rule changes require developer intervention
-- Regulatory compliance updates cause system-wide delays
-- Credit policies are hardcoded and inflexible
-
-### **Our Solution Preview:**
-*"Today, I'll show you how SaaR's Core Banking Platform enables banks to create, test, and deploy complex business rules in real-time, without writing a single line of code."*
-
----
-
-## 🎬 **Story Arc 2: Live Business Rule Creation** (5 minutes)
+## 🎬 **Story Arc 3: Dynamic Forms & Conversational Configuration** (8 minutes)
 
 ### **Scenario Setup:**
-*"Let's imagine you're the Chief Risk Officer at a mid-sized bank. The RBI just announced new credit scoring guidelines, and you need to update your loan eligibility criteria immediately."*
+"*Now we'll highlight how fast regulatory-driven field changes can be introduced to customer-facing forms, and how a conversational assistant speeds configuration.*"
 
 ### **Demo Script:**
 
-#### **Step 1: Access Expression Builder**
+#### **Step 1: Dynamic Form Configuration (Regulatory Change)**
 ```
-URL: http://localhost:3001/login
-Action: Login with demo credentials
-Navigate: Admin Config → Expression Builder
-```
-
-**Narration:**
-*"Here's our Expression Builder - think of it as Excel for banking rules, but with the power of a programming language behind it."*
-
-#### **Step 2: Create New Rule**
-```
-Click: "Create New Expression"
-Name: "RBI Compliant Loan Eligibility 2025"
-Description: "Updated eligibility criteria per RBI guidelines"
-Category: "loan"
+URL: http://localhost:3001/admin/config
+Action: Navigate to Form Configuration (Form Builder)
+Show: Current personal loan schema (7 fields)
 ```
 
 **Narration:**
-*"I'm creating a new rule for RBI compliance. Notice how I'm using business language, not technical jargon."*
+"*A new regulation requires collection of the customer's Aadhar number for certain loan types. We'll add this mandatory field to the loan application in under a minute.*"
 
-#### **Step 3: Build the Logic**
+#### **Step 2: Conversational Form Change (Chat Assistant)
 ```
-Expression Logic:
-IF(AND(
-  customer.creditScore >= 750, 
-  customer.monthlyIncome >= 50000, 
-  customer.debtToIncomeRatio < 0.35
-), "APPROVED", 
-IF(AND(
-  customer.creditScore >= 650,
-  customer.monthlyIncome >= 30000
-), "MANUAL_REVIEW", "REJECTED"))
+Action: Open the Form Builder chat assistant (bottom-right)
+User prompt (natural language): "Add a mandatory field 'aadharNumber' (text, 12 digits) to the personal loan form and label it 'Aadhar Number'."
+System: Chat assistant confirms intent and generates the form change
+Click: 'Apply' in the assistant to commit the change
 ```
 
 **Narration:**
-*"I'm defining complex eligibility criteria using natural business logic. Notice the real-time syntax highlighting and validation - this prevents errors before deployment."*
+"*Instead of clicking through fields, a product manager types a request into the chat. The assistant creates the field, performs validation rules, and proposes the change for immediate deployment.*"
 
-#### **Step 4: Test the Rule**
+#### **Step 3: Save & Verify**
 ```
-Test Data: 
-{
-  "customer": {
-    "creditScore": 780,
-    "monthlyIncome": 75000,
-    "debtToIncomeRatio": 0.25
-  }
-}
-Result: "APPROVED" (execution time: <1ms)
+Action: Click 'Save Schema'
+Verify: Navigate to /loans/new and the 'Aadhar Number' field appears and is marked required
 ```
 
 **Narration:**
-*"Let me test this rule with sample customer data. See how it executes in under 1 millisecond? This isn't scripting - it's compiled C# code running at production speed."*
+"*The new field is instantly present in the customer form. That change propagated across channels without any developer work.*"
 
-#### **Step 5: Deploy Instantly**
+#### **Step 4: Show Quick Audit & Rollback**
 ```
-Click: "Save & Deploy"
-Status: "Active" (available immediately)
+Show: Change history in Form Builder (who requested, chat transcript, timestamp)
+Action: Click 'Rollback' to revert the change if required
 ```
 
 **Narration:**
+"*Every assistant-driven change is auditable — the chat transcript, the generated JSON, and the user who approved it are all recorded. Rollback is a single click.*"
+
+### **Key Value Points:**
+- **Speed:** Regulatory fields can be added in under a minute
+- **Usability:** Business users use conversational prompts instead of complex UIs
+- **Auditability:** Every change has a traceable chat transcript and version history
+- **Safety:** Assistant performs validation and preview before committing changes
 *"And just like that, this rule is live in production. No deployments, no downtime, no developer involvement."*
 
 ### **Key Value Points:**
