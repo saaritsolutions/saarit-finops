@@ -88,9 +88,17 @@ builder.Services.AddScoped<IExpressionService, ExpressionService>();
 builder.Services.Configure<GeminiAISettings>(
     builder.Configuration.GetSection(GeminiAISettings.SectionName));
 
-// HTTP Client for Gemini AI
+// LLM configuration (allow selecting provider via configuration)
+builder.Services.Configure<LlmSettings>(builder.Configuration.GetSection("LlmSettings"));
+
+// HTTP Clients and registrations for supported LLMs
 builder.Services.AddHttpClient<IGeminiAIService, GeminiAIService>();
 builder.Services.AddScoped<IGeminiAIService, GeminiAIService>();
+builder.Services.AddHttpClient<OllamaAIService>();
+builder.Services.AddScoped<OllamaAIService>();
+
+// Generic ILLMService selector
+builder.Services.AddScoped<ILlmSelectorService, LlmSelectorService>();
 
 // CORS configuration for React frontend
 builder.Services.AddCors(options =>
