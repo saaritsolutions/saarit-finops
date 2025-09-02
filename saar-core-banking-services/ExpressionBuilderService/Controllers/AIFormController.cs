@@ -10,11 +10,13 @@ public class AIFormController : ControllerBase
 {
     private readonly ILogger<AIFormController> _logger;
     private readonly IWebHostEnvironment _env;
+    private readonly ExpressionBuilderService.AI.IGeminiAIService _ai;
 
-    public AIFormController(ILogger<AIFormController> logger, IWebHostEnvironment env)
+    public AIFormController(ILogger<AIFormController> logger, IWebHostEnvironment env, ExpressionBuilderService.AI.IGeminiAIService ai)
     {
         _logger = logger;
         _env = env;
+        _ai = ai;
     }
 
     [HttpPost("chat")]
@@ -24,7 +26,9 @@ public class AIFormController : ControllerBase
         {
             if (string.IsNullOrWhiteSpace(request.Message)) return BadRequest("Message cannot be empty");
 
-            _logger.LogInformation("Form chat request: {Message}", request.Message);
+            _logger.LogInformation("Form chat request: {Message} (formOnly={FormOnly}) CurrentSchema: {CurrentSchema}", request.Message, request.FormOnly, request.CurrentSchemaJson);
+            // Log the bound request payload so we can see incoming flags (use Information so it appears in default logs)
+            _logger.LogInformation("Bound AIFormRequest: {RequestJson}", System.Text.Json.JsonSerializer.Serialize(request));
 
             // Basic deterministic handling for the demo Aadhar prompt
             var lower = request.Message.ToLower();
@@ -55,7 +59,31 @@ public class AIFormController : ControllerBase
                 return Ok(resp);
             }
 
-            // Generic reply
+            // If caller asked for JSON-only form, call the LLM and return sanitized schema
+            if (request.FormOnly)
+            {
+                // Build a lightweight expression request to the LLM
+                var aiReq = new ExpressionBuilderService.AI.AIExpressionRequest
+                {
+                    UserPrompt = request.Message,
+                    Domain = request.Category ?? "form",
+                    Context = request.CurrentSchemaJson
+                };
+
+                var json = await _ai.GenerateFormSchemaAsync(aiReq, request.CurrentSchemaJson);
+
+                if (string.IsNullOrWhiteSpace(json))
+                {
+                    _logger.LogWarning("AI returned no valid JSON for form-only request. Raw transcript: {Transcript}", request.Message);
+                    // Return an empty JSON object to indicate no schema could be generated
+                    return Content("{}", "application/json");
+                }
+
+                // Return the raw JSON schema directly (LLM output is sanitized by the AI service)
+                return Content(json, "application/json");
+            }
+
+            // Generic reply for interactive/demo
             return Ok(new AIFormResponse
             {
                 Explanation = "I can help add or modify form fields. Try: 'Add mandatory field aadharNumber (12 digits)'.",

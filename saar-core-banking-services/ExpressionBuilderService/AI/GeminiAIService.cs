@@ -95,6 +95,8 @@ public interface IGeminiAIService
     Task<AIExpressionResponse> GenerateExpressionAsync(AIExpressionRequest request);
     Task<string> ExplainExpressionAsync(string expression);
     Task<List<string>> SuggestImprovementsAsync(string expression, string context);
+    // Generate a JSON form schema string (sanitized) based on request; may return null on failure
+    Task<string?> GenerateFormSchemaAsync(AIExpressionRequest request, string? currentSchemaJson = null);
 }
 
 // Backwards-compatible: GeminiAIService now implements the generic ILLMService via IGeminiAIService
@@ -152,6 +154,90 @@ Be concise but thorough in explanations. Suggest alternatives when appropriate.
                 IsValid = false,
                 ValidationWarnings = new List<string> { "AI service temporarily unavailable" }
             };
+        }
+    }
+
+    // New: generate a JSON form schema string only. Attempts to coerce/sanitize output to first JSON object found.
+    public async Task<string?> GenerateFormSchemaAsync(AIExpressionRequest request, string? currentSchemaJson = null)
+    {
+        try
+        {
+            var prompt = BuildFormSchemaPrompt(request, currentSchemaJson);
+            var geminiResponse = await CallGeminiAPI(prompt);
+            var text = ExtractTextFromResponse(geminiResponse);
+            _logger.LogInformation("Gemini returned text for form schema: {TextShort}", text?.Substring(0, Math.Min(200, text?.Length ?? 0)));
+            var json = ExtractFirstJsonObject(text);
+            if (!string.IsNullOrWhiteSpace(json))
+            {
+                _logger.LogInformation("Extracted JSON schema from Gemini response (len={Len})", json.Length);
+                return json;
+            }
+
+            _logger.LogWarning("No JSON object extracted from Gemini response; falling back to simple parser.");
+
+            // Lightweight fallback: try to parse simple field:list patterns from the user's prompt
+            var fallback = BuildSimpleSchemaFromPrompt(request.UserPrompt);
+            _logger.LogInformation("Fallback schema generated (len={Len})", fallback.Length);
+            return fallback;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating form schema with Gemini AI");
+            return null;
+        }
+    }
+
+    // Very small heuristic parser to create a JSON schema from the user's prompt when LLM isn't available.
+    private string BuildSimpleSchemaFromPrompt(string prompt)
+    {
+        try
+        {
+            // Look for patterns like: name (type), age (number), email (string)
+            var fields = new List<Dictionary<string, object>>();
+            var parts = prompt.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var part in parts)
+            {
+                var p = part.Trim();
+                // match 'fieldName (type)'
+                var idx = p.IndexOf('(');
+                if (idx > 0 && p.Contains(')'))
+                {
+                    var name = p.Substring(0, idx).Trim();
+                    var type = p.Substring(idx + 1, p.IndexOf(')') - idx - 1).Trim();
+                    // sanitize
+                    name = name.Replace(" ", "").Replace("-", "_").Replace("'", "");
+                    var field = new Dictionary<string, object>
+                    {
+                        { "name", name },
+                        { "label", System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(name) },
+                        { "type", type.ToLower() },
+                        { "required", false }
+                    };
+                    fields.Add(field);
+                }
+            }
+
+            if (fields.Count == 0)
+            {
+                // Generic fallback fields
+                fields.Add(new Dictionary<string, object> { { "name", "firstName" }, { "label", "First Name" }, { "type", "string" }, { "required", true } });
+                fields.Add(new Dictionary<string, object> { { "name", "age" }, { "label", "Age" }, { "type", "number" }, { "required", true } });
+                fields.Add(new Dictionary<string, object> { { "name", "email" }, { "label", "Email" }, { "type", "string" }, { "required", false } });
+            }
+
+            var obj = new Dictionary<string, object>
+            {
+                { "entityName", "GeneratedForm" },
+                { "title", "Generated Form" },
+                { "fields", fields }
+            };
+
+            return JsonSerializer.Serialize(obj, new JsonSerializerOptions { WriteIndented = false });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Fallback schema builder failed");
+            return "{}";
         }
     }
 
@@ -249,6 +335,31 @@ RESPONSE FORMAT (return as JSON):
         return prompt.ToString();
     }
 
+    private string BuildFormSchemaPrompt(AIExpressionRequest request, string? currentSchema)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("You are a forms generation assistant. Return ONLY a single JSON object which represents the form schema. Do NOT include any explanation, markdown, or surrounding text. If you cannot produce a valid JSON object, return an empty JSON object {}.");
+        sb.AppendLine();
+        sb.AppendLine("The JSON schema format should be:\n{\n  \"entityName\": \"Name\",\n  \"title\": \"Title\",\n  \"fields\": [ { \"name\": \"age\", \"type\": \"number\", \"label\": \"Age\", \"required\": true } ]\n}");
+        sb.AppendLine();
+        sb.AppendLine($"USER REQUEST: {request.UserPrompt}");
+        if (!string.IsNullOrEmpty(request.Context)) sb.AppendLine($"CONTEXT: {request.Context}");
+        if (!string.IsNullOrEmpty(currentSchema))
+        {
+            sb.AppendLine("CURRENT_SCHEMA: (if provided, the existing schema is below; modify it according to the user's request)");
+            sb.AppendLine(currentSchema);
+            sb.AppendLine();
+            sb.AppendLine("IMPORTANT: You must decide where to place any new or modified field within the existing 'fields' array based on semantic meaning."
+                          + " Preserve existing fields and their semantics. If the user's request asks to add or modify a field, insert or update that field in the most appropriate position (beginning/middle/end) rather than always appending."
+                          + " Avoid creating duplicate fields: if a field with the same name exists, update its properties (type, required, validationRegex) instead of adding a second entry.");
+            sb.AppendLine("If you change field order, keep it logical for a typical data-entry form (for example: identity fields, personal details, contact info, identifiers).\n");
+        }
+        sb.AppendLine();
+    sb.AppendLine("REMEMBER: Output must be a single JSON object only. No prose, no markdown, no backticks.");
+    sb.AppendLine("If CURRENT_SCHEMA is provided, return the modified schema JSON object with the requested changes applied (for example, adding a mandatory field). Do not invent unrelated fields.");
+        return sb.ToString();
+    }
+
     private async Task<GeminiResponse> CallGeminiAPI(string prompt)
     {
         var request = new GeminiRequest
@@ -293,6 +404,8 @@ RESPONSE FORMAT (return as JSON):
         }
 
         var responseJson = await response.Content.ReadAsStringAsync();
+        // Log raw response for debugging; be careful about sensitive data in production
+        _logger.LogInformation("Raw Gemini response (truncated 200 chars): {Response}", responseJson?.Substring(0, Math.Min(200, responseJson?.Length ?? 0)));
         var geminiResponse = JsonSerializer.Deserialize<GeminiResponse>(responseJson, new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
@@ -345,6 +458,36 @@ RESPONSE FORMAT (return as JSON):
                 Confidence = "low"
             };
         }
+    }
+
+    // Extracts the first JSON object from a text blob. Returns null if not found.
+    private string? ExtractFirstJsonObject(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return null;
+
+        var start = text.IndexOf('{');
+        if (start == -1) return null;
+
+        int depth = 0;
+        for (int i = start; i < text.Length; i++)
+        {
+            if (text[i] == '{') depth++;
+            else if (text[i] == '}') depth--;
+
+            if (depth == 0)
+            {
+                var json = text.Substring(start, i - start + 1).Trim();
+                // quick validation
+                try
+                {
+                    using var doc = JsonDocument.Parse(json);
+                    return json;
+                }
+                catch { return null; }
+            }
+        }
+
+        return null;
     }
 
     private string ExtractTextFromResponse(GeminiResponse response)
