@@ -9,6 +9,8 @@ namespace ExpressionBuilderService.AI
         public string? CurrentSchemaJson { get; set; }
         // domain hint: "form"
         public string? Category { get; set; }
+    // If true, instruct LLM to return only a JSON schema object (no prose)
+    public bool FormOnly { get; set; } = false;
     }
 
     public class SuggestedField
