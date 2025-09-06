@@ -44,3 +44,16 @@ You don’t have to ever use `eject`. The curated feature set is suitable for sm
 You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
 
 To learn React, check out the [React documentation](https://reactjs.org/).
+
+## Multi-service setup (Expression + Loan)
+
+Create `.env.local` in this folder with:
+
+```
+REACT_APP_API_BASE_URL=http://localhost:5002           # ExpressionBuilderService
+REACT_APP_LOAN_SERVICE_BASE_URL=http://localhost:5130  # LoanService
+```
+
+Then run `npm start` (or the provided start scripts). The app will use both services:
+- /admin/ai-form-designer — AI dynamic form designer (chat → schema → apply)
+- /loans/new — Loan Origination flow that prefers the last applied AI schema

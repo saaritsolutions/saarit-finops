@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Box, Button, Paper, TextField, Typography, Alert, Stack, Divider, Link as MLink, Stepper, Step, StepLabel, Card, CardContent, CardHeader, Chip } from '@mui/material';
-import Grid from '@mui/material/Grid2';
 import { Link as RouterLink } from 'react-router-dom';
 import { getFormSchema, preValidate, submitApplication, processWorkflow, type PreValidateRequest, type ServerField, type WorkflowStepResult } from '../services/loanOriginationService';
 import WorkflowTimeline from '../components/workflow/WorkflowTimeline';
+import { aiFormService } from '../services/aiFormService';
 
 type FieldState = Record<string, any>;
 
@@ -28,7 +28,24 @@ export default function LoanOrigination() {
     (async () => {
       setLoading(true);
       try {
-  const data = await getFormSchema(PRODUCT_TYPE);
+        // 1) Prefer AI-designed schema if available
+        const aiSchema = await aiFormService.getLastApplied();
+        if (mounted && aiSchema?.fields && aiSchema.fields.length > 0) {
+          const mapped: ServerField[] = aiSchema.fields.map((f: any) => ({
+            name: f.name,
+            label: f.label || f.name,
+            type: (f.type || 'text').toLowerCase(),
+            required: !!f.required,
+            min: undefined,
+            max: undefined,
+          }));
+          setFields(mapped);
+          setValues(v => ({ ...toInitialState(mapped), ...v }));
+          return; // stop here if AI schema used
+        }
+
+        // 2) Fallback: LoanService-provided schema
+        const data = await getFormSchema(PRODUCT_TYPE);
         let list: ServerField[] = [];
         if (Array.isArray(data?.fields)) list = data.fields;
         if (!list || list.length === 0) {
