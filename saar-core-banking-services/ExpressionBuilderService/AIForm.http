@@ -1,0 +1,65 @@
+### AI Form Tests (local)
+# @name addTwoFields
+POST http://localhost:5000/api/AIForm/chat
+Content-Type: application/json
+
+{
+  "Message": "Add fields mobileNumber (text, required), dateOfBirth (date)",
+  "CurrentSchemaJson": "{\"entityName\":\"Customer\",\"title\":\"Customer Onboarding\",\"fields\":[{\"name\":\"firstName\",\"label\":\"First Name\",\"type\":\"text\",\"required\":true}]}",
+  "Category": "form",
+  "FormOnly": true
+}
+
+### Add three fields
+# @name addThree
+POST http://localhost:5000/api/AIForm/chat
+Content-Type: application/json
+
+{
+  "Message": "Add fields panNumber (text, required), income (number), email (text)",
+  "CurrentSchemaJson": "{\"entityName\":\"KYC\",\"title\":\"KYC\",\"fields\":[]}",
+  "Category": "form",
+  "FormOnly": true
+}
+
+### Modify: make age required
+# @name makeAgeRequired
+POST http://localhost:5000/api/AIForm/chat
+Content-Type: application/json
+
+{
+  "Message": "Make age required",
+  "CurrentSchemaJson": "{\"entityName\":\"Customer\",\"title\":\"Customer\",\"fields\":[{\"name\":\"age\",\"label\":\"Age\",\"type\":\"number\",\"required\":false}]}",
+  "Category": "form",
+  "FormOnly": true
+}
+
+### Delete field
+# @name deleteField
+POST http://localhost:5000/api/AIForm/chat
+Content-Type: application/json
+
+{
+  "Message": "Remove middleName",
+  "CurrentSchemaJson": "{\"entityName\":\"Customer\",\"title\":\"Customer\",\"fields\":[{\"name\":\"firstName\",\"label\":\"First Name\",\"type\":\"text\",\"required\":true},{\"name\":\"middleName\",\"label\":\"Middle Name\",\"type\":\"text\",\"required\":false}]}",
+  "Category": "form",
+  "FormOnly": true
+}
+
+### Apply suggested schema (wrap the raw JSON from chat as SchemaJson if you need this route)
+# @name apply
+POST http://localhost:5000/api/AIForm/apply
+Content-Type: application/json
+
+{
+  "Explanation": "apply",
+  "SuggestedFields": [],
+  "SchemaJson": "{\"entityName\":\"Sample\",\"title\":\"Sample\",\"fields\":[]}",
+  "Confidence": "high",
+  "IsValid": true,
+  "Transcript": "manual apply"
+}
+
+### Get last applied
+# @name lastApplied
+GET http://localhost:5000/api/AIForm/last-applied
