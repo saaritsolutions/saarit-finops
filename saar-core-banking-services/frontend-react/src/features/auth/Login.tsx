@@ -14,6 +14,7 @@ import { LockOutlined as LockIcon } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { loginUser, selectAuthLoading, selectAuthError } from '../../store/slices/authSlice';
+import VersionDisplay from '../../components/VersionDisplay';
 
 /**
  * Login component for banking application authentication
@@ -181,17 +182,18 @@ const Login: React.FC = () => {
         </Box>
 
         {/* Footer */}
-        <Typography
-          variant="caption"
-          color="textSecondary"
-          sx={{
-            display: 'block',
-            textAlign: 'center',
-            mt: 3,
-          }}
-        >
-          © 2024 SaaR Banking Solutions. All rights reserved.
-        </Typography>
+        <Box sx={{ mt: 3, textAlign: 'center' }}>
+          <Typography
+            variant="caption"
+            color="textSecondary"
+            sx={{ display: 'block' }}
+          >
+            © 2024 SaaR Banking Solutions. All rights reserved.
+          </Typography>
+          <Box sx={{ mt: 1 }}>
+            <VersionDisplay variant="text" size="small" showBuildTime={false} />
+          </Box>
+        </Box>
       </Paper>
     </Box>
   );

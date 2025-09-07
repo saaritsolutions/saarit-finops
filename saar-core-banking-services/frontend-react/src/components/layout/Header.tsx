@@ -21,10 +21,12 @@ import {
   Brightness7 as LightModeIcon,
   Settings as SettingsIcon,
   ExitToApp as LogoutIcon,
+  Info as InfoIcon,
 } from '@mui/icons-material';
 import { useSelector, useDispatch } from 'react-redux';
 import { selectSidebarOpen, setSidebarOpen, selectTheme, setTheme } from '../../store/slices/uiSlice';
 import { selectUser, logoutUser } from '../../store/slices/authSlice';
+import AboutDialog from '../dialogs/AboutDialog';
 
 /**
  * Header component with navigation controls, user menu, and notifications
@@ -42,6 +44,7 @@ const Header: React.FC = () => {
   // Local state for menus
   const [userMenuAnchor, setUserMenuAnchor] = React.useState<null | HTMLElement>(null);
   const [notificationMenuAnchor, setNotificationMenuAnchor] = React.useState<null | HTMLElement>(null);
+  const [aboutDialogOpen, setAboutDialogOpen] = React.useState(false);
 
   const handleMenuToggle = () => {
     dispatch(setSidebarOpen(!sidebarOpen));
@@ -72,9 +75,19 @@ const Header: React.FC = () => {
     handleUserMenuClose();
   };
 
+  const handleAboutOpen = () => {
+    setAboutDialogOpen(true);
+    handleUserMenuClose();
+  };
+
+  const handleAboutClose = () => {
+    setAboutDialogOpen(false);
+  };
+
   return (
-    <AppBar
-      position="fixed"
+    <>
+      <AppBar
+        position="fixed"
       elevation={1}
       sx={{
         zIndex: theme.zIndex.drawer + 1,
@@ -201,6 +214,9 @@ const Header: React.FC = () => {
           <MenuItem onClick={handleUserMenuClose}>
             <SettingsIcon sx={{ mr: 2 }} /> Settings
           </MenuItem>
+          <MenuItem onClick={handleAboutOpen}>
+            <InfoIcon sx={{ mr: 2 }} /> About
+          </MenuItem>
           <MenuItem onClick={handleLogout}>
             <LogoutIcon sx={{ mr: 2 }} /> Logout
           </MenuItem>
@@ -251,6 +267,10 @@ const Header: React.FC = () => {
         </Menu>
       </Toolbar>
     </AppBar>
+    
+    {/* About Dialog */}
+    <AboutDialog open={aboutDialogOpen} onClose={handleAboutClose} />
+    </>
   );
 };
 
