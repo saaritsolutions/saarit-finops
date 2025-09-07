@@ -1,14 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Box, Button, Card, CardContent, Divider, Stack, TextField, Typography, Alert } from '@mui/material';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { aiFormService, type FormSchema } from '../services/aiFormService';
 import SchemaForm from '../components/forms/SchemaForm';
 import { loanDetailedSchema } from '../schemas/loanDetailedSchema';
+import { getFormSchema as getLoanFormSchema } from '../services/loanOriginationService';
 
 const pretty = (obj: any) => JSON.stringify(obj, null, 2);
 
 const DEFAULT_SCHEMA: FormSchema = loanDetailedSchema;
 
 const AIDynamicFormDesigner: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const productType = params.get('productType') || 'personal_loan';
+  const returnTo = params.get('returnTo');
   const [schema, setSchema] = useState<FormSchema>(DEFAULT_SCHEMA);
   const [schemaText, setSchemaText] = useState(pretty(DEFAULT_SCHEMA));
   const [prompt, setPrompt] = useState('');
@@ -18,19 +25,44 @@ const AIDynamicFormDesigner: React.FC = () => {
   const [values, setValues] = useState<Record<string, any>>({});
 
   useEffect(() => {
-    // Try load last applied on mount
+    // Try load current schema: prefer LoanService for productType when dynamic enabled, else last applied
     (async () => {
-      const last = await aiFormService.getLastApplied();
-      if (last) {
-        setSchema(last);
-        setSchemaText(pretty(last));
+      setLoading(true);
+      try {
+        // Attempt server-provided schema for the selected product type
+        const server = await getLoanFormSchema(productType);
+        if (server && Array.isArray(server.fields) && server.fields.length > 0) {
+          const s: FormSchema = {
+            entityName: 'LoanApplication',
+            title: 'Loan Application',
+            fields: server.fields as any,
+          };
+          setSchema(s);
+          setSchemaText(pretty(s));
+        } else {
+          const last = await aiFormService.getLastApplied();
+          if (last) {
+            setSchema(last);
+            setSchemaText(pretty(last));
+          }
+        }
+      } catch {
+        const last = await aiFormService.getLastApplied();
+        if (last) {
+          setSchema(last);
+          setSchemaText(pretty(last));
+        }
+      } finally {
+        // Initialize values keys based on schema (fallback uses DEFAULT_SCHEMA until state updates)
+        const base = schema.fields?.length ? schema : DEFAULT_SCHEMA;
+        const vals: Record<string, any> = {};
+        for (const f of (base.fields || [])) vals[f.name] = '';
+        setValues(vals);
+        setLoading(false);
       }
-  // Initialize values keys based on schema
-  const vals: Record<string, any> = {};
-  for (const f of (DEFAULT_SCHEMA.fields || [])) vals[f.name] = '';
-  setValues(vals);
     })();
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productType]);
 
   const currentSchemaJson = useMemo(() => {
     try { return JSON.stringify(JSON.parse(schemaText)); } catch { return JSON.stringify(schema); }
@@ -70,7 +102,13 @@ const AIDynamicFormDesigner: React.FC = () => {
         IsValid: true,
         Transcript: prompt,
       });
-      if (success?.success) setMsg('Schema applied'); else setError('Apply failed');
+      if (success?.success) {
+        setMsg('Schema applied');
+        if (returnTo) {
+          // small delay to show feedback
+          setTimeout(() => navigate(returnTo), 400);
+        }
+      } else setError('Apply failed');
     } catch (e: any) {
       setError(e?.message || 'Apply failed');
     } finally {
@@ -100,7 +138,7 @@ const AIDynamicFormDesigner: React.FC = () => {
               />
               <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
                 <Button variant="contained" onClick={runPrompt} disabled={loading || !prompt.trim()}>Update Schema</Button>
-                <Button variant="outlined" onClick={applySchema} disabled={loading}>Apply</Button>
+                <Button variant="outlined" onClick={applySchema} disabled={loading}>{returnTo ? 'Apply & Return' : 'Apply'}</Button>
               </Stack>
               {loading && <Alert sx={{ mt: 1 }} severity="info">Working…</Alert>}
               {msg && <Alert sx={{ mt: 1 }} severity="success">{msg}</Alert>}

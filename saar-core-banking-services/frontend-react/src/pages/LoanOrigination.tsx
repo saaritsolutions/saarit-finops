@@ -155,7 +155,12 @@ export default function LoanOrigination() {
           </Stepper>
           <Typography color="text.secondary">Base URL: {process.env.REACT_APP_LOAN_SERVICE_BASE_URL || 'http://localhost:5130'}</Typography>
           <Box display="flex" gap={2}>
-            <MLink component={RouterLink} to="/admin/config">Admin Config</MLink>
+            <MLink
+              component={RouterLink}
+              to={`/admin/ai-form-designer?productType=${PRODUCT_TYPE}&returnTo=/loans/new`}
+            >
+              Admin Config
+            </MLink>
             <MLink component={RouterLink} to="/expressions">Expression Builder</MLink>
           </Box>
           {loading && <Alert severity="info">Loading schema…</Alert>}
