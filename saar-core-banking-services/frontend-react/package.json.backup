@@ -1,6 +1,6 @@
 {
   "name": "frontend-react",
-  "version": "2.0.2",
+  "version": "0.1.0",
   "private": true,
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -39,14 +39,11 @@
     "zustand": "^5.0.6"
   },
   "scripts": {
-    "start": "PORT=3002 BROWSER=none REACT_APP_VERSION=$npm_package_version REACT_APP_BUILD_TIME=$(date +%s) craco start",
-    "build": "REACT_APP_VERSION=$npm_package_version REACT_APP_BUILD_TIME=$(date +%s) craco build",
-    "test": "craco test",
-    "eject": "react-scripts eject",
-    "version-bump": "npm version patch --no-git-tag-version && echo \"Version updated to $(node -p \"require(\\\"./package.json\\\").version\")\"",
-    "version-patch": "node scripts/update-version.js patch",
-    "version-minor": "node scripts/update-version.js minor",
-    "version-major": "node scripts/update-version.js major"
+  "start": "PORT=3001 BROWSER=none SKIP_PREFLIGHT_CHECK=true TSC_COMPILE_ON_ERROR=true DISABLE_ESLINT_PLUGIN=true NODE_OPTIONS=\"--max-old-space-size=8192\" craco start",
+  "start-no-ts": "PORT=3001 BROWSER=none SKIP_PREFLIGHT_CHECK=true TSC_COMPILE_ON_ERROR=true DISABLE_ESLINT_PLUGIN=true GENERATE_SOURCEMAP=false DISABLE_NEW_JSX_TRANSFORM=true NODE_OPTIONS=\"--max-old-space-size=4096\" REACT_APP_TS_NODE_PROJECT=false craco start",
+  "build": "craco build",
+  "test": "craco test",
+  "eject": "react-scripts eject"
   },
   "eslintConfig": {
     "extends": [
@@ -67,11 +64,11 @@
     ]
   },
   "devDependencies": {
-    "@craco/craco": "^7.1.0",
+  "@craco/craco": "^7.1.0",
     "@tanstack/react-query-devtools": "^5.83.0",
     "@types/testing-library__jest-dom": "^5.14.9",
     "@types/uuid": "^10.0.0",
-    "craco-alias": "^3.0.1",
+  "craco-alias": "^3.0.1",
     "cypress": "^14.5.4",
     "jest-environment-jsdom": "^29.7.0",
     "msw": "^2.10.4"

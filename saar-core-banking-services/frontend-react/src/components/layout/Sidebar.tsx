@@ -40,6 +40,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import { selectSidebarOpen, setSidebarOpen } from '../../store/slices/uiSlice';
 import { selectUser } from '../../store/slices/authSlice';
 import { DRAWER_WIDTH, HEADER_HEIGHT } from './Layout';
+import { getAppVersion } from '../../utils/version';
+import VersionDisplay from '../VersionDisplay';
 
 interface MenuItem {
   id: string;
@@ -408,9 +410,12 @@ const Sidebar: React.FC = () => {
       {/* Sidebar Footer */}
       <Box sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
         {sidebarOpen && (
-          <Typography variant="caption" color="textSecondary" sx={{ textAlign: 'center', display: 'block' }}>
-            v2.0.0 | © 2024 SaaR Banking
-          </Typography>
+          <Box sx={{ textAlign: 'center' }}>
+            <VersionDisplay variant="tooltip" showBuildTime={false} />
+            <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mt: 0.5 }}>
+              © 2024 SaaR Banking
+            </Typography>
+          </Box>
         )}
       </Box>
     </Box>

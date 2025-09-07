@@ -183,13 +183,13 @@ export const ExpressionTemplates: React.FC<ExpressionTemplatesProps> = ({
     navigator.clipboard.writeText(text);
   };
 
-  const useTemplate = (template: ExpressionTemplate) => {
+  const handleUseTemplate = (template: ExpressionTemplate) => {
     if (onUseTemplate) {
       onUseTemplate(template);
     }
   };
 
-  const createFromTemplate = (template: ExpressionTemplate) => {
+  const handleCreateFromTemplate = (template: ExpressionTemplate) => {
     if (onCreateFromTemplate) {
       onCreateFromTemplate(template);
     }
@@ -325,7 +325,7 @@ export const ExpressionTemplates: React.FC<ExpressionTemplatesProps> = ({
                     <Button
                       variant="outlined"
                       size="small"
-                      onClick={() => useTemplate(template)}
+                      onClick={() => handleUseTemplate(template)}
                       startIcon={<ContentCopyIcon />}
                       fullWidth
                     >
@@ -336,7 +336,7 @@ export const ExpressionTemplates: React.FC<ExpressionTemplatesProps> = ({
                     <Button
                       variant="contained"
                       size="small"
-                      onClick={() => createFromTemplate(template)}
+                      onClick={() => handleCreateFromTemplate(template)}
                       startIcon={<AddIcon />}
                       fullWidth
                     >
@@ -433,7 +433,7 @@ export const ExpressionTemplates: React.FC<ExpressionTemplatesProps> = ({
                       <Button
                         variant="outlined"
                         size="small"
-                        onClick={() => useTemplate(template)}
+                        onClick={() => handleUseTemplate(template)}
                         startIcon={<ContentCopyIcon />}
                         fullWidth
                       >
@@ -444,7 +444,7 @@ export const ExpressionTemplates: React.FC<ExpressionTemplatesProps> = ({
                       <Button
                         variant="contained"
                         size="small"
-                        onClick={() => createFromTemplate(template)}
+                        onClick={() => handleCreateFromTemplate(template)}
                         startIcon={<AddIcon />}
                         fullWidth
                       >
@@ -553,7 +553,7 @@ export const ExpressionTemplates: React.FC<ExpressionTemplatesProps> = ({
                 <Button
                   variant="outlined"
                   onClick={() => {
-                    useTemplate(selectedTemplate);
+                    handleUseTemplate(selectedTemplate);
                     setPreviewDialogOpen(false);
                   }}
                   startIcon={<ContentCopyIcon />}
@@ -565,7 +565,7 @@ export const ExpressionTemplates: React.FC<ExpressionTemplatesProps> = ({
                 <Button
                   variant="contained"
                   onClick={() => {
-                    createFromTemplate(selectedTemplate);
+                    handleCreateFromTemplate(selectedTemplate);
                     setPreviewDialogOpen(false);
                   }}
                   startIcon={<AddIcon />}

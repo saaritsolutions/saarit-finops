@@ -378,7 +378,7 @@ const WorldClassExpressionBuilder: React.FC = () => {
     }
   };
 
-  const useTemplate = (template: Template) => {
+  const handleUseTemplate = (template: Template) => {
     setExpressionCode(template.code);
     setExpressionName(template.name);
     setDescription(template.description);
@@ -579,7 +579,7 @@ Example: IF (customer.Age >= 18 AND customer.Income > 50000) THEN 'APPROVED' ELS
                 <Button
                   variant="contained"
                   size="small"
-                  onClick={() => useTemplate(template)}
+                  onClick={() => handleUseTemplate(template)}
                   startIcon={<BookmarkIcon />}
                   sx={{ minWidth: 'fit-content' }}
                 >
