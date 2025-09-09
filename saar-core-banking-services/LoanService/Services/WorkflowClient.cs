@@ -102,5 +102,7 @@ namespace LoanService.Services
         public string? NextStep { get; set; }
         public string? WorkflowStatus { get; set; }
         public string Message { get; set; } = string.Empty;
+    // Optional list of actions the UI should render for the current step
+    public List<string>? RequiredActions { get; set; }
     }
 }

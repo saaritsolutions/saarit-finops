@@ -201,8 +201,8 @@ const EndToEndDemo: React.FC = () => {
 ## Demo Access
 
 ### Live Demo URLs
-- **Frontend**: http://localhost:3001/demo
-- **Main Application**: http://localhost:3001/expressions
+- **Frontend**: http://localhost:3002/demo
+- **Main Application**: http://localhost:3002/expressions
 - **Backend API**: http://localhost:5001/api/expressions/health
 
 ### Navigation

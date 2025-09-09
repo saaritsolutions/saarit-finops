@@ -47,6 +47,7 @@ namespace LoanService.Services
             if (string.IsNullOrWhiteSpace(current)) current = def.StartStep ?? def.Steps.FirstOrDefault()?.Name ?? "START";
             var next = await ResolveNextAsync(def, current, context) ?? "COMPLETED";
             var status = next.Equals("COMPLETED", StringComparison.OrdinalIgnoreCase) ? "COMPLETED" : "ACTIVE";
+            var step = def.Steps.FirstOrDefault(s => s.Name.Equals(current, StringComparison.OrdinalIgnoreCase));
             return new WorkflowStepResult
             {
                 InstanceId = instanceId,
@@ -54,7 +55,8 @@ namespace LoanService.Services
                 CurrentStep = current,
                 NextStep = next,
                 WorkflowStatus = status,
-                Message = "Processed via local orchestrator"
+                Message = "Processed via local orchestrator",
+                RequiredActions = step?.RequiredActions
             };
         }
 
@@ -140,6 +142,8 @@ namespace LoanService.Services
         public string? ConditionExpressionId { get; set; }
         public string? Next { get; set; }
         public string? ElseNext { get; set; }
+    // Optional list of actions the UI should present to the user at this step
+    public List<string>? RequiredActions { get; set; }
     }
 
     public class LocalWorkflowInstance
@@ -180,7 +184,8 @@ namespace LoanService.Services
                 CurrentStep = context.TryGetValue("workflow.currentStep", out var v) ? v?.ToString() ?? "START" : "START",
                 NextStep = "COMPLETED",
                 WorkflowStatus = "COMPLETED",
-                Message = "Processed by Null orchestrator"
+                Message = "Processed by Null orchestrator",
+                RequiredActions = null
             });
         }
 

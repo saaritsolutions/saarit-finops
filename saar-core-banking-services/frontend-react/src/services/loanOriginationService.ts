@@ -58,7 +58,11 @@ export async function preValidate(payload: PreValidateRequest): Promise<PreValid
     const res = await axios.post(`${API_ROOT}/pre-validate`, payload, {
       headers: { 'Content-Type': 'application/json' },
     });
-    return res.data as PreValidateResponse;
+  // Backend returns PascalCase (Eligibility, InterestRate). Normalize to camelCase.
+  const data = res.data ?? {};
+  const eligibility = data.eligibility ?? data.Eligibility ?? data.eligibilityStatus ?? data.EligibilityStatus;
+  const interestRate = data.interestRate ?? data.InterestRate ?? null;
+  return { eligibility, interestRate } as PreValidateResponse;
   } catch (e: any) {
     const status = e?.response?.status;
     const body = e?.response?.data;
@@ -71,7 +75,16 @@ export async function submitApplication(payload: PreValidateRequest): Promise<Su
     const res = await axios.post(`${API_ROOT}/submit`, payload, {
       headers: { 'Content-Type': 'application/json' },
     });
-    return res.data as SubmitApplicationResponse;
+    // Normalize PascalCase fields from backend to camelCase expected by UI
+    const d = res.data ?? {};
+    return {
+      status: d.status ?? d.Status,
+      applicationId: d.applicationId ?? d.ApplicationId,
+      workflowInstanceId: d.workflowInstanceId ?? d.WorkflowInstanceId,
+      currentStep: d.currentStep ?? d.CurrentStep,
+      interestRate: d.interestRate ?? d.InterestRate,
+      message: d.message ?? d.Message,
+    } as SubmitApplicationResponse;
   } catch (e: any) {
     const status = e?.response?.status;
     const body = e?.response?.data;

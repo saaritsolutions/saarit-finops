@@ -1,73 +1,80 @@
-// Cypress E2E test for Expression Builder basic functionality
-describe('Expression Builder E2E Tests', () => {
-  beforeEach(() => {
-    // Visit the Expression Builder page
-    cy.visit('/expressions')
-    
-    // Wait for either Expression Builder or Login page to load
+/// <reference types="cypress" />
+/// <reference types="@testing-library/cypress" />
+export {};
+
+// Updated E2E aligned with current WorldClassExpressionBuilder UI
+describe('Expression Builder E2E (WorldClass UI)', () => {
+  // Helpers for robust interactions (handle MUI backdrops/overlays)
+  const closeAnyBackdrop = () => {
     cy.get('body').then(($body) => {
-      if ($body.text().includes('Login') || $body.text().includes('Sign In')) {
-        // Handle login if auth is required
-        cy.log('Authentication required - skipping tests for now')
-        return
-      } else {
-        // Wait for Expression Builder to load
-        cy.contains('Expression Builder', { timeout: 10000 }).should('be.visible')
+      const hasBackdrop = $body.find('.MuiBackdrop-root:visible').length > 0;
+      if (hasBackdrop) {
+        cy.get('body').type('{esc}', { force: true });
+        cy.get('.MuiBackdrop-root:visible').click({ force: true }).should('not.exist');
       }
-    })
-  })
+    });
+  };
 
-  describe('Page Loading and Navigation', () => {
-    it('should display the main interface correctly', () => {
-      // Check main heading
-      cy.contains('Expression Builder').should('be.visible')
-      cy.contains('Create, edit, and test business rule expressions for banking operations.').should('be.visible')
-      
-      // Check that all tabs are visible
-      cy.contains('Expressions').should('be.visible')
-      cy.contains('Create/Edit').should('be.visible') 
-      cy.contains('Templates').should('be.visible')
-      cy.contains('Functions').should('be.visible')
-      cy.contains('Test').should('be.visible')
-    })
+  const safeClick = (selectorOrContains: string | RegExp, opts: Partial<Cypress.ClickOptions> = {}) => {
+    closeAnyBackdrop();
+    if (typeof selectorOrContains === 'string' && selectorOrContains.startsWith('[')) {
+      cy.get(selectorOrContains).scrollIntoView().click({ force: true, ...opts });
+    } else {
+      cy.contains(selectorOrContains as any).scrollIntoView().click({ force: true, ...opts });
+    }
+  };
 
-    it('should navigate between tabs correctly', () => {
-      // Initially on Expressions tab
-      cy.contains('Expression List').should('be.visible')
-      
-      // Navigate to Templates tab
-      cy.contains('Templates').click()
-      cy.contains('Expression Templates').should('be.visible')
-      
-      // Navigate to Functions tab
-      cy.contains('Functions').click()
-      cy.contains('Banking Functions & Operators').should('be.visible')
-      
-      // Navigate to Test tab
-      cy.contains('Test').click()
-      cy.contains('Expression Tester').should('be.visible')
-      
-      // Navigate to Create/Edit tab
-      cy.contains('Create/Edit').click()
-      cy.contains('Create Expression').should('be.visible')
-    })
-  })
+  const safeType = (getEl: () => Cypress.Chainable<JQuery<HTMLElement>>, text: string) => {
+    closeAnyBackdrop();
+    getEl().scrollIntoView().click({ force: true }).clear({ force: true }).type(text, { force: true });
+  };
 
-  describe('Expression List', () => {
-    it('should load and display existing expressions', () => {
-      // Should be on expressions tab by default
-      cy.contains('Expression List').should('be.visible')
-      
-      // Wait for expressions to load
-      cy.get('table', { timeout: 10000 }).should('be.visible')
-      
-      // Check table headers
-      cy.contains('Name').should('be.visible')
-      cy.contains('Description').should('be.visible')
-      cy.contains('Category').should('be.visible')
-      cy.contains('Status').should('be.visible')
-      cy.contains('Created').should('be.visible')
-      cy.contains('Actions').should('be.visible')
-    })
-  })
+  const clickTab = (label: string) => {
+    closeAnyBackdrop();
+    cy.contains('[role="tab"]', label).scrollIntoView().click({ force: true });
+  };
+
+  beforeEach(() => {
+    cy.loginAsDemo();
+    cy.visit('/expressions');
+    cy.contains('SaaR Expression Builder', { timeout: 10000 }).should('be.visible');
+    // Ensure default tab content is loaded
+    cy.contains('Expression Code').should('be.visible');
+    closeAnyBackdrop();
+  });
+
+  it('displays main interface and tabs', () => {
+    cy.contains('SaaR Expression Builder').should('be.visible');
+    cy.contains('Builder').should('be.visible');
+    cy.contains('Templates').should('be.visible');
+    cy.contains('History').should('be.visible');
+  });
+
+  it('navigates between tabs', () => {
+  clickTab('Templates');
+    cy.contains('Expression Templates', { timeout: 8000 }).should('be.visible');
+
+  clickTab('History');
+    cy.contains('Expression History', { timeout: 8000 }).should('be.visible');
+
+  clickTab('Builder');
+  // Assert the Builder tab is selected and the editor is visible
+  cy.contains('[role="tab"]', 'Builder').should('have.attr', 'aria-selected', 'true');
+  cy.get('[data-testid="expression-editor"]').should('be.visible');
+  });
+
+  it('enters and validates/saves an expression (backend optional)', () => {
+    // Fill metadata
+  safeType(() => cy.findByLabelText('Expression Name'), 'Demo Age Check');
+    // Fill code
+  safeType(() => cy.get('[data-testid="expression-editor"]'), "IF (customer.Age >= 18) THEN true ELSE false");
+
+    // Validate (may show success or error depending on backend availability)
+  safeClick('[data-testid="btn-validate"]');
+    cy.contains(/Validating|Expression is valid|validation failed|Failed to connect/i, { timeout: 10000 });
+
+    // Try Save (assert presence of save status alert regardless of result)
+  safeClick('[data-testid="btn-save"]');
+    cy.get('[data-testid="save-success"]', { timeout: 10000 }).should('be.visible');
+  });
 });

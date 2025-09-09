@@ -31,9 +31,10 @@ namespace LoanService.Services
                 };
 
                 // Use configured BaseAddress when available, fall back to fixed demo port 5004
+                // Correct endpoint route lives under ExpressionEngineController
                 var url = _httpClient.BaseAddress != null
-                    ? new Uri(_httpClient.BaseAddress, "/api/Expressions/execute").ToString()
-                    : "http://localhost:5004/api/Expressions/execute";
+                    ? new Uri(_httpClient.BaseAddress, "/api/expression-engine/execute").ToString()
+                    : "http://localhost:5004/api/expression-engine/execute";
                 var response = await _httpClient.PostAsJsonAsync(url, request);
 
                 response.EnsureSuccessStatusCode();

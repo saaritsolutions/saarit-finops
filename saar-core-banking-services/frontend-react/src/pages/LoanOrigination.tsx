@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Box, Button, Paper, TextField, Typography, Alert, Stack, Divider, Link as MLink, Stepper, Step, StepLabel, Card, CardContent, CardHeader, Chip } from '@mui/material';
+import { Box, Button, Paper, TextField, Typography, Alert, Stack, Divider, Stepper, Step, StepLabel, Card, CardContent, CardHeader, Chip, Tooltip, IconButton } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
+import SettingsIcon from '@mui/icons-material/Settings';
 import { getFormSchema, preValidate, submitApplication, processWorkflow, type PreValidateRequest, type ServerField, type WorkflowStepResult } from '../services/loanOriginationService';
 import WorkflowTimeline from '../components/workflow/WorkflowTimeline';
 import { aiFormService } from '../services/aiFormService';
+import SchemaForm from '../components/forms/SchemaForm';
+import type { FormSchema } from '../services/aiFormService';
 
 type FieldState = Record<string, any>;
 
@@ -15,13 +18,21 @@ function toInitialState(fields: ServerField[]): FieldState {
 
 export default function LoanOrigination() {
   const [fields, setFields] = useState<ServerField[]>([]);
+  const [formSchema, setFormSchema] = useState<FormSchema | null>(null);
   const [values, setValues] = useState<FieldState>({});
   const [loading, setLoading] = useState(false);
   const [pre, setPre] = useState<{ eligibility?: string; interestRate?: number | null; error?: string; errors?: string[] } | null>(null);
   const [submit, setSubmit] = useState<{ status?: string; message?: string; applicationId?: string; workflowInstanceId?: string; currentStep?: string; error?: string } | null>(null);
   const [activeStep, setActiveStep] = useState(0);
   const [timeline, setTimeline] = useState<string[]>([]);
+  const [availableActions, setAvailableActions] = useState<string[]>([]);
+  const [uiError, setUiError] = useState<string | null>(null);
   const PRODUCT_TYPE = 'personal_loan' as const;
+  const kycRequired = useMemo(() => {
+    const hasAction = availableActions.some(a => /kyc_verify/i.test(a));
+    const inStep = /kyc/i.test(submit?.currentStep || '');
+    return hasAction || inStep;
+  }, [availableActions, submit?.currentStep]);
 
   useEffect(() => {
     let mounted = true;
@@ -40,6 +51,7 @@ export default function LoanOrigination() {
             max: undefined,
           }));
           setFields(mapped);
+          setFormSchema(aiSchema as any);
           setValues(v => ({ ...toInitialState(mapped), ...v }));
           return; // stop here if AI schema used
         }
@@ -59,6 +71,8 @@ export default function LoanOrigination() {
         }
         if (mounted) {
           setFields(list);
+          const schemaFromServer: FormSchema = { entityName: 'LoanApplication', title: 'Loan Application', fields: list as any };
+          setFormSchema(schemaFromServer);
           setValues(v => ({ ...toInitialState(list), ...v }));
         }
       } catch (e) {
@@ -71,6 +85,7 @@ export default function LoanOrigination() {
         ];
         if (mounted) {
           setFields(fallback);
+          setFormSchema({ entityName: 'LoanApplication', title: 'Loan Application', fields: fallback as any });
           setValues(v => ({ ...toInitialState(fallback), ...v }));
         }
       } finally {
@@ -111,6 +126,8 @@ export default function LoanOrigination() {
 
   const onSubmit = async () => {
     setSubmit(null);
+    setAvailableActions([]);
+    setUiError(null);
     try {
       const req = buildRequest(values);
       const res = await submitApplication(req);
@@ -135,15 +152,66 @@ export default function LoanOrigination() {
       });
       const next = res.nextStep || res.currentStep;
       setSubmit(s => s ? { ...s, currentStep: next, status: res.workflowStatus || s.status } : s);
+      setAvailableActions(res.requiredActions || []);
       setTimeline(t => [...t, `Advanced to: ${next}`]);
     } catch (e: any) {
       setTimeline(t => [...t, 'Advance failed']);
     }
   };
 
+  const onPerformAction = async (action: string) => {
+    if (!submit?.workflowInstanceId) return;
+    setUiError(null);
+
+    // If action relates to KYC, ensure we have an aadharNumber in values
+    const aadhar = values['aadharNumber'];
+    if (/kyc/i.test(action) || /kyc/i.test(submit.currentStep || '')) {
+      const aadharStr = (aadhar ?? '').toString().trim();
+      if (!aadharStr || aadharStr.length !== 12 || /\D/.test(aadharStr)) {
+        setUiError('Please provide a valid 12-digit Aadhar Number before performing KYC.');
+        return;
+      }
+    }
+
+    try {
+      const res: WorkflowStepResult = await processWorkflow(submit.workflowInstanceId, action, {
+        'workflow.currentStep': submit.currentStep || 'START',
+        'loan.amount': values['loanAmount'],
+        'loan.type': PRODUCT_TYPE.toUpperCase(),
+        'customer.creditScore': values['creditScore'],
+        // KYC context (if present)
+        'kyc.aadharNumber': values['aadharNumber'] || null,
+        'kyc.channel': 'WEB',
+      });
+      const next = res.nextStep || res.currentStep;
+      setSubmit(s => s ? { ...s, currentStep: next, status: res.workflowStatus || s.status, message: res.message || s.message } : s);
+      setAvailableActions(res.requiredActions || []);
+      setTimeline(t => [...t, `Action ${action} -> ${next}`]);
+    } catch (e: any) {
+      setUiError(e?.message || `Action ${action} failed`);
+    }
+  };
+
   return (
     <Box>
-      <Typography variant="h4" sx={{ mb: 3, fontWeight: 700, letterSpacing: 0.25 }}>Apply for a Loan</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+        <Typography variant="h4" sx={{ fontWeight: 700, letterSpacing: 0.25 }}>Apply for a Loan</Typography>
+        {/* Single elegant config entry */}
+    <Tooltip title="Open Admin Configuration">
+          <IconButton
+            component={RouterLink}
+            to="/admin/config"
+            size="small"
+            aria-label="Open Admin Configuration"
+          >
+      <SettingsIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Box>
+      {/* subtle helper for admins */}
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+        Configure form, workflow, and expressions in Admin Config (top-right)
+      </Typography>
       <Paper sx={{ p: 3, borderRadius: 4 }}>
         <Stack spacing={3}>
           <Stepper activeStep={activeStep} alternativeLabel>
@@ -153,44 +221,33 @@ export default function LoanOrigination() {
               </Step>
             ))}
           </Stepper>
-          <Typography color="text.secondary">Base URL: {process.env.REACT_APP_LOAN_SERVICE_BASE_URL || 'http://localhost:5130'}</Typography>
-          <Box display="flex" gap={2}>
-            <MLink
-              component={RouterLink}
-              to={`/admin/ai-form-designer?productType=${PRODUCT_TYPE}&returnTo=/loans/new`}
-            >
-              Admin Config
-            </MLink>
-            <MLink component={RouterLink} to="/expressions">Expression Builder</MLink>
-          </Box>
+          {/* Removed extra links and debug base URL for a cleaner, elegant look */}
           {loading && <Alert severity="info">Loading schema…</Alert>}
           <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3 }}>
             <Box sx={{ flex: 1 }}>
-              <Box sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-                gap: 2,
-              }}>
-                {fields.map((f) => {
-                  const name = f.name || '';
-                  const type = (f.type || 'text').toLowerCase();
-                  const isNumber = type === 'number';
-                  return (
-                    <TextField
-                      key={name}
-                      fullWidth
-                      type={isNumber ? 'number' : 'text'}
-                      label={f.label || name}
-                      placeholder={name === 'creditScore' ? 'e.g. 750' : undefined}
-                      value={values[name] ?? ''}
-                      onChange={(e) => setValue(name, e.target.value)}
-                      InputProps={name === 'loanAmount' ? { inputProps: { min: f.min ?? 0 }, startAdornment: <span style={{ marginRight: 6 }}>₹</span> } : undefined}
-                    />
-                  );
-                })}
-              </Box>
+                {formSchema && (
+                  <SchemaForm
+                    schema={formSchema}
+                    values={values}
+                    onChange={setValue}
+                  />
+                )}
+                {/* Opportunistic KYC field if required and schema didn't include it */}
+                {kycRequired && !fields.some(f => (f.name || '').toLowerCase() === 'aadharnumber') && (
+                  <TextField
+                    fullWidth
+                    type="text"
+                    label="Aadhar Number"
+                    placeholder="12-digit Aadhar"
+                    value={(values['aadharNumber'] ?? '') as string}
+                    onChange={(e) => setValue('aadharNumber', e.target.value)}
+                    helperText="Required for KYC verification"
+                    inputProps={{ 'data-testid': 'field-aadharNumber', name: 'aadharNumber' }}
+                    sx={{ mt: 2 }}
+                  />
+                )}
 
-              <Box display="flex" gap={2} sx={{ mt: 2 }}>
+              <Box display="flex" gap={1.5} sx={{ mt: 2 }}>
                 <Button variant="contained" onClick={onPreValidate}>Pre-Validate</Button>
                 <Button variant="outlined" onClick={onSubmit}>Submit</Button>
               </Box>
@@ -262,6 +319,7 @@ export default function LoanOrigination() {
               <CardHeader title="Submission Result" />
               <CardContent>
               {submit.error && <Alert severity="error" sx={{ mt: 1 }}>{submit.error}</Alert>}
+              {uiError && <Alert severity="warning" sx={{ mt: 1 }}>{uiError}</Alert>}
               {submit.status && (
                 <Box sx={{ mt: 1 }}>
                   <Typography>Status: {submit.status}</Typography>
@@ -269,10 +327,36 @@ export default function LoanOrigination() {
                   {submit.applicationId && <Typography>Application ID: {submit.applicationId}</Typography>}
                   {submit.workflowInstanceId && <Typography>Workflow ID: {submit.workflowInstanceId}</Typography>}
                   {submit.currentStep && <Typography>Current Step: {submit.currentStep}</Typography>}
+                  {/* Required actions indicator */}
+                  {availableActions.length > 0 && (
+                    <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap' }}>
+                      {availableActions.map((act) => (
+                        <Chip key={act} color={/kyc/i.test(act) ? 'warning' : 'info'} label={`Required: ${act.replace(/_/g, ' ')}`} size="small" />
+                      ))}
+                    </Stack>
+                  )}
+                  {kycRequired && (
+                    <Alert severity="info" sx={{ mt: 1 }}>KYC verification required. Provide Aadhar and click the KYC action.</Alert>
+                  )}
                   {submit.workflowInstanceId && (
-                    <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-                      <Button variant="contained" size="small" onClick={onAdvanceStep}>Advance Step</Button>
-                    </Box>
+                    <Stack direction="row" spacing={1} sx={{ mt: 1.5, flexWrap: 'wrap' }}>
+                      <Tooltip title={availableActions.length > 0 ? 'Complete required actions first' : ''}>
+                        <span>
+                          <Button variant="contained" size="small" onClick={onAdvanceStep} disabled={availableActions.length > 0}>Advance Step</Button>
+                        </span>
+                      </Tooltip>
+                      {availableActions.map((act) => (
+                        <Button key={act} variant="outlined" size="small" onClick={() => onPerformAction(act)} sx={{ textTransform: 'none' }}>
+                          {act.replace(/_/g, ' ')}
+                        </Button>
+                      ))}
+                      {/* Heuristic: show a KYC button when step name mentions KYC even if requiredActions is empty */}
+                      {availableActions.length === 0 && /kyc/i.test(submit.currentStep || '') && (
+                        <Button variant="outlined" size="small" color="secondary" onClick={() => onPerformAction('KYC_VERIFY')}>
+                          Perform KYC
+                        </Button>
+                      )}
+                    </Stack>
                   )}
                   {timeline.length > 0 && (
                     <Box sx={{ mt: 2 }}>
