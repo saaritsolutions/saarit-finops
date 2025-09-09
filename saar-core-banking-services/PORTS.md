@@ -6,7 +6,7 @@ Use these ports for local dev and demos. If a port is in use, kill the blocker a
 - WorkflowOrchestrationService: http://localhost:5012
 - DynamicFieldsSchemaService: http://localhost:5013
 - LoanService: http://localhost:5130
-- Frontend (React dev): http://localhost:3001
+- Frontend (React dev): http://localhost:3002 (CRA may auto-bump if busy)
 
 ## Scripts
 

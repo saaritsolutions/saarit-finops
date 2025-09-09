@@ -9,7 +9,7 @@
 
 ## 📋 **Pre-Demo Checklist**
 - [ ] All services running (5004, 5012, 5013, 5130)
-- [ ] Frontend accessible at http://localhost:3001
+- [ ] Frontend accessible at http://localhost:3002 (CRA may auto-bump if busy; use the port shown in terminal)
 - [ ] Demo credentials ready: `admin@saarbanking.com` / `admin123`
 - [ ] Browser bookmarks set for key pages
 - [ ] Sample loan application data prepared
@@ -26,7 +26,7 @@
 
 #### **Step 1: Dynamic Form Configuration (Regulatory Change)**
 ```
-URL: http://localhost:3001/admin/config
+URL: http://localhost:3002/admin/config
 Action: Navigate to Form Configuration (Form Builder)
 Show: Current personal loan schema (7 fields)
 ```
@@ -34,12 +34,19 @@ Show: Current personal loan schema (7 fields)
 **Narration:**
 "*A new regulation requires collection of the customer's Aadhar number for certain loan types. We'll add this mandatory field to the loan application in under a minute.*"
 
-#### **Step 2: Conversational Form Change (Chat Assistant)
+#### **Step 2: Conversational Form Change (Chat Assistant) — Optional if assistant is enabled**
 ```
 Action: Open the Form Builder chat assistant (bottom-right)
 User prompt (natural language): "Add a mandatory field 'aadharNumber' (text, 12 digits) to the personal loan form and label it 'Aadhar Number'."
 System: Chat assistant confirms intent and generates the form change
 Click: 'Apply' in the assistant to commit the change
+```
+
+Fallback (if chat assistant UI isn't visible):
+```
+Action: In Admin Config, open the personal_loan form schema JSON
+Edit: Add a field object { "name": "aadharNumber", "label": "Aadhar Number", "type": "text", "required": true, "minLength": 12, "maxLength": 12 }
+Click: Save/Apply schema
 ```
 
 **Narration:**
@@ -48,17 +55,18 @@ Click: 'Apply' in the assistant to commit the change
 #### **Step 3: Save & Verify**
 ```
 Action: Click 'Save Schema'
-Verify: Navigate to /loans/new and the 'Aadhar Number' field appears and is marked required
+Verify: Navigate to http://localhost:3002/loans/new and the 'Aadhar Number' field appears and is marked required
 ```
 
 **Narration:**
 "*The new field is instantly present in the customer form. That change propagated across channels without any developer work.*"
 
-#### **Step 4: Show Quick Audit & Rollback**
+#### **Step 4: Show Quick Audit & Rollback — Talk track if audit UI not enabled**
 ```
 Show: Change history in Form Builder (who requested, chat transcript, timestamp)
 Action: Click 'Rollback' to revert the change if required
 ```
+Note: If an audit/change-history UI isn't available in this build, describe the audit trail conceptually and show the saved schema JSON before/after as evidence. Rollback can be described as re-applying the prior JSON.
 
 **Narration:**
 "*Every assistant-driven change is auditable — the chat transcript, the generated JSON, and the user who approved it are all recorded. Rollback is a single click.*"
@@ -87,7 +95,7 @@ Action: Click 'Rollback' to revert the change if required
 
 #### **Step 1: Dynamic Form Configuration**
 ```
-URL: http://localhost:3001/admin/config
+URL: http://localhost:3002/admin/config
 Action: Navigate to Form Configuration
 Show: Current personal loan schema (7 fields)
 ```
@@ -113,7 +121,7 @@ Click: "Save Schema"
 
 #### **Step 3: Show Form Updates Instantly**
 ```
-URL: http://localhost:3001/loans/new
+URL: http://localhost:3002/loans/new
 Action: Refresh to show new field appears
 ```
 
@@ -122,7 +130,7 @@ Action: Refresh to show new field appears
 
 #### **Step 4: Workflow Orchestration Magic**
 ```
-URL: http://localhost:3001/admin/config
+URL: http://localhost:3002/admin/config
 Navigate: Workflow Configuration → Loan Processing
 Current Workflow: Application → Eligibility → Approval → Disbursement
 ```
@@ -130,22 +138,27 @@ Current Workflow: Application → Eligibility → Approval → Disbursement
 **Narration:**
 *"Now let me show you workflow orchestration. This is the current loan processing workflow. But what if compliance requires a new KYC step? Watch me add it in real-time."*
 
-#### **Step 5: Live Workflow Modification**
+#### **Step 5: Live Workflow Modification (AI Assistant)**
 ```
-Action: Modify workflow to add KYC step
-New Workflow: Application → Eligibility → KYC Verification → Approval → Disbursement
-Add Step: {
-  "name": "KYC_VERIFICATION",
-  "type": "automated",
-  "timeout": "24h",
-  "onSuccess": "APPROVAL",
-  "onFailure": "MANUAL_REVIEW"
-}
-Click: "Deploy Workflow Changes"
+Action: Use the Workflow AI assistant (Admin Config → AI Assistant) to insert verification and actions
+Prompt examples:
+- "Add required action KYC_VERIFY to KYC"
+- "Insert step Risk Assessment before Credit Check"
+- "Rename Credit Check to Enhanced Credit Analysis"
+System: Assistant returns updated workflow JSON into the editor
+Click: "Save Workflow"
+```
+
+Fallback (manual edit if assistant UI not available):
+```
+Action: Edit the workflow JSON directly
+Add to KYC step: "requiredActions": ["KYC_VERIFY"]
+Optionally insert a new step object before CREDIT_CHECK with { "name": "RISK_ASSESSMENT", "next": "CREDIT_CHECK" }
+Click: Save Workflow
 ```
 
 **Narration:**
-*"I've just inserted a KYC verification step into our workflow. This change is now active for all new applications. Existing applications continue on the old workflow - no disruption to in-flight processes."*
+"*I've just added a KYC verification action and optionally a Risk Assessment step to our workflow through conversational edits. This change is active for new applications immediately. Existing applications continue on their prior definition, avoiding disruption.*"
 
 #### **Step 6: Conditional Logic & Smart Routing**
 ```
@@ -174,7 +187,7 @@ Example: Low-risk customers → Express processing track
 
 #### **Step 1: Customer Application with New Form**
 ```
-URL: http://localhost:3001/loans/new
+URL: http://localhost:3002/loans/new
 Fill Form: (including new employment type field)
 - Employment Type: "Salaried"
 - All previous fields: Rajesh Kumar data
@@ -234,7 +247,7 @@ Workflow Decision: Auto-route to disbursement prep
 
 #### **Step 1: Configuration Power Overview**
 ```
-URL: http://localhost:3001/admin/config
+URL: http://localhost:3002/admin/config
 Show: Three pillars of configuration
 1. Dynamic Forms (product schemas)
 2. Business Rules (expression library) 

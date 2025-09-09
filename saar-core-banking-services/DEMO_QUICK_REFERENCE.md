@@ -1,7 +1,7 @@
 # 🎭 Demo Quick Reference Card - SaaR Banking Platform
 
 ## 🔐 **Login Credentials**
-- **URL:** http://localhost:3001/login
+- **URL:** http://localhost:3002/login
 - **Username:** admin@saarbanking.com
 - **Password:** admin123
 
@@ -10,11 +10,11 @@
 ## 🎯 **Key Demo URLs** (Bookmark These!)
 | Feature | URL | Purpose |
 |---------|-----|---------|
-| Dashboard | http://localhost:3001/dashboard | Starting point |
-| Expression Builder | http://localhost:3001/expressions | Create business rules |
-| Loan Application | http://localhost:3001/loans/new | Customer journey |
-| Admin Config | http://localhost:3001/admin/config | System management |
-| End-to-End Demo | http://localhost:3001/demo | Complete workflow |
+| Dashboard | http://localhost:3002/dashboard | Starting point |
+| Expression Builder | http://localhost:3002/expressions | Create business rules |
+| Loan Application | http://localhost:3002/loans/new | Customer journey |
+| Admin Config | http://localhost:3002/admin/config | System management |
+| End-to-End Demo | http://localhost:3002/demo | Complete workflow |
 
 ---
 
@@ -143,7 +143,7 @@ cd /Users/apple/GithubRepos/saarit-finops/saar-core-banking-services
 ```
 
 ### **If Frontend Issues:**
-- **Backup URL:** http://localhost:3001/demo (static demo page)
+- **Backup URL:** http://localhost:3002/demo (static demo page)
 - **Alternative:** Switch to API demos via Swagger
 - **Last Resort:** Pre-recorded video walkthrough
 

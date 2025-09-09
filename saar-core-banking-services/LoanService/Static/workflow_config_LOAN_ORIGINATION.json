@@ -2,7 +2,7 @@
   "workflowType": "LOAN_ORIGINATION",
   "startStep": "KYC",
   "steps": [
-    { "name": "KYC", "next": "CREDIT_CHECK" },
+  { "name": "KYC", "requiredActions": ["KYC_VERIFY"], "next": "CREDIT_CHECK" },
     { "name": "CREDIT_CHECK", "conditionExpressionId": "EXPR_IS_HIGH_RISK", "next": "UNDERWRITER_REVIEW", "elseNext": "APPROVAL" },
     { "name": "UNDERWRITER_REVIEW", "next": "APPROVAL" },
     { "name": "APPROVAL", "next": "COMPLETED" }

@@ -42,6 +42,12 @@ const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 );
 
 describe('Expression Builder Integration Tests', () => {
+  // Prevent jsdom from throwing on alert calls used by the page under test
+  beforeAll(() => {
+    // @ts-ignore
+    window.alert = jest.fn();
+  });
+
   beforeEach(() => {
     mockFetch.mockClear();
     // Default mock for GET expressions
@@ -142,14 +148,14 @@ describe('Expression Builder Integration Tests', () => {
         json: async () => mockExpressionsResponse
       });
       // Second call - create new expression
-      mockFetch.mockResolvedValueOnce({
+    mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           id: '2',
           expressionId: 'EXPR_TEST_002',
           name: 'New Test Expression',
           description: 'A new test expression created via form',
-          category: 'savings',
+      category: 'loan',
           subCategory: 'account',
           expression: 'customer.age >= 18',
           returnType: 'boolean',
@@ -158,6 +164,31 @@ describe('Expression Builder Integration Tests', () => {
           isActive: true,
           createdAt: '2025-08-15T11:00:00Z',
           updatedAt: '2025-08-15T11:00:00Z'
+        })
+      });
+      // Third call - reload expressions after successful create
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          expressions: [
+            ...mockExpressionsResponse.expressions,
+            {
+              id: '2',
+              expressionId: 'EXPR_TEST_002',
+              name: 'New Test Expression',
+              description: 'A new test expression created via form',
+              category: 'loan',
+              subCategory: 'account',
+              expressionText: 'customer.age >= 18',
+              returnType: 'boolean',
+              contextType: 'Customer',
+              usageType: 'Validation',
+              isActive: true,
+              createdAt: '2025-08-15T11:00:00Z',
+              updatedAt: '2025-08-15T11:00:00Z'
+            }
+          ],
+          pagination: { page: 1, pageSize: 20, hasNext: false, total: 2 }
         })
       });
 
@@ -198,7 +229,8 @@ describe('Expression Builder Integration Tests', () => {
 
       const categorySelect = screen.getByDisplayValue('Select a category');
       await act(async () => {
-        await userEvent.selectOptions(categorySelect, 'savings');
+        // Choose an existing option from the UI (e.g., 'loan')
+        await userEvent.selectOptions(categorySelect, 'loan');
       });
 
       const expressionTextarea = screen.getByPlaceholderText(/Example: IF\(customer\.creditScore/);
@@ -329,9 +361,10 @@ describe('Expression Builder Integration Tests', () => {
         await userEvent.click(createButton);
       });
 
-      // Should show error message
+      // Should trigger an alert error; verify alert was called
       await waitFor(() => {
-        expect(screen.getByText(/Failed to create expression/i)).toBeInTheDocument();
+        expect(window.alert).toHaveBeenCalled();
+        expect((window.alert as jest.Mock).mock.calls[0][0]).toMatch(/Error creating expression/i);
       });
     });
   });

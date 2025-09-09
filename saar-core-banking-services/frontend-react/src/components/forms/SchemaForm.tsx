@@ -19,6 +19,7 @@ const renderField = (f: FormField, val: any, onChange: (n: string, v: any) => vo
     helperText: f.description,
     size: 'small' as const,
     margin: 'dense' as const,
+    inputProps: { 'data-testid': `field-${f.name}`, name: f.name },
   };
 
   switch (f.type) {
@@ -27,7 +28,18 @@ const renderField = (f: FormField, val: any, onChange: (n: string, v: any) => vo
     case 'date':
       return <TextField type="date" {...common} InputLabelProps={{ shrink: true }} />;
     case 'boolean':
-      return <FormControlLabel control={<Checkbox checked={!!val} onChange={(e) => onChange(f.name, e.target.checked)} />} label={f.label} />;
+      return (
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={!!val}
+              onChange={(e) => onChange(f.name, e.target.checked)}
+              slotProps={{ input: { 'data-testid': `field-${f.name}`, name: f.name } as any }}
+            />
+          }
+          label={f.label}
+        />
+      );
     case 'select':
       return (
         <TextField select {...common}>

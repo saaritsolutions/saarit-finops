@@ -96,16 +96,59 @@ public class AIExpressionController : ControllerBase
 
     private string GenerateFallbackResponse(string userMessage)
     {
-        var message = userMessage.ToLower();
+    var message = userMessage.ToLower();
+    // Common flag: when user wants only the raw expression (no formatting)
+    bool wantsExpressionOnly = message.Contains("expression only") ||
+                   message.Contains("just expression") ||
+                   message.Contains("code only") ||
+                   message.Contains("raw expression") ||
+                   message.Contains("direct expression");
+        
+        // Special handling: if user specifies creditScore/monthlyIncome, generate a matching eligibility expression
+        // Supports prompts like: "loan eligibility expression only using creditScore >= 750 and monthlyIncome >= 60000"
+        // or "make it stricter: creditScore >= 800 and monthlyIncome >= 100000"
+        if (message.Contains("creditscore") || message.Contains("monthlyincome"))
+        {
+            // Try to extract thresholds if provided
+            // Pattern 1: creditScore >= N and monthlyIncome >= M
+            // Pattern 2: monthlyIncome >= M and creditScore >= N
+            int cs = 750;
+            int mi = 60000;
+            try
+            {
+                var re1 = new System.Text.RegularExpressions.Regex(@"creditscore\s*[><=!]+\s*(\d+).*?monthlyincome\s*[><=!]+\s*(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Singleline);
+                var re2 = new System.Text.RegularExpressions.Regex(@"monthlyincome\s*[><=!]+\s*(\d+).*?creditscore\s*[><=!]+\s*(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Singleline);
+                var m1 = re1.Match(userMessage);
+                var m2 = m1.Success ? null : re2.Match(userMessage);
+                if (m1.Success)
+                {
+                    int.TryParse(m1.Groups[1].Value, out cs);
+                    int.TryParse(m1.Groups[2].Value, out mi);
+                }
+                else if (m2 != null && m2.Success)
+                {
+                    int.TryParse(m2.Groups[1].Value, out mi);
+                    int.TryParse(m2.Groups[2].Value, out cs);
+                }
+            }
+            catch { /* ignore parse issues; use defaults */ }
+
+            var expr = $"(creditScore >= {cs} && monthlyIncome >= {mi}) ? \"APPROVED\" : \"DECLINED\"";
+
+            if (wantsExpressionOnly)
+            {
+                return expr;
+            }
+
+            var header = "💰 **Loan Eligibility Rule (Using creditScore and monthlyIncome)**\n\n";
+            var blockStart = "**Ready-to-Use Expression:**\n```\n";
+            var blockEnd = "\n```\n\n";
+            var footer = "**Variables:** creditScore (integer), monthlyIncome (number)\n💡 Tip: Ask for \"expression only\" to get raw expression without formatting.";
+            return header + blockStart + expr + blockEnd + footer;
+        }
         
         // Check if user wants only the expression (for direct application)
-        bool expressionOnly = message.Contains("expression only") || 
-                             message.Contains("just expression") || 
-                             message.Contains("code only") ||
-                             message.Contains("raw expression") ||
-                             message.Contains("direct expression");
-        
-        if (expressionOnly)
+    if (wantsExpressionOnly)
         {
             return GenerateExpressionOnly(message);
         }
@@ -177,7 +220,7 @@ riskScore >= 100 ? 'HIGH_RISK' : riskScore >= 50 ? 'MEDIUM_RISK' : 'LOW_RISK'
         }
         
         // Loan eligibility
-        if (message.Contains("loan") || message.Contains("credit") || message.Contains("eligibility"))
+    if (message.Contains("loan") || message.Contains("credit") || message.Contains("eligibility"))
         {
             return @"💰 **Loan Eligibility Rule**
 
@@ -265,6 +308,32 @@ customer.SanctionScreening = 'PASSED'
 
     private string GenerateExpressionOnly(string message)
     {
+        // Variable-aware: When explicitly asking to use creditScore/monthlyIncome
+        if ((message.Contains("creditscore") || message.Contains("monthlyincome")))
+        {
+            int cs = 750;
+            int mi = 60000;
+            try
+            {
+                var re1 = new System.Text.RegularExpressions.Regex(@"creditscore\s*[><=!]+\s*(\d+).*?monthlyincome\s*[><=!]+\s*(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Singleline);
+                var re2 = new System.Text.RegularExpressions.Regex(@"monthlyincome\s*[><=!]+\s*(\d+).*?creditscore\s*[><=!]+\s*(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Singleline);
+                var m1 = re1.Match(message);
+                var m2 = m1.Success ? null : re2.Match(message);
+                if (m1.Success)
+                {
+                    int.TryParse(m1.Groups[1].Value, out cs);
+                    int.TryParse(m1.Groups[2].Value, out mi);
+                }
+                else if (m2 != null && m2.Success)
+                {
+                    int.TryParse(m2.Groups[1].Value, out mi);
+                    int.TryParse(m2.Groups[2].Value, out cs);
+                }
+            }
+            catch { }
+            return $"(creditScore >= {cs} && monthlyIncome >= {mi}) ? \"APPROVED\" : \"DECLINED\"";
+        }
+
         // Age validation
         if (message.Contains("age"))
         {

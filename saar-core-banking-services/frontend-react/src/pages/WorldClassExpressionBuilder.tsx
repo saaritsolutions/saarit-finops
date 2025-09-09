@@ -178,6 +178,36 @@ const WorldClassExpressionBuilder: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Load active Loan expressions for History tab
+  const fetchActiveLoanExpressions = async () => {
+    try {
+      const base = process.env.REACT_APP_EXPRESSION_API_URL || 'http://localhost:5004';
+      // Fetch all active expressions and filter by contextType=Loan to include legacy records
+      const resp = await fetch(`${base}/api/expressions?status=Active&page=1&pageSize=50`);
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const list = (data?.expressions || [])
+        .filter((e: any) => (e.contextType || '').toLowerCase() === 'loan')
+        .map((e: any) => ({
+        id: e.id,
+        name: e.name || e.ExpressionName || e.ExpressionId,
+        code: e.expressionText || e.code,
+        contextType: e.contextType || 'Loan',
+        usageType: e.usageType || e.category || 'Validation',
+        isActive: (e.status || 'Active') === 'Active',
+        createdAt: new Date(e.createdAt || Date.now())
+      })) as Expression[];
+      setExpressions(list);
+    } catch {
+      // ignore fetch errors in UI
+    }
+  };
+
+  useEffect(() => {
+    // initial fetch for history data
+    fetchActiveLoanExpressions();
+  }, []);
+
   const handleSendMessage = async () => {
     if (!chatInput.trim()) return;
 
@@ -311,9 +341,8 @@ const WorldClassExpressionBuilder: React.FC = () => {
     ExpressionId: computedExpressionId,
     Name: expressionName,
     Description: description,
-    // Use the selected usageType as the Category when saving so backend services
-    // that currently filter by category (e.g. LoanService) will find the expression.
-    Category: usageType || 'General',
+    // Use the selected contextType as the Category so Loan expressions can be listed by category=Loan
+    Category: contextType || 'General',
     ExpressionText: expressionCode,
     ReturnType: 'boolean',
     ContextType: contextType,
@@ -332,8 +361,18 @@ const WorldClassExpressionBuilder: React.FC = () => {
   });
 
     if (response.ok) {
-    const newExpression = await response.json();
-    setExpressions(prev => [newExpression, ...prev]);
+    const saved = await response.json();
+    // Normalize to local shape
+    const normalized: Expression = {
+      id: saved.id,
+      name: saved.name || payload.Name,
+      code: saved.expressionText || payload.ExpressionText,
+      contextType: saved.contextType || payload.ContextType,
+      usageType: saved.usageType || payload.UsageType,
+      isActive: (saved.status || 'Active') === 'Active',
+      createdAt: new Date(saved.createdAt || Date.now())
+    };
+    setExpressions(prev => [normalized, ...prev]);
 
     // Clear form
     setExpressionName('');
@@ -352,9 +391,11 @@ const WorldClassExpressionBuilder: React.FC = () => {
     setMessages(prev => [...prev, successMessage]);
 
     // Expose save status for UI automation/tests and include the saved expression id
-    const savedId = newExpression?.expressionId || newExpression?.ExpressionId || computedExpressionId;
+  const savedId = saved?.expressionId || saved?.ExpressionId || computedExpressionId;
     setSaveStatus({ ok: true, message: `Expression saved successfully (id: ${savedId})` });
     console.log('Saved expression id:', savedId);
+  // Refresh history list for category alignment
+  fetchActiveLoanExpressions();
   } else {
     // Try to extract error message from response
     let errText = 'Failed to save expression';

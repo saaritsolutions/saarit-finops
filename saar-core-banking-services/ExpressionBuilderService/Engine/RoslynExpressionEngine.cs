@@ -157,8 +157,8 @@ public class RoslynExpressionEngine : IExpressionEngine
                 };
             }
 
-            // Execute the compiled expression
-            var result = await ExecuteCompiledExpression(compilationResult, variables);
+            // Execute the compiled expression (ensure context matches requested contextType)
+            var result = await ExecuteCompiledExpression(compilationResult, variables, contextType);
             
             stopwatch.Stop();
             var memoryAfter = GC.GetTotalMemory(false);
@@ -640,7 +640,7 @@ namespace DynamicExpression
         return result;
     }
 
-    private async Task<object?> ExecuteCompiledExpression(CompilationResult compilationResult, Dictionary<string, object> variables)
+    private async Task<object?> ExecuteCompiledExpression(CompilationResult compilationResult, Dictionary<string, object> variables, string contextType)
     {
         if (compilationResult.ExecuteMethod == null)
             throw new InvalidOperationException("Execute method not found in compiled expression");
@@ -649,37 +649,44 @@ namespace DynamicExpression
     // Normalize incoming variables (convert JsonElement -> CLR primitives/objects)
     var normalizedVariables = NormalizeVariables(variables);
 
-    // Create context object based on normalized variables
-    var context = CreateContextFromVariables(normalizedVariables);
+    // Create context object based on requested context type and normalized variables
+    var context = CreateContextFromVariables(normalizedVariables, contextType);
 
     return await Task.FromResult(compilationResult.ExecuteMethod.Invoke(instance, new object[] { context, normalizedVariables }));
     }
 
-    private object CreateContextFromVariables(Dictionary<string, object> variables)
+    private object CreateContextFromVariables(Dictionary<string, object> variables, string contextType)
     {
-        // Try to construct a domain context object from provided variables
+        // Prefer building context that matches the declared contextType of the expression
         try
         {
-            if (variables.TryGetValue("customer", out var cust))
+            switch (contextType)
             {
-                return BuildCustomerContext(cust, variables);
+                case "Customer":
+                    variables.TryGetValue("customer", out var cust);
+                    return BuildCustomerContext(cust, variables);
+                case "Account":
+                    variables.TryGetValue("account", out var acc);
+                    return BuildAccountContext(acc, variables);
+                case "Loan":
+                    variables.TryGetValue("loan", out var loanObj);
+                    return BuildLoanContext(loanObj, variables);
             }
 
-            if (variables.TryGetValue("account", out var acc))
-            {
-                return BuildAccountContext(acc, variables);
-            }
+            // Heuristics when contextType is dynamic/unknown
+            if (variables.TryGetValue("customer", out var c))
+                return BuildCustomerContext(c, variables);
+            if (variables.TryGetValue("account", out var a))
+                return BuildAccountContext(a, variables);
+            if (variables.TryGetValue("loan", out var l))
+                return BuildLoanContext(l, variables);
 
-            // Fallback: infer from flat variables
             if (variables.ContainsKey("age") || variables.ContainsKey("creditScore") || variables.ContainsKey("monthlyIncome"))
-            {
                 return BuildCustomerContext(null, variables);
-            }
-
             if (variables.ContainsKey("balance") || variables.ContainsKey("accountBalance"))
-            {
                 return BuildAccountContext(null, variables);
-            }
+            if (variables.ContainsKey("loan.amount") || variables.ContainsKey("loanAmount") || variables.ContainsKey("tenureMonths"))
+                return BuildLoanContext(null, variables);
         }
         catch (Exception ex)
         {
@@ -725,6 +732,43 @@ namespace DynamicExpression
         if (!string.IsNullOrWhiteSpace(type)) ad.AccountType = type!;
 
         return ad;
+    }
+
+    private LoanData BuildLoanContext(object? loanSource, Dictionary<string, object> flat)
+    {
+        var ld = new LoanData();
+
+        // Amount
+        var amount = TryGetDecimal(loanSource, "amount")
+            ?? TryGetDecimal(flat, "loan.amount")
+            ?? TryGetDecimal(flat, "loanAmount")
+            ?? TryGetDecimal(flat, "amount");
+        if (amount.HasValue) ld.RequestedAmount = amount.Value;
+
+        // Tenure
+        var tenure = TryGetInt(loanSource, "tenure")
+            ?? TryGetInt(flat, "loan.tenure")
+            ?? TryGetInt(flat, "loanTenure")
+            ?? TryGetInt(flat, "tenureMonths");
+        if (tenure.HasValue) ld.TenureMonths = tenure.Value;
+
+        // DebtToIncomeRatio
+        var dti = TryGetDecimal(loanSource, "debtToIncomeRatio")
+            ?? TryGetDecimal(flat, "debtToIncomeRatio");
+        if (dti.HasValue) ld.DebtToIncomeRatio = dti.Value;
+
+        // InterestRate (if provided)
+        var ir = TryGetDecimal(loanSource, "interestRate")
+            ?? TryGetDecimal(flat, "interestRate");
+        if (ir.HasValue) ld.InterestRate = ir.Value;
+
+        // LoanType/ProductType
+        var lt = TryGetString(loanSource, "loanType")
+            ?? TryGetString(flat, "productType")
+            ?? TryGetString(flat, "loan.type");
+        if (!string.IsNullOrWhiteSpace(lt)) ld.LoanType = lt!;
+
+        return ld;
     }
 
     private int? TryGetInt(object? container, string key)

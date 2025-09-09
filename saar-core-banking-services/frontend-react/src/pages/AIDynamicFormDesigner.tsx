@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Box, Button, Card, CardContent, Divider, Stack, TextField, Typography, Alert } from '@mui/material';
+import { Box, Button, Card, CardContent, Divider, Stack, TextField, Typography } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { aiFormService, type FormSchema } from '../services/aiFormService';
 import SchemaForm from '../components/forms/SchemaForm';
 import { loanDetailedSchema } from '../schemas/loanDetailedSchema';
 import { getFormSchema as getLoanFormSchema } from '../services/loanOriginationService';
+import ChatPanel from '../components/common/ChatPanel';
+import StatusBanner from '../components/common/StatusBanner';
 
 const pretty = (obj: any) => JSON.stringify(obj, null, 2);
 
@@ -68,11 +70,13 @@ const AIDynamicFormDesigner: React.FC = () => {
     try { return JSON.stringify(JSON.parse(schemaText)); } catch { return JSON.stringify(schema); }
   }, [schemaText, schema]);
 
-  const runPrompt = async () => {
+  const runPrompt = async (text?: string) => {
     setLoading(true); setMsg(null); setError(null);
     try {
+      const finalPrompt = (text ?? prompt).trim();
+      if (!finalPrompt) { setLoading(false); return; }
       const result = await aiFormService.chatSchema({
-        Message: prompt,
+        Message: finalPrompt,
         CurrentSchemaJson: currentSchemaJson,
         Category: 'form',
         FormOnly: true,
@@ -128,21 +132,19 @@ const AIDynamicFormDesigner: React.FC = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>AI Prompt</Typography>
-              <TextField
+              <ChatPanel
+                title="AI Assistant (Form Designer)"
                 placeholder="e.g., Add fields mobileNumber (text, required), dateOfBirth (date)"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                fullWidth
-                multiline
-                minRows={3}
+                sending={loading}
+                onSend={(m) => { setPrompt(m); return runPrompt(m); }}
+                actionLabel="Update Schema"
               />
               <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                <Button variant="contained" onClick={runPrompt} disabled={loading || !prompt.trim()}>Update Schema</Button>
                 <Button variant="outlined" onClick={applySchema} disabled={loading}>{returnTo ? 'Apply & Return' : 'Apply'}</Button>
               </Stack>
-              {loading && <Alert sx={{ mt: 1 }} severity="info">Working…</Alert>}
-              {msg && <Alert sx={{ mt: 1 }} severity="success">{msg}</Alert>}
-              {error && <Alert sx={{ mt: 1 }} severity="error">{error}</Alert>}
+              <StatusBanner message={loading ? 'Working…' : null} severity="info" />
+              <StatusBanner message={msg} severity="success" />
+              <StatusBanner message={error} severity="error" />
               <Divider sx={{ my: 2 }} />
               <Typography variant="body2" color="text.secondary">
                 Tips: "Add fields panNumber (text, required), income (number)", "Make age required", "Remove middleName".

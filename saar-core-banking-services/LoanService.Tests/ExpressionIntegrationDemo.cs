@@ -94,14 +94,17 @@ internal class StubHttpMessageHandler : HttpMessageHandler
         // POST /api/Expressions/execute or /api/expressions/execute -> simulate execution using Variables
         if (request.Method == HttpMethod.Post && (path.IndexOf("/api/Expressions/execute", StringComparison.OrdinalIgnoreCase) >= 0 || path.IndexOf("/api/expressions/execute", StringComparison.OrdinalIgnoreCase) >= 0))
         {
-            var body = await request.Content.ReadAsStringAsync(cancellationToken);
+            var body = request.Content != null
+                ? await request.Content.ReadAsStringAsync(cancellationToken)
+                : string.Empty;
             int creditScore = 0;
             decimal monthlyIncome = 0m;
 
             try
             {
                 using var doc = JsonDocument.Parse(body);
-                if (doc.RootElement.TryGetProperty("Variables", out var vars))
+                // Handle both camelCase and PascalCase keys
+                if (doc.RootElement.TryGetProperty("Variables", out var vars) || doc.RootElement.TryGetProperty("variables", out vars))
                 {
                     if (vars.TryGetProperty("creditScore", out var cs)) creditScore = cs.GetInt32();
                     else if (vars.TryGetProperty("customer.creditScore", out var cs2)) creditScore = cs2.GetInt32();
@@ -135,4 +138,19 @@ internal class StubHttpMessageHandler : HttpMessageHandler
 
         return new HttpResponseMessage(HttpStatusCode.NotFound);
     }
+}
+
+// Local minimal fakes for this test file to avoid cross-file coupling
+file class FakeWorkflow : IWorkflowClient
+{
+    public Task<WorkflowInstance> StartLoanOriginationAsync(Guid entityId, Dictionary<string, object> context, CancellationToken ct = default)
+        => Task.FromResult(new WorkflowInstance { Id = Guid.NewGuid(), EntityId = entityId, WorkflowType = "LOAN_ORIGINATION", Status = "IN_REVIEW" });
+    public Task<WorkflowStepResult> ProcessStepAsync(Guid instanceId, string action, Dictionary<string, object> context, CancellationToken ct = default)
+        => Task.FromResult(new WorkflowStepResult { InstanceId = instanceId, Success = true, WorkflowStatus = "IN_REVIEW" });
+}
+
+file class FakeForms : IDynamicFormsClient
+{
+    public Task<List<DynamicField>> GetLoanFormSchemaAsync(string productType)
+        => Task.FromResult(new List<DynamicField> { new DynamicField { Id = 1, Name = "fullName" } });
 }

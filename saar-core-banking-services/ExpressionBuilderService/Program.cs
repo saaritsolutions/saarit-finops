@@ -68,12 +68,24 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Database configuration
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+// Database configuration with optional in-memory fallback for local/dev
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? "Host=localhost;Database=saar_banking_expressions;Username=postgres;Password=postgres";
 
-builder.Services.AddDbContext<ExpressionDbContext>(options =>
-    options.UseNpgsql(connectionString));
+var useInMemoryDb = Environment.GetEnvironmentVariable("EXPR_USE_INMEMORY_DB");
+if (!string.IsNullOrWhiteSpace(useInMemoryDb) &&
+    (string.Equals(useInMemoryDb, "1", StringComparison.OrdinalIgnoreCase) ||
+     string.Equals(useInMemoryDb, "true", StringComparison.OrdinalIgnoreCase)))
+{
+    builder.Services.AddDbContext<ExpressionDbContext>(options =>
+        options.UseInMemoryDatabase("ExpressionBuilderDev"));
+    Log.Warning("Using InMemory database for ExpressionBuilderService (EXPR_USE_INMEMORY_DB={UseInMemoryDb})", useInMemoryDb);
+}
+else
+{
+    builder.Services.AddDbContext<ExpressionDbContext>(options =>
+        options.UseNpgsql(connectionString));
+}
 
 // Memory caching
 builder.Services.AddMemoryCache();
