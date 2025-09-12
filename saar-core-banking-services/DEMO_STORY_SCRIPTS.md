@@ -5,6 +5,23 @@
 **Audience:** Investors, Banking Executives, Technology Leaders  
 **Goal:** Demonstrate world-class banking rules engine with real-time business rule creation and execution
 
+> Security note: Never commit API keys in docs. Configure them via environment variables before running the demo.
+
+Quick setup (zsh):
+
+```bash
+# OpenAI (example) — use your real key via the shell, not in files
+export OPENAI_API_KEY="<your-openai-key>"
+
+# ExpressionBuilderService settings to use OpenAI-compatible endpoint
+export GptOssAI__BaseUrl="https://api.openai.com/v1"
+export GptOssAI__Model="gpt-5-nano"           # or your chosen model
+export GptOssAI__ApiKey="$OPENAI_API_KEY"
+# optional: route generic AI calls through OpenAI-compatible provider
+export LlmSettings__DefaultProvider="gpt-oss"
+```
+
+If a key was exposed previously, rotate it in the provider dashboard.
 ---
 
 ## 📋 **Pre-Demo Checklist**
