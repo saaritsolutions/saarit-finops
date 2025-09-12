@@ -99,6 +99,12 @@ builder.Services.AddScoped<IExpressionService, ExpressionService>();
 // AI Services Configuration
 builder.Services.Configure<GeminiAISettings>(
     builder.Configuration.GetSection(GeminiAISettings.SectionName));
+builder.Services.Configure<GptOssSettings>(
+    builder.Configuration.GetSection(GptOssSettings.SectionName));
+builder.Services.Configure<OllamaSettings>(
+    builder.Configuration.GetSection(OllamaSettings.SectionName));
+builder.Services.Configure<OpenAISettings>(
+    builder.Configuration.GetSection(OpenAISettings.SectionName));
 
 // LLM configuration (allow selecting provider via configuration)
 builder.Services.Configure<LlmSettings>(builder.Configuration.GetSection("LlmSettings"));
@@ -108,6 +114,10 @@ builder.Services.AddHttpClient<IGeminiAIService, GeminiAIService>();
 builder.Services.AddScoped<IGeminiAIService, GeminiAIService>();
 builder.Services.AddHttpClient<OllamaAIService>();
 builder.Services.AddScoped<OllamaAIService>();
+builder.Services.AddHttpClient<GptOssAIService>();
+builder.Services.AddScoped<GptOssAIService>();
+builder.Services.AddHttpClient<OpenAIGptService>();
+builder.Services.AddScoped<OpenAIGptService>();
 
 // Generic ILLMService selector
 builder.Services.AddScoped<ILlmSelectorService, LlmSelectorService>();
