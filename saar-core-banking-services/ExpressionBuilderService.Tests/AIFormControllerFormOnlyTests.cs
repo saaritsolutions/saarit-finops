@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using ExpressionBuilderService.AI;
 using Microsoft.AspNetCore.Hosting;
@@ -62,6 +63,9 @@ namespace ExpressionBuilderService.Tests
 
         public Task<List<string>> SuggestImprovementsAsync(string expression, string context)
             => Task.FromResult(new List<string> { "fake" });
+
+        public Task<string> ChatAsync(string prompt, CancellationToken cancellationToken = default)
+            => Task.FromResult("fake-reply");
 
         public Task<string?> GenerateFormSchemaAsync(AIExpressionRequest request, string? currentSchemaJson = null)
         {

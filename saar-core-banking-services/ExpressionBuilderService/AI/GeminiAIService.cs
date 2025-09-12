@@ -97,6 +97,8 @@ public interface IGeminiAIService
     Task<List<string>> SuggestImprovementsAsync(string expression, string context);
     // Generate a JSON form schema string (sanitized) based on request; may return null on failure
     Task<string?> GenerateFormSchemaAsync(AIExpressionRequest request, string? currentSchemaJson = null);
+    // General lightweight chat (raw prompt -> raw text)
+    Task<string> ChatAsync(string prompt, CancellationToken cancellationToken = default);
 }
 
 // Backwards-compatible: GeminiAIService now implements the generic ILLMService via IGeminiAIService
@@ -296,6 +298,20 @@ Format as a numbered list.";
         }
     }
 
+    public async Task<string> ChatAsync(string prompt, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await CallGeminiAPI(prompt);
+            return ExtractTextFromResponse(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Gemini ChatAsync failed");
+            return "Unable to get Gemini response right now.";
+        }
+    }
+
     private string BuildExpressionGenerationPrompt(AIExpressionRequest request)
     {
         var prompt = new StringBuilder(BANKING_SYSTEM_PROMPT);
@@ -318,8 +334,12 @@ DOMAIN: {request.Domain ?? "banking"}");
             }
         }
 
-        prompt.AppendLine(@"
+    prompt.AppendLine(@"
 TASK: Generate a banking expression that fulfills the user's request.
+
+CONSTRAINTS:
+- The main expression must fit on a single line and be <= 140 characters.
+- Keep explanations <= 30 words.
 
 RESPONSE FORMAT (return as JSON):
 {

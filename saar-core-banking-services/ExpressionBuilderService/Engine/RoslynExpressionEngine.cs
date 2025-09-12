@@ -379,6 +379,25 @@ public class RoslynExpressionEngine : IExpressionEngine
         // Preprocess the expression text to handle string literals
         var processedExpression = PreprocessExpression(expressionText);
 
+        // Ensure banking library functions resolve: prefix known function names with 'banking.'
+        try
+        {
+            var fnNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var fn in _bankingFunctions.GetAvailableFunctions()) fnNames.Add(fn);
+            // Exclude built-in logical helpers
+            fnNames.Remove("IF"); fnNames.Remove("AND"); fnNames.Remove("OR"); fnNames.Remove("NOT");
+
+            foreach (var name in fnNames)
+            {
+                // Replace bare function invocations like CalculateEMI( -> banking.CalculateEMI(
+                processedExpression = System.Text.RegularExpressions.Regex.Replace(
+                    processedExpression,
+                    $@"(?<![\\w\.]){System.Text.RegularExpressions.Regex.Escape(name)}\s*\(",
+                    $"banking.{name}(");
+            }
+        }
+        catch { /* best-effort; fall back if metadata not available */ }
+
         // Analyze expression to discover used variables so we can declare locals
         var metadata = await AnalyzeExpressionAsync(expressionText, contextType);
         var variableDecls = GenerateVariableDeclarations(metadata?.Variables?.Keys ?? Enumerable.Empty<string>());
@@ -762,8 +781,9 @@ namespace DynamicExpression
             ?? TryGetDecimal(flat, "interestRate");
         if (ir.HasValue) ld.InterestRate = ir.Value;
 
-        // LoanType/ProductType
+        // LoanType/ProductType (support multiple possible variable names)
         var lt = TryGetString(loanSource, "loanType")
+            ?? TryGetString(flat, "loanType")
             ?? TryGetString(flat, "productType")
             ?? TryGetString(flat, "loan.type");
         if (!string.IsNullOrWhiteSpace(lt)) ld.LoanType = lt!;
