@@ -10,13 +10,13 @@ public class AIFormController : ControllerBase
 {
     private readonly ILogger<AIFormController> _logger;
     private readonly IWebHostEnvironment _env;
-    private readonly ExpressionBuilderService.AI.IGeminiAIService _ai;
+    private readonly ILlmSelectorService _llmSelector;
 
-    public AIFormController(ILogger<AIFormController> logger, IWebHostEnvironment env, ExpressionBuilderService.AI.IGeminiAIService ai)
+    public AIFormController(ILogger<AIFormController> logger, IWebHostEnvironment env, ILlmSelectorService llmSelector)
     {
         _logger = logger;
         _env = env;
-        _ai = ai;
+        _llmSelector = llmSelector;
     }
 
     [HttpPost("chat")]
@@ -65,14 +65,15 @@ public class AIFormController : ControllerBase
                 // Build a lightweight expression request to the LLM
                 var aiReq = new ExpressionBuilderService.AI.AIExpressionRequest
                 {
-                    UserPrompt = request.Message,
-                    Domain = request.Category ?? "form",
-                    Context = request.CurrentSchemaJson
+                    UserPrompt = $"Generate a JSON form schema based on this request: {request.Message}. Current schema context: {request.CurrentSchemaJson}",
+                    Context = "form_generation"
                 };
 
-                var json = await _ai.GenerateFormSchemaAsync(aiReq, request.CurrentSchemaJson);
+                var aiProvider = _llmSelector.GetProvider();
+                var response = await aiProvider.GenerateExpressionAsync(aiReq);
+                var json = response?.Explanation ?? response?.SuggestedExpression ?? "{}";
 
-                if (string.IsNullOrWhiteSpace(json))
+                if (string.IsNullOrWhiteSpace(json) || json == "{}")
                 {
                     _logger.LogWarning("AI returned no valid JSON for form-only request. Raw transcript: {Transcript}", request.Message);
                     // Return an empty JSON object to indicate no schema could be generated

@@ -96,26 +96,14 @@ builder.Services.AddScoped<ISecurityValidator, ExpressionSecurityValidator>();
 builder.Services.AddScoped<IExpressionEngine, RoslynExpressionEngine>();
 builder.Services.AddScoped<IExpressionService, ExpressionService>();
 
-// AI Services Configuration
-builder.Services.Configure<GeminiAISettings>(
-    builder.Configuration.GetSection(GeminiAISettings.SectionName));
-builder.Services.Configure<GptOssSettings>(
-    builder.Configuration.GetSection(GptOssSettings.SectionName));
-builder.Services.Configure<OllamaSettings>(
-    builder.Configuration.GetSection(OllamaSettings.SectionName));
+// AI Services Configuration (only OpenAI now)
 builder.Services.Configure<OpenAISettings>(
     builder.Configuration.GetSection(OpenAISettings.SectionName));
 
 // LLM configuration (allow selecting provider via configuration)
 builder.Services.Configure<LlmSettings>(builder.Configuration.GetSection("LlmSettings"));
 
-// HTTP Clients and registrations for supported LLMs
-builder.Services.AddHttpClient<IGeminiAIService, GeminiAIService>();
-builder.Services.AddScoped<IGeminiAIService, GeminiAIService>();
-builder.Services.AddHttpClient<OllamaAIService>();
-builder.Services.AddScoped<OllamaAIService>();
-builder.Services.AddHttpClient<GptOssAIService>();
-builder.Services.AddScoped<GptOssAIService>();
+// HTTP Client and registration for OpenAI (only provider in use)
 builder.Services.AddHttpClient<OpenAIGptService>();
 builder.Services.AddScoped<OpenAIGptService>();
 
@@ -196,6 +184,14 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
+// Lightweight health/diagnostics endpoint for LLM configuration
+app.MapGet("/health/llm", (IConfiguration config) =>
+{
+    var provider = config["LlmSettings:DefaultProvider"] ?? "unknown";
+    var hasOpenAiKey = !string.IsNullOrWhiteSpace(config["OpenAI:ApiKey"]);
+    return Results.Json(new { provider, hasOpenAiKey });
+});
+
 // Auto-migrate database on startup (non-fatal if DB not available)
 using var scope = app.Services.CreateScope();
 var context = scope.ServiceProvider.GetRequiredService<ExpressionDbContext>();
@@ -209,6 +205,24 @@ catch (Exception dbEx)
 }
 
 Log.Information("Expression Builder Service starting up...");
+
+// Check for presence of OpenAI API Key (do not log the key itself)
+try
+{
+    var openAiKey = builder.Configuration["OpenAI:ApiKey"]; // user-secrets or env var
+    if (string.IsNullOrWhiteSpace(openAiKey))
+    {
+        Log.Warning("OpenAI:ApiKey not configured. Calls to OpenAI provider will fail with 401/403. Set via 'dotnet user-secrets set OpenAI:ApiKey <key>' or environment variable.");
+    }
+    else
+    {
+        Log.Information("OpenAI:ApiKey detected (length={Length}).", openAiKey.Length);
+    }
+}
+catch (Exception ex)
+{
+    Log.Error(ex, "Error while checking OpenAI API key presence.");
+}
 
 // Honor hosting configuration/args (ASPNETCORE_URLS, --urls, etc.)
 app.Run();

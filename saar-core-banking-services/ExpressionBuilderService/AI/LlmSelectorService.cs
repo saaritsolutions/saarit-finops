@@ -21,13 +21,11 @@ namespace ExpressionBuilderService.AI
 
         public ILLMService GetProvider()
         {
-            var provider = _settings.DefaultProvider?.ToLowerInvariant() ?? "gemini";
+            var provider = _settings.DefaultProvider?.ToLowerInvariant() ?? "openai";
             return provider switch
             {
-                "gptoss" => (ILLMService)_serviceProvider.GetService(typeof(GptOssAIService))!,
-                "gpt-oss" => (ILLMService)_serviceProvider.GetService(typeof(GptOssAIService))!,
-                "ollama" => (ILLMService)_serviceProvider.GetService(typeof(OllamaAIService))!,
-                _ => (ILLMService)_serviceProvider.GetService(typeof(GeminiAIService))!,
+                "openai" => (ILLMService)_serviceProvider.GetService(typeof(OpenAIGptService))!,
+                _ => (ILLMService)_serviceProvider.GetService(typeof(OpenAIGptService))!  // Default to OpenAI
             };
         }
     }

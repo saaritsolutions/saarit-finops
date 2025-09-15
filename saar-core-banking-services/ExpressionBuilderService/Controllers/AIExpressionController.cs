@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace ExpressionBuilderService.Controllers;
 
@@ -28,33 +29,50 @@ public class AIExpressionController : ControllerBase
 
             _logger.LogInformation("Received chat request: {Message} (category: {Category})", request.Message, request.Category);
 
-            // Use configured LLM provider when available
+            // Use configured LLM provider when available; no fallback desired
             try
             {
                 var provider = _llmSelector.GetProvider();
-                if (provider != null)
+                if (provider == null)
                 {
-                    var aiReq = new ExpressionBuilderService.AI.AIExpressionRequest
-                    {
-                        UserPrompt = request.Message,
-                        Context = request.Category // small hint for provider to know domain: expression|form|workflow
-                    };
-
-                    var aiResp = await provider.GenerateExpressionAsync(aiReq);
-                    if (aiResp != null && aiResp.IsValid)
-                    {
-                        return Ok(new { response = aiResp });
-                    }
+                    _logger.LogWarning("No LLM provider resolved");
+                    return StatusCode(502, new { error = "LLM provider unavailable" });
                 }
+
+                // Build rich context like AIGptNanoController
+                var defaultContext = BuildDefaultContext(request.Category);
+                var ctx = string.IsNullOrWhiteSpace(request.Category) ? defaultContext : request.Category + "\n" + defaultContext;
+
+                var aiReq = new ExpressionBuilderService.AI.AIExpressionRequest
+                {
+                    UserPrompt = request.Message + " expression only",  // Add "expression only" suffix
+                    Context = ctx,
+                    ExampleExpressions = new List<string>
+                    {
+                        "customer.creditScore >= 700 && customer.monthlyIncome >= 50000",
+                        "loan.RequestedAmount <= customer.monthlyIncome * 12 * 0.4",
+                        "CalculateEMI(loan.RequestedAmount, loan.InterestRate, loan.TenureMonths) <= Percentage(customer.monthlyIncome, 40)"
+                    }
+                };
+
+                var aiResp = await provider.GenerateExpressionAsync(aiReq);
+                if (aiResp == null || !aiResp.IsValid)
+                {
+                    return StatusCode(502, new { error = "LLM response invalid" });
+                }
+                
+                // Return just the expression string that the frontend expects for saving
+                var expressionText = !string.IsNullOrWhiteSpace(aiResp.SuggestedExpression) 
+                    ? aiResp.SuggestedExpression 
+                    : aiResp.Explanation;
+                    
+                return Ok(new { response = expressionText });
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "LLM provider failed, falling back to canned responses");
+                _logger.LogError(ex, "LLM provider error");
+                return StatusCode(502, new { error = ex.Message });
             }
-
-            // Fallback response system for reliable expression generation
-            _logger.LogInformation("Using enhanced fallback response system");
-            return Ok(new { response = GenerateFallbackResponse(request.Message) });
         }
         catch (Exception ex)
         {
@@ -426,6 +444,38 @@ Add ""expression only"" to any request for raw expressions:
 
 What banking rule do you need?";
     }
+
+    private string BuildDefaultContext(string entity)
+    {
+        var context = @"
+You are a business rule expression generator for a core banking system. Generate only valid C#-like boolean expressions.
+
+Available Entities:
+- customer: creditScore(int), monthlyIncome(decimal), age(int), employmentType(string), HasDefaultHistory(bool)
+- loan: RequestedAmount(decimal), InterestRate(decimal), TenureMonths(int), LoanType(string), CollateralValue(decimal)
+- account: Balance(decimal), AccountType(string), IsActive(bool), LastTransactionDate(DateTime)
+
+Available Functions:
+- CalculateEMI(amount, rate, tenure): Calculate EMI for loan
+- Percentage(value, percent): Calculate percentage of a value
+- CalculateLTV(loanAmount, collateralValue): Calculate Loan-to-Value ratio
+- GetCreditUtilization(customer): Get customer's credit utilization ratio
+
+Rules:
+- Use only the entities and functions listed above
+- Generate syntactically correct C# boolean expressions
+- Use proper operators: &&, ||, !, ==, !=, <, >, <=, >=
+- Return only the expression, no explanations
+- Ensure expressions are realistic for banking scenarios";
+
+        // Add entity-specific context if provided
+        if (!string.IsNullOrWhiteSpace(entity))
+        {
+            context += $"\n\nFocus on {entity.ToLower()} related expressions.";
+        }
+
+        return context;
+    }
 }
 
 /// <summary>
@@ -445,4 +495,15 @@ public class ChatRequest
     public string Message { get; set; } = string.Empty;
     // Optional domain/category hint: "expression" | "form" | "workflow"
     public string? Category { get; set; }
+
+    // Allow legacy/alternate client payload key: userPrompt
+    [JsonPropertyName("userPrompt")] // if client sends userPrompt it will bind here
+    public string? UserPrompt
+    {
+        get => Message;
+        set
+        {
+            if (!string.IsNullOrWhiteSpace(value)) Message = value!;
+        }
+    }
 }
