@@ -20,6 +20,16 @@ public class OpenAISettings
 }
 
 /// <summary>
+/// OpenAI Chat Completions request for newer models (gpt-5-nano) with minimal parameters
+/// </summary>
+internal class OpenAIGpt5Request
+{
+    [JsonPropertyName("model")] public string Model { get; set; } = string.Empty;
+    [JsonPropertyName("messages")] public List<OpenAIChatMessage> Messages { get; set; } = new();
+    [JsonPropertyName("response_format")] public OpenAIResponseFormat? ResponseFormat { get; set; }
+}
+
+/// <summary>
 /// Service that talks to OpenAI Chat Completions for GPT nano.
 /// Reuses OpenAIChatRequest/Response types declared in the same assembly/namespace.
 /// </summary>
@@ -56,14 +66,45 @@ OUTPUT RULES:
         _settings = settings.Value;
         _logger = logger;
 
+        _logger.LogInformation("[OpenAI] Constructor: BaseUrl={BaseUrl} Model={Model} HasApiKey={HasKey}", 
+            _settings.BaseUrl, _settings.Model, !string.IsNullOrWhiteSpace(_settings.ApiKey));
+
         if (_httpClient.BaseAddress == null && Uri.TryCreate(_settings.BaseUrl.TrimEnd('/'), UriKind.Absolute, out var baseUri))
         {
             _httpClient.BaseAddress = baseUri;
+            _logger.LogInformation("[OpenAI] Set HttpClient.BaseAddress to {BaseAddress}", baseUri);
+            _logger.LogInformation("[OpenAI] BaseAddress ends with slash: {EndsWithSlash}", baseUri.ToString().EndsWith("/"));
+        }
+        else if (_httpClient.BaseAddress != null)
+        {
+            _logger.LogInformation("[OpenAI] HttpClient.BaseAddress already set to {BaseAddress}", _httpClient.BaseAddress);
+            _logger.LogInformation("[OpenAI] BaseAddress ends with slash: {EndsWithSlash}", _httpClient.BaseAddress.ToString().EndsWith("/"));
+        }
+        else
+        {
+            _logger.LogWarning("[OpenAI] Failed to set BaseAddress from {BaseUrl}", _settings.BaseUrl);
         }
         try { _httpClient.Timeout = TimeSpan.FromSeconds(Math.Max(30, _settings.RequestTimeoutSeconds)); } catch { }
-        if (!string.IsNullOrWhiteSpace(_settings.ApiKey) && !_httpClient.DefaultRequestHeaders.Contains("Authorization"))
+        
+        // Enhanced API Key debugging
+        _logger.LogInformation("[OpenAI] API Key Debug: IsNull={IsNull} IsEmpty={IsEmpty} Length={Length}", 
+            _settings.ApiKey == null, string.IsNullOrWhiteSpace(_settings.ApiKey), _settings.ApiKey?.Length ?? 0);
+        
+        if (!string.IsNullOrWhiteSpace(_settings.ApiKey))
         {
-            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_settings.ApiKey}");
+            var hasAuthHeader = _httpClient.DefaultRequestHeaders.Contains("Authorization");
+            _logger.LogInformation("[OpenAI] Authorization header already exists: {HasAuth}", hasAuthHeader);
+            
+            if (!hasAuthHeader)
+            {
+                _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_settings.ApiKey}");
+                _logger.LogInformation("[OpenAI] Added Authorization header with key prefix: {KeyPrefix}", 
+                    _settings.ApiKey.Substring(0, Math.Min(15, _settings.ApiKey.Length)));
+            }
+        }
+        else
+        {
+            _logger.LogWarning("[OpenAI] API Key is null or empty - Authorization header not set");
         }
     }
 
@@ -86,14 +127,8 @@ OUTPUT RULES:
         {
             sw.Stop();
             _logger.LogWarning(ex, "OpenAI GenerateExpression failed after {Ms}ms", sw.ElapsedMilliseconds);
-            return new AIExpressionResponse
-            {
-                Explanation = "OpenAI unavailable; fallback expression provided.",
-                SuggestedExpression = "customer.Age >= 18 AND account.Balance >= 1000",
-                Confidence = "low",
-                IsValid = true,
-                ValidationWarnings = new List<string> { "OpenAI offline, quota, or model unavailable" }
-            };
+            // Propagate failure so controller returns 502 (no silent fallback)
+            throw;
         }
     }
 
@@ -174,11 +209,9 @@ OUTPUT RULES:
     private async Task<string> SendChatAsync(string userPrompt, bool preferJson = false)
     {
         var expressionOnly = userPrompt.ToLowerInvariant().Contains("expression only");
-        var req = new OpenAIChatRequest
+        var req = new OpenAIGpt5Request
         {
             Model = _settings.Model,
-            Temperature = _settings.Temperature,
-            MaxTokens = expressionOnly ? Math.Min(64, _settings.MaxTokens) : _settings.MaxTokens,
             Messages = new List<OpenAIChatMessage>
             {
                 new() { Role = "system", Content = SYSTEM_PROMPT },
@@ -191,20 +224,78 @@ OUTPUT RULES:
         using var httpContent = new StringContent(json, Encoding.UTF8, "application/json");
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(Math.Max(30, _settings.RequestTimeoutSeconds)));
         var url = _httpClient.BaseAddress != null && _httpClient.BaseAddress.ToString().EndsWith("/")
-            ? "chat/completions" : "chat/completions";
+            ? "v1/chat/completions" : "/v1/chat/completions";
+
+        var promptChars = userPrompt.Length;
+        var fullUrl = _httpClient.BaseAddress != null ? new Uri(_httpClient.BaseAddress, url).ToString() : url;
+        
+        // COMPREHENSIVE LOGGING - Print entire request
+        _logger.LogInformation("[OpenAI] =====FULL REQUEST DEBUG=====");
+        _logger.LogInformation("[OpenAI] URL: {Url}", fullUrl);
+        _logger.LogInformation("[OpenAI] BaseUrl from settings: {BaseUrl}", _settings.BaseUrl);
+        _logger.LogInformation("[OpenAI] Model: {Model}", req.Model);
+        _logger.LogInformation("[OpenAI] Has ResponseFormat: {HasFormat}", req.ResponseFormat != null);
+        _logger.LogInformation("[OpenAI] API Key length: {KeyLength}", !string.IsNullOrWhiteSpace(_settings.ApiKey) ? _settings.ApiKey.Length : 0);
+        _logger.LogInformation("[OpenAI] API Key prefix: {KeyPrefix}", !string.IsNullOrWhiteSpace(_settings.ApiKey) ? _settings.ApiKey.Substring(0, Math.Min(15, _settings.ApiKey.Length)) : "NULL");
+        _logger.LogInformation("[OpenAI] Headers:");
+        foreach (var header in _httpClient.DefaultRequestHeaders)
+        {
+            _logger.LogInformation("[OpenAI]   {HeaderName}: {HeaderValue}", header.Key, string.Join(", ", header.Value));
+        }
+        _logger.LogInformation("[OpenAI] Request Body JSON: {Json}", json);
+        _logger.LogInformation("[OpenAI] =====END FULL REQUEST=====");
+        
+        var sendSw = System.Diagnostics.Stopwatch.StartNew();
 
         var resp = await _httpClient.PostAsync(url, httpContent, cts.Token);
+        sendSw.Stop();
         var body = await resp.Content.ReadAsStringAsync();
+        var bodyLen = body?.Length ?? 0;
+        
+        // COMPREHENSIVE LOGGING - Print entire response
+        _logger.LogInformation("[OpenAI] =====FULL RESPONSE DEBUG=====");
+        _logger.LogInformation("[OpenAI] Status Code: {StatusCode} ({StatusCodeNumber})", resp.StatusCode, (int)resp.StatusCode);
+        _logger.LogInformation("[OpenAI] Elapsed: {ElapsedMs}ms", sendSw.ElapsedMilliseconds);
+        _logger.LogInformation("[OpenAI] Response Headers:");
+        foreach (var header in resp.Headers)
+        {
+            _logger.LogInformation("[OpenAI]   {HeaderName}: {HeaderValue}", header.Key, string.Join(", ", header.Value));
+        }
+        foreach (var header in resp.Content.Headers)
+        {
+            _logger.LogInformation("[OpenAI]   {HeaderName}: {HeaderValue}", header.Key, string.Join(", ", header.Value));
+        }
+        _logger.LogInformation("[OpenAI] Response Body Length: {BodyLength}", bodyLen);
+        _logger.LogInformation("[OpenAI] Full Response Body: {Body}", body);
+        _logger.LogInformation("[OpenAI] =====END FULL RESPONSE=====");
+        
         if (!resp.IsSuccessStatusCode)
         {
-            _logger.LogWarning("OpenAI non-success {Code}: {Snippet}", resp.StatusCode, body.Length > 200 ? body[..200] : body);
-            throw new HttpRequestException($"OpenAI error: {resp.StatusCode}");
+            _logger.LogWarning("[OpenAI] Non-success status={Code} snippet={Snippet}", resp.StatusCode, bodyLen > 320 ? body[..320] : body);
+            // Try to extract OpenAI error message field if present
+            string? errorMsg = null;
+            try
+            {
+                using var doc = JsonDocument.Parse(body);
+                if (doc.RootElement.TryGetProperty("error", out var errEl))
+                {
+                    if (errEl.ValueKind == JsonValueKind.Object && errEl.TryGetProperty("message", out var msgEl) && msgEl.ValueKind == JsonValueKind.String)
+                        errorMsg = msgEl.GetString();
+                    else if (errEl.ValueKind == JsonValueKind.String)
+                        errorMsg = errEl.GetString();
+                }
+            }
+            catch { /* ignore parse issues */ }
+            var snippet = bodyLen > 240 ? body[..240] : body;
+            var detail = errorMsg ?? snippet;
+            throw new HttpRequestException($"OpenAI error: {resp.StatusCode} - {detail}");
         }
         try
         {
             var parsed = JsonSerializer.Deserialize<OpenAIChatResponse>(body, JsonOpts);
             var text = parsed?.Choices?.FirstOrDefault()?.Message?.Content?.Trim();
             if (string.IsNullOrWhiteSpace(text)) throw new InvalidOperationException("Empty model response");
+            _logger.LogDebug("[OpenAI] Parsed primary choice chars={Chars} preview={Preview}", text.Length, text.Length > 120 ? text[..120] : text);
             // If JSON object was requested, try to extract a single string property value that looks like an expression
             if (preferJson && (text.StartsWith("{") || text.Contains("\"")))
             {

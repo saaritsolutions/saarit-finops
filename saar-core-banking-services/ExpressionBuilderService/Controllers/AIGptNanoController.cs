@@ -48,7 +48,13 @@ public class AIGptNanoController : ControllerBase
             var aiResp = await _service.GenerateExpressionAsync(new AIExpressionRequest
             {
                 UserPrompt = req.Message + " expression only",
-                Context = ctx
+                Context = ctx,
+                ExampleExpressions = new List<string>
+                {
+                    "customer.creditScore >= 700 && customer.monthlyIncome >= 50000",
+                    "loan.RequestedAmount <= customer.monthlyIncome * 12 * 0.4",
+                    "CalculateEMI(loan.RequestedAmount, loan.InterestRate, loan.TenureMonths) <= Percentage(customer.monthlyIncome, 40)"
+                }
             });
             sw.Stop();
             // Return ONLY the single-line expression as plain text
