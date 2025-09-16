@@ -13,6 +13,8 @@ export interface PreValidateRequest {
 export interface PreValidateResponse {
   eligibility: string;
   interestRate?: number | null;
+  message?: string;
+  failureReasons?: string[];
 }
 
 export interface SubmitApplicationResponse {
@@ -62,7 +64,9 @@ export async function preValidate(payload: PreValidateRequest): Promise<PreValid
   const data = res.data ?? {};
   const eligibility = data.eligibility ?? data.Eligibility ?? data.eligibilityStatus ?? data.EligibilityStatus;
   const interestRate = data.interestRate ?? data.InterestRate ?? null;
-  return { eligibility, interestRate } as PreValidateResponse;
+  const message = data.message ?? data.Message ?? null;
+  const failureReasons = data.failureReasons ?? data.FailureReasons ?? null;
+  return { eligibility, interestRate, message, failureReasons } as PreValidateResponse;
   } catch (e: any) {
     const status = e?.response?.status;
     const body = e?.response?.data;

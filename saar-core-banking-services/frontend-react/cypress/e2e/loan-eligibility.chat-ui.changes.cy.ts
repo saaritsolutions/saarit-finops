@@ -56,9 +56,14 @@ const askAIAndSave = (prompt: string, expressionId = 'EXPR_LOAN_E2E') => {
   closeAnyBackdrop();
   // Type prompt in chat
   cy.get('[data-testid="chat-input"]').should('exist').scrollIntoView().click({ force: true }).clear({ force: true }).type(prompt, { delay: 0, force: true });
+  
+  // Click Generate and verify loading indicator appears
   cy.findByRole('button', { name: /Generate/i }).click();
-  // Wait for AI output to render
+  cy.contains('Processing...').should('be.visible'); // Verify loading state appears
+  
+  // Wait for AI output to render and loading to disappear
   cy.get('[data-testid="ai-expression-output"]').should('be.visible');
+  cy.contains('Processing...').should('not.exist'); // Verify loading is gone
   // Ensure expression id
   cy.get('[data-testid="expression-id-input"]').clear().type(expressionId);
   // Save
@@ -128,7 +133,11 @@ describe('Loan Eligibility updates via Admin Config Chat', () => {
     cy.contains('Apply for a Loan');
     fillLoanForm();
     cy.contains('button', 'Pre-Validate').scrollIntoView().click({ force: true });
+    
+    // Check for approval with detailed message
+    cy.get('[data-cy="pre-validation-result"]', { timeout: 10000 }).should('be.visible');
     cy.contains(/Eligibility:\s*APPROVED/i, { timeout: 10000 }).should('be.visible');
+    cy.contains(/pre-approved|all criteria met/i).should('be.visible');
 
     // Step 2: make it stricter via chat
     goToAdminExpressions();
@@ -139,6 +148,11 @@ describe('Loan Eligibility updates via Admin Config Chat', () => {
     cy.contains('Apply for a Loan');
     fillLoanForm();
     cy.contains('button', 'Pre-Validate').scrollIntoView().click({ force: true });
-    cy.contains(/Eligibility:\s*DECLINED/i, { timeout: 10000 }).should('be.visible');
+    
+    // Check for rejection with detailed failure reasons
+    cy.get('[data-cy="pre-validation-result"]', { timeout: 10000 }).should('be.visible');
+    cy.contains(/Eligibility:\s*(DECLINED|REJECTED)/i, { timeout: 10000 }).should('be.visible');
+    cy.contains(/doesn't meet.*criteria|specific issues/i).should('be.visible');
+    cy.contains(/credit score.*below|monthly income.*below/i).should('be.visible');
   });
 });

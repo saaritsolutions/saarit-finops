@@ -120,13 +120,23 @@ namespace LoanService.Services
 
         public async Task<string> EvaluateLoanEligibilityAsync(string customerId, decimal loanAmount, Dictionary<string, object> customerData)
         {
-            // Fetch latest active eligibility rule from ExpressionBuilderService
-            var response = await _httpClient.GetAsync("http://localhost:5004/api/expressions?category=Validation&status=Active&usageType=Validation&page=1&pageSize=1");
+            // Fetch active eligibility rules from ExpressionBuilderService
+            // Get more than 1 to find the most recently updated expression
+            var response = await _httpClient.GetAsync("http://localhost:5004/api/expressions?category=Validation&status=Active&usageType=Validation&page=1&pageSize=10");
             response.EnsureSuccessStatusCode();
             var data = await response.Content.ReadFromJsonAsync<ExpressionListResponse>();
-            var latestExpr = data?.expressions?.FirstOrDefault();
-            if (latestExpr == null)
+            
+            if (data?.expressions == null || !data.expressions.Any())
                 throw new Exception("No active loan eligibility rule found");
+
+            // Find the expression with the most recent updatedAt timestamp
+            var latestExpr = data.expressions
+                .Where(e => !string.IsNullOrEmpty(e.updatedAt))
+                .OrderByDescending(e => DateTime.Parse(e.updatedAt))
+                .FirstOrDefault();
+                
+            if (latestExpr == null)
+                throw new Exception("No valid loan eligibility rule found");
 
             // Some expressions expect a strongly-typed `customer` object (ExpressionBuilder.Models.CustomerData).
             // Wrap the customer fields into a nested object so the remote service can deserialize to the expected type.
@@ -149,7 +159,18 @@ namespace LoanService.Services
                 ["loan.amount"] = loanAmount
             };
 
-            return await EvaluateExpressionAsync<string>(latestExpr.expressionId, context);
+            // Check if the expression returns boolean or string
+            if (latestExpr.returnType.Equals("boolean", StringComparison.OrdinalIgnoreCase))
+            {
+                // For boolean expressions, evaluate as bool and convert to APPROVED/DECLINED
+                var boolResult = await EvaluateExpressionAsync<bool>(latestExpr.expressionId, context);
+                return boolResult ? "APPROVED" : "DECLINED";
+            }
+            else
+            {
+                // For string expressions, return as-is
+                return await EvaluateExpressionAsync<string>(latestExpr.expressionId, context);
+            }
         }
 
         public async Task<decimal> CalculateInterestRateAsync(string productId, Dictionary<string, object> loanContext)
@@ -222,6 +243,8 @@ public class ExpressionListResponse
 public class ExpressionResponse
 {
     public string expressionId { get; set; }
+    public string returnType { get; set; }
+    public string updatedAt { get; set; }
     // Add other fields as needed
 }
 

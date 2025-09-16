@@ -21,7 +21,8 @@ export default function LoanOrigination() {
   const [formSchema, setFormSchema] = useState<FormSchema | null>(null);
   const [values, setValues] = useState<FieldState>({});
   const [loading, setLoading] = useState(false);
-  const [pre, setPre] = useState<{ eligibility?: string; interestRate?: number | null; error?: string; errors?: string[] } | null>(null);
+  const [preValidating, setPreValidating] = useState(false);
+  const [pre, setPre] = useState<{ eligibility?: string; interestRate?: number | null; message?: string; failureReasons?: string[]; error?: string; errors?: string[] } | null>(null);
   const [submit, setSubmit] = useState<{ status?: string; message?: string; applicationId?: string; workflowInstanceId?: string; currentStep?: string; error?: string } | null>(null);
   const [activeStep, setActiveStep] = useState(0);
   const [timeline, setTimeline] = useState<string[]>([]);
@@ -39,7 +40,23 @@ export default function LoanOrigination() {
     (async () => {
       setLoading(true);
       try {
-        // 1) Prefer AI-designed schema if available
+        // 1) Primary: Use LoanService-provided schema (reflects admin changes)
+        const data = await getFormSchema(PRODUCT_TYPE);
+        let list: ServerField[] = [];
+        if (Array.isArray(data?.fields)) list = data.fields;
+        
+        if (list && list.length > 0) {
+          // Use the saved schema from admin config
+          if (mounted) {
+            setFields(list);
+            const schemaFromServer: FormSchema = { entityName: 'LoanApplication', title: 'Loan Application', fields: list as any };
+            setFormSchema(schemaFromServer);
+            setValues(v => ({ ...toInitialState(list), ...v }));
+            return; // stop here if saved schema is available
+          }
+        }
+
+        // 2) Fallback: AI-designed schema if no saved schema
         const aiSchema = await aiFormService.getLastApplied();
         if (mounted && aiSchema?.fields && aiSchema.fields.length > 0) {
           const mapped: ServerField[] = aiSchema.fields.map((f: any) => ({
@@ -56,26 +73,21 @@ export default function LoanOrigination() {
           return; // stop here if AI schema used
         }
 
-        // 2) Fallback: LoanService-provided schema
-        const data = await getFormSchema(PRODUCT_TYPE);
-        let list: ServerField[] = [];
-        if (Array.isArray(data?.fields)) list = data.fields;
-        if (!list || list.length === 0) {
-          list = [
-            { name: 'loanAmount', label: 'Loan Amount', type: 'number', required: true, min: 1000 },
-            { name: 'tenureMonths', label: 'Tenure (months)', type: 'number', required: true, min: 6 },
-            { name: 'monthlyIncome', label: 'Monthly Income', type: 'number', required: true, min: 1000 },
-            { name: 'creditScore', label: 'Credit Score', type: 'number', required: true, min: 300, max: 900 },
-            { name: 'debtToIncomeRatio', label: 'Debt-to-Income Ratio', type: 'number', required: true, min: 0, max: 1 },
-          ];
-        }
+        // 3) Final fallback: hardcoded default schema
+        list = [
+          { name: 'loanAmount', label: 'Loan Amount', type: 'number', required: true, min: 1000 },
+          { name: 'tenureMonths', label: 'Tenure (months)', type: 'number', required: true, min: 6 },
+          { name: 'monthlyIncome', label: 'Monthly Income', type: 'number', required: true, min: 1000 },
+          { name: 'creditScore', label: 'Credit Score', type: 'number', required: true, min: 300, max: 900 },
+          { name: 'debtToIncomeRatio', label: 'Debt-to-Income Ratio', type: 'number', required: true, min: 0, max: 1 },
+        ];
         if (mounted) {
           setFields(list);
-          const schemaFromServer: FormSchema = { entityName: 'LoanApplication', title: 'Loan Application', fields: list as any };
-          setFormSchema(schemaFromServer);
+          setFormSchema({ entityName: 'LoanApplication', title: 'Loan Application', fields: list as any });
           setValues(v => ({ ...toInitialState(list), ...v }));
         }
       } catch (e) {
+        // Error fallback: use hardcoded schema
         const fallback: ServerField[] = [
           { name: 'loanAmount', label: 'Loan Amount', type: 'number', required: true, min: 1000 },
           { name: 'tenureMonths', label: 'Tenure (months)', type: 'number', required: true, min: 6 },
@@ -113,14 +125,22 @@ export default function LoanOrigination() {
 
   const onPreValidate = async () => {
     setPre(null);
+    setPreValidating(true);
     try {
       const req = buildRequest(values);
       const res = await preValidate(req);
-      setPre({ eligibility: res.eligibility, interestRate: res.interestRate ?? null });
+      setPre({ 
+        eligibility: res.eligibility, 
+        interestRate: res.interestRate ?? null,
+        message: res.message,
+        failureReasons: res.failureReasons
+      });
       setActiveStep(1);
     } catch (e: any) {
       if (e?.status === 400 && e.body?.errors) setPre({ error: 'Validation error', errors: e.body.errors });
       else setPre({ error: e?.message || 'Pre-validate failed' });
+    } finally {
+      setPreValidating(false);
     }
   };
 
@@ -248,7 +268,14 @@ export default function LoanOrigination() {
                 )}
 
               <Box display="flex" gap={1.5} sx={{ mt: 2 }}>
-                <Button variant="contained" onClick={onPreValidate}>Pre-Validate</Button>
+                <Button 
+                  variant="contained" 
+                  onClick={onPreValidate}
+                  disabled={preValidating}
+                  data-cy="pre-validate-button"
+                >
+                  {preValidating ? 'Validating...' : 'Pre-Validate'}
+                </Button>
                 <Button variant="outlined" onClick={onSubmit}>Submit</Button>
               </Box>
             </Box>
@@ -295,7 +322,7 @@ export default function LoanOrigination() {
           </Box>
 
           {pre && (
-            <Card variant="outlined" sx={{ borderRadius: 3 }}>
+            <Card variant="outlined" sx={{ borderRadius: 3 }} data-cy="pre-validation-result">
               <CardHeader title="Pre-Validation Result" />
               <CardContent>
               {pre.error && <Alert severity="error" sx={{ mt: 1 }}>{pre.error}</Alert>}
@@ -306,8 +333,42 @@ export default function LoanOrigination() {
               )}
               {pre.eligibility && (
                 <Box sx={{ mt: 1 }}>
-                  <Typography>Eligibility: {pre.eligibility}</Typography>
-                  <Typography>Interest Rate: {pre.interestRate ?? 'N/A'}</Typography>
+                  <Typography variant="h6" gutterBottom data-cy="eligibility-result">
+                    Eligibility: {pre.eligibility === 'True' ? 'APPROVED' : pre.eligibility === 'False' ? 'DECLINED' : pre.eligibility}
+                  </Typography>
+                  
+                  {pre.message && (
+                    <Alert 
+                      severity={
+                        pre.eligibility === 'APPROVED' || pre.eligibility === 'True' ? 'success' : 
+                        pre.eligibility === 'REJECTED' || pre.eligibility === 'DECLINED' || pre.eligibility === 'False' ? 'error' : 
+                        'warning'
+                      } 
+                      sx={{ mt: 1, mb: 2 }}
+                      data-cy="eligibility-message"
+                    >
+                      {pre.message}
+                    </Alert>
+                  )}
+                  
+                  {pre.failureReasons && pre.failureReasons.length > 0 && (
+                    <Box sx={{ mt: 2 }} data-cy="failure-reasons">
+                      <Typography variant="subtitle2" color="error" gutterBottom>
+                        Specific Issues:
+                      </Typography>
+                      <Box component="ul" sx={{ pl: 2, mt: 1 }}>
+                        {pre.failureReasons.map((reason, i) => (
+                          <Typography component="li" key={i} color="error" sx={{ mb: 0.5 }}>
+                            {reason}
+                          </Typography>
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
+                  
+                  <Typography sx={{ mt: 2 }}>
+                    Interest Rate: {pre.interestRate ?? 'N/A'}
+                  </Typography>
                 </Box>
               )}
               </CardContent>
