@@ -125,19 +125,65 @@ namespace LoanService.Controllers
                     rate = await _expressions.CalculateInterestRateAsync(request.ProductType ?? "PERSONAL_LOAN", new Dictionary<string, object>(ctx));
                 }
 
-                return Ok(new PreValidateResponse { Eligibility = eligibility, InterestRate = rate });
+                // Generate detailed message based on expression result and criteria
+                var message = GetDetailedEligibilityMessage(eligibility, request);
+                var failureReasons = eligibility == "REJECTED" ? GetFailureReasons(request) : null;
+
+                return Ok(new PreValidateResponse 
+                { 
+                    Eligibility = eligibility, 
+                    InterestRate = rate,
+                    Message = message,
+                    FailureReasons = failureReasons
+                });
             }
 
-            // Phase 1: hardcoded eligibility/rate
-            var eligibilityLocal = (request.CreditScore >= 700 && request.DebtToIncomeRatio <= 0.45m && request.MonthlyIncome >= 15000)
-                ? "APPROVED"
-                : (request.CreditScore >= 650 ? "MANUAL_REVIEW" : "REJECTED");
+            // Phase 1: hardcoded eligibility/rate with detailed failure reasons
+            var hardcodedFailureReasons = new List<string>();
+            var hardcodedMessage = "";
+            
+            // Check individual criteria
+            if (request.CreditScore < 650)
+            {
+                hardcodedFailureReasons.Add($"Credit score {request.CreditScore} is below minimum requirement of 650");
+            }
+            if (request.DebtToIncomeRatio > 0.45m)
+            {
+                hardcodedFailureReasons.Add($"Debt-to-income ratio {request.DebtToIncomeRatio:P1} exceeds maximum allowed of 45%");
+            }
+            if (request.MonthlyIncome < 15000)
+            {
+                hardcodedFailureReasons.Add($"Monthly income ₹{request.MonthlyIncome:N0} is below minimum requirement of ₹15,000");
+            }
+
+            string eligibilityLocal;
+            if (hardcodedFailureReasons.Any())
+            {
+                eligibilityLocal = "REJECTED";
+                hardcodedMessage = $"Application rejected. Reasons: {string.Join("; ", hardcodedFailureReasons)}";
+            }
+            else if (request.CreditScore >= 700 && request.DebtToIncomeRatio <= 0.45m && request.MonthlyIncome >= 15000)
+            {
+                eligibilityLocal = "APPROVED";
+                hardcodedMessage = "Application pre-approved! All criteria met.";
+            }
+            else
+            {
+                eligibilityLocal = "MANUAL_REVIEW";
+                hardcodedMessage = "Application requires manual review. Credit score between 650-699 or other factors need assessment.";
+            }
 
             decimal? rateLocal = eligibilityLocal == "APPROVED"
                 ? Math.Round(10m + Math.Max(0, 750 - request.CreditScore) * 0.01m, 2)
                 : null;
 
-            return Ok(new PreValidateResponse { Eligibility = eligibilityLocal, InterestRate = rateLocal });
+            return Ok(new PreValidateResponse 
+            { 
+                Eligibility = eligibilityLocal, 
+                InterestRate = rateLocal,
+                Message = hardcodedMessage,
+                FailureReasons = hardcodedFailureReasons.Any() ? hardcodedFailureReasons : null
+            });
         }
 
         /// <summary>
@@ -394,6 +440,8 @@ namespace LoanService.Controllers
     {
         public string Eligibility { get; set; } = string.Empty;
         public decimal? InterestRate { get; set; }
+        public string? Message { get; set; }
+        public List<string>? FailureReasons { get; set; }
     }
 
     public class SubmitApplicationResponse
@@ -446,6 +494,41 @@ namespace LoanService.Controllers
                 _logger.LogError(ex, "Workflow step processing failed for {WorkflowInstanceId}", workflowInstanceId);
                 return StatusCode(503, new { error = "Workflow processing failed" });
             }
+        }
+
+        private string GetDetailedEligibilityMessage(string eligibility, PreValidateRequest request)
+        {
+            return eligibility switch
+            {
+                "APPROVED" => "Congratulations! Your application has been pre-approved. All eligibility criteria are met.",
+                "MANUAL_REVIEW" => "Your application requires manual review. One or more criteria need further assessment by our team.",
+                "REJECTED" => $"Unfortunately, your application doesn't meet our current eligibility criteria. Please see specific reasons below.",
+                _ => "Unable to determine eligibility status at this time. Please contact support."
+            };
+        }
+
+        private List<string> GetFailureReasons(PreValidateRequest request)
+        {
+            var reasons = new List<string>();
+            
+            if (request.CreditScore < 650)
+            {
+                reasons.Add($"Credit score {request.CreditScore} is below minimum requirement of 650");
+            }
+            if (request.DebtToIncomeRatio > 0.45m)
+            {
+                reasons.Add($"Debt-to-income ratio {request.DebtToIncomeRatio:P1} exceeds maximum allowed of 45%");
+            }
+            if (request.MonthlyIncome < 15000)
+            {
+                reasons.Add($"Monthly income ₹{request.MonthlyIncome:N0} is below minimum requirement of ₹15,000");
+            }
+            if (request.LoanAmount > request.MonthlyIncome * 60) // 5 years worth of income
+            {
+                reasons.Add($"Requested loan amount ₹{request.LoanAmount:N0} is too high relative to monthly income");
+            }
+
+            return reasons;
         }
     }
 }

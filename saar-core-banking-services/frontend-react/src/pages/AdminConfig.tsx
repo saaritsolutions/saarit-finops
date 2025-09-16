@@ -1,20 +1,23 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Box, Button, Card, CardContent, Divider, Paper, Stack, Tab, Tabs, TextField, Typography, Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Tooltip } from '@mui/material';
+import { Box, Button, Card, CardContent, Divider, Paper, Stack, Tab, Tabs, TextField, Typography, Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Tooltip, Alert } from '@mui/material';
 import { Edit, Delete, PlayArrow, Refresh } from '@mui/icons-material';
 import StatusBanner from '../components/common/StatusBanner';
 import ChatPanel from '../components/common/ChatPanel';
 import SchemaForm from '../components/forms/SchemaForm';
 import type { FormSchema } from '../services/aiFormService';
+import { aiFormService } from '../services/aiFormService';
 import expressionService from '../services/expressionService';
 
 export default function AdminConfig() {
   const [workflowJson, setWorkflowJson] = useState('');
-  const [schemaJson, setSchemaJson] = useState('');
+    const [schemaJson, setSchemaJson] = useState<string>('{}');
+  const [originalSchemaJson, setOriginalSchemaJson] = useState<string>('{}'); // Store original form
+  const [schemaModifiedByAI, setSchemaModifiedByAI] = useState<boolean>(false); // Track if AI modified the schema
   const [loading, setLoading] = useState(false);
   const baseUrl = process.env.REACT_APP_LOAN_SERVICE_BASE_URL || 'http://localhost:5130';
   const aiBase = process.env.REACT_APP_EXPRESSION_API_URL || 'http://localhost:5004';
   const workflowType = 'LOAN_ORIGINATION';
-  const productType = 'personal_loan';
+  const productType = 'PERSONAL_LOAN';
   const [msg, setMsg] = useState<string | null>(null);
   const [chatMsg, setChatMsg] = useState<string | null>(null);
   const [tab, setTab] = useState(0);
@@ -27,16 +30,35 @@ export default function AdminConfig() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [originalExpression, setOriginalExpression] = useState('');
   const [syntaxCorrections, setSyntaxCorrections] = useState<string[]>([]);
+  const [schemaMsg, setSchemaMsg] = useState<string | null>(null);
 
   const fetchAll = async () => {
     setLoading(true);
     setMsg(null);
     try {
+      // Load workflow configuration
       const wf = await fetch(`${baseUrl}/api/admin/config/workflow/${workflowType}`).then(r => r.json());
       setWorkflowJson(JSON.stringify(wf, null, 2));
-      const schema = await fetch(`${baseUrl}/api/admin/config/forms/${productType}`).then(r => r.text());
-      setSchemaJson(schema);
-    } catch (e:any) {
+      
+      // Load form schema with better error handling
+      const schemaResponse = await fetch(`${baseUrl}/api/admin/config/forms/${productType}`);
+      if (!schemaResponse.ok) {
+        throw new Error(`Failed to load form schema: ${schemaResponse.status} ${schemaResponse.statusText}`);
+      }
+      const schema = await schemaResponse.text();
+      
+      // Validate that we got valid JSON
+        try {
+          JSON.parse(schema);
+          setSchemaJson(schema);
+          setOriginalSchemaJson(schema); // Store original schema
+          setSchemaModifiedByAI(false); // Reset AI modification flag
+          setMsg('Configuration loaded successfully');
+        } catch (parseError) {
+          console.error('Invalid JSON in form schema:', parseError);
+          throw new Error('Form schema contains invalid JSON');
+        }    } catch (e:any) {
+      console.error('Failed to load config:', e);
       setMsg(e?.message || 'Failed to load config');
     } finally {
       setLoading(false);
@@ -82,14 +104,95 @@ export default function AdminConfig() {
     setMsg('Workflow saved');
   };
 
+  const resetToDefaultForm = async () => {
+    setMsg(null);
+    setSchemaMsg(null);
+    try {
+      // Load the default form schema from the source
+      const defaultSchema = {
+        "productType": "PERSONAL_LOAN",
+        "title": "Personal Loan Application",
+        "fields": [
+          { "name": "fullName", "label": "Full Name", "type": "text", "required": true },
+          { "name": "email", "label": "Email", "type": "text", "required": true },
+          { "name": "loanAmount", "label": "Loan Amount", "type": "number", "required": true, "min": 10000 },
+          { "name": "tenureMonths", "label": "Tenure (Months)", "type": "number", "required": true, "min": 6 },
+          { "name": "monthlyIncome", "label": "Monthly Income", "type": "number", "required": true, "min": 0 },
+          { "name": "creditScore", "label": "Credit Score", "type": "number", "required": true, "min": 300, "max": 900 }
+        ]
+      };
+      
+      const schemaJson = JSON.stringify(defaultSchema, null, 2);
+      setSchemaJson(schemaJson);
+      setOriginalSchemaJson(schemaJson);
+      setSchemaModifiedByAI(false);
+      setSchemaMsg('Form reset to default schema');
+    } catch (e: any) {
+      setSchemaMsg(e?.message || 'Failed to reset form to default');
+    }
+  };
+
+  const revertAIChanges = () => {
+    setSchemaJson(originalSchemaJson);
+    setSchemaModifiedByAI(false);
+    setSchemaMsg('Reverted to original form schema');
+  };
+
   const saveSchema = async () => {
     setMsg(null);
-    await fetch(`${baseUrl}/api/admin/config/forms/${productType}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: schemaJson });
-    setMsg('Form schema saved');
+    if (schemaModifiedByAI) {
+      const confirmSave = window.confirm(
+        'This form has been modified by AI. Are you sure you want to save these changes? This will permanently replace the original form schema.'
+      );
+      if (!confirmSave) {
+        setMsg('Save cancelled');
+        return;
+      }
+    }
+    
+    try {
+      await fetch(`${baseUrl}/api/admin/config/forms/${productType}`, { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: schemaJson 
+      });
+      setMsg('Form schema saved');
+      setOriginalSchemaJson(schemaJson); // Update original to match saved version
+      setSchemaModifiedByAI(false); // Reset AI modification flag
+    } catch (e: any) {
+      setMsg('Failed to save form schema: ' + (e?.message || 'Unknown error'));
+    }
+  };
+
+  const chatSchema = async (message: string) => {
+    setSchemaMsg(null);
+    setLoading(true); // Start loading for forms AI
+    try {
+      const result = await aiFormService.chatSchema({
+        Message: message,
+        CurrentSchemaJson: schemaJson,
+        Category: 'form',
+        FormOnly: true,
+      });
+      
+      if (result) {
+        const newSchemaJson = JSON.stringify(result, null, 2);
+        setSchemaJson(newSchemaJson);
+        setSchemaModifiedByAI(true); // Mark as modified by AI
+        setSchemaMsg('Schema updated from AI - Review before saving!');
+      } else {
+        setSchemaMsg('No schema updates received from AI');
+      }
+    } catch (e: any) {
+      setSchemaMsg(e?.message || 'Failed to update schema from AI');
+    } finally {
+      setLoading(false); // Stop loading for forms AI
+    }
   };
 
   const chatWorkflow = async (message: string) => {
     setChatMsg(null);
+    setLoading(true); // Start loading for workflow AI
     try {
       const res = await fetch(`${aiBase}/api/aiworkflow/chat`, {
         method: 'POST',
@@ -103,6 +206,8 @@ export default function AdminConfig() {
       setChatMsg('Workflow updated from AI');
     } catch (e:any) {
       setChatMsg(e?.message || 'Failed to update workflow from AI');
+    } finally {
+      setLoading(false); // Stop loading for workflow AI
     }
   };
 
@@ -110,6 +215,7 @@ export default function AdminConfig() {
     setExprOutput('');
     setExprMsg(null);
     setSyntaxCorrections([]); // Clear previous corrections
+    setLoading(true); // Start loading for expression AI
     try {
       const res = await fetch(`${aiBase}/api/aiexpression/chat`, {
         method: 'POST',
@@ -135,6 +241,8 @@ export default function AdminConfig() {
       setExprOutput(content);
     } catch (e: any) {
       setExprOutput(e?.message || 'Failed to get expression from AI');
+    } finally {
+      setLoading(false); // Stop loading for expression AI
     }
   };
 
@@ -416,6 +524,7 @@ export default function AdminConfig() {
   const chatExpressionWithContext = async (message: string) => {
     setExprOutput('');
     setExprMsg(null);
+    setLoading(true);
     try {
       // Add context about current rule if editing
       let contextualMessage = message;
@@ -448,6 +557,8 @@ export default function AdminConfig() {
       setExprOutput(content);
     } catch (e: any) {
       setExprOutput(e?.message || 'Failed to get expression from AI');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -471,16 +582,66 @@ export default function AdminConfig() {
         {tab === 0 && (
           <Box>
             <Stack spacing={2}>
-              <Card variant="outlined">
+              <Card variant="outlined" sx={{ border: schemaModifiedByAI ? '2px solid #ff9800' : '1px solid #e0e0e0' }}>
                 <CardContent>
-                  <Typography variant="subtitle1" gutterBottom>Form Schema JSON</Typography>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                    <Typography variant="subtitle1">Form Schema JSON</Typography>
+                    {schemaModifiedByAI && (
+                      <Chip 
+                        label="AI Modified" 
+                        color="warning" 
+                        size="small" 
+                        icon={<span>🤖</span>}
+                      />
+                    )}
+                  </Stack>
+                  {schemaModifiedByAI && (
+                    <Alert severity="warning" sx={{ mb: 2 }}>
+                      <Typography variant="body2">
+                        <strong>⚠️ Schema updated from AI - Review before saving!</strong>
+                        <br />
+                        The form schema has been modified by AI assistance. Please review the changes carefully before saving to ensure they meet your requirements.
+                      </Typography>
+                    </Alert>
+                  )}
                   <TextField multiline minRows={12} value={schemaJson} onChange={(e) => setSchemaJson(e.target.value)} fullWidth spellCheck={false} />
                   <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                    <Button variant="contained" onClick={saveSchema} disabled={loading}>Save Schema</Button>
+                    <Button 
+                      variant="contained" 
+                      onClick={saveSchema} 
+                      disabled={loading}
+                      color={schemaModifiedByAI ? "warning" : "primary"}
+                      startIcon={schemaModifiedByAI ? <span>⚠️</span> : undefined}
+                    >
+                      {schemaModifiedByAI ? "Save AI Changes" : "Save Schema"}
+                    </Button>
                     <Button variant="outlined" onClick={fetchAll} disabled={loading}>Reload</Button>
+                    <Button variant="outlined" onClick={resetToDefaultForm} disabled={loading}>Reset to Default</Button>
+                    {schemaModifiedByAI && (
+                      <Button 
+                        variant="outlined" 
+                        onClick={revertAIChanges} 
+                        disabled={loading}
+                        color="secondary"
+                        startIcon={<span>↶</span>}
+                      >
+                        Revert AI Changes
+                      </Button>
+                    )}
                   </Stack>
                 </CardContent>
               </Card>
+
+              <ChatPanel
+                title="AI Assistant (Form Schema)"
+                placeholder="e.g., Add fields mobileNumber (text, required), dateOfBirth (date), or Remove middleName field"
+                helperText={!process.env.REACT_APP_EXPRESSION_API_URL ? 'REACT_APP_EXPRESSION_API_URL is not set; using default http://localhost:5004' : undefined}
+                sending={loading}
+                onSend={chatSchema}
+                actionLabel="Update Schema"
+              />
+              <StatusBanner message={schemaMsg} severity="info" />
+
               <Card variant="outlined">
                 <CardContent>
                   <Typography variant="subtitle1" gutterBottom>Live Preview</Typography>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Button, Card, CardContent, Stack, TextField, Typography } from '@mui/material';
+import { Box, Button, Card, CardContent, Stack, TextField, Typography, CircularProgress } from '@mui/material';
 
 export interface ChatPanelProps {
   title?: string;
@@ -43,7 +43,15 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
             inputProps={{ 'aria-label': 'Type your instruction', 'data-testid': 'chat-input' }}
           />
           <Box display="flex" alignItems="flex-start">
-            <Button variant="outlined" onClick={handleSend} disabled={!!sending || !msg.trim()} data-testid="chat-send">{actionLabel}</Button>
+            <Button 
+              variant="outlined" 
+              onClick={handleSend} 
+              disabled={!!sending || !msg.trim()} 
+              data-testid="chat-send"
+              startIcon={sending ? <CircularProgress size={16} /> : undefined}
+            >
+              {sending ? 'Processing...' : actionLabel}
+            </Button>
           </Box>
         </Stack>
         {helperText && (

@@ -60,6 +60,27 @@ OUTPUT RULES:
 - Prefer entity-qualified identifiers like customer.age, loan.TenureMonths, etc.
 - Do not include comments, labels, JSON, or fences. Return only the expression line.";
 
+    private const string FORM_SYSTEM_PROMPT = @"You are a banking form schema generator that creates and modifies JSON form schemas for loan applications and banking workflows.
+
+FORM SCHEMA STRUCTURE:
+- fields: Array of field objects with properties: name (camelCase), label, type, required, validation
+- sections: Optional grouping of fields with keys and titles
+- Common field types: text, number, date, boolean, select, email, phone, currency
+- Include validation rules where appropriate (regex patterns, min/max values)
+
+BANKING FORM FIELDS:
+- Personal: firstName, lastName, dateOfBirth, ssn, phone, email, address
+- Financial: monthlyIncome, creditScore, employmentStatus, employerName, assets, liabilities
+- Loan: loanAmount, loanPurpose, loanTerm, collateralType, collateralValue
+- Identity: aadharNumber (12 digits), panNumber, drivingLicense
+
+OUTPUT RULES:
+- Return ONLY valid JSON without markdown formatting or code blocks
+- Use camelCase for field names (e.g., 'firstName', not 'first_name')
+- Include appropriate validation rules and required flags
+- When modifying existing schemas, preserve existing fields unless explicitly asked to remove them
+- Add requested fields with proper banking-specific validation";
+
     public OpenAIGptService(HttpClient httpClient, IOptions<OpenAISettings> settings, ILogger<OpenAIGptService> logger)
     {
         _httpClient = httpClient;
@@ -209,12 +230,19 @@ OUTPUT RULES:
     private async Task<string> SendChatAsync(string userPrompt, bool preferJson = false)
     {
         var expressionOnly = userPrompt.ToLowerInvariant().Contains("expression only");
+        var isFormGeneration = userPrompt.ToLowerInvariant().Contains("form schema") || 
+                             userPrompt.ToLowerInvariant().Contains("form generation") ||
+                             userPrompt.ToLowerInvariant().Contains("modify the existing form schema") ||
+                             userPrompt.ToLowerInvariant().Contains("generate a new json form schema");
+        
+        var systemPrompt = isFormGeneration ? FORM_SYSTEM_PROMPT : SYSTEM_PROMPT;
+        
         var req = new OpenAIGpt5Request
         {
             Model = _settings.Model,
             Messages = new List<OpenAIChatMessage>
             {
-                new() { Role = "system", Content = SYSTEM_PROMPT },
+                new() { Role = "system", Content = systemPrompt },
                 new() { Role = "user", Content = userPrompt }
             },
             ResponseFormat = preferJson ? new OpenAIResponseFormat { Type = "json_object" } : null

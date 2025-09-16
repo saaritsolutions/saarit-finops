@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ExpressionBuilderService.AI;
 
 namespace ExpressionBuilderService.Controllers;
 
@@ -9,14 +10,16 @@ namespace ExpressionBuilderService.Controllers;
 public class AIWorkflowController : ControllerBase
 {
     private readonly ILogger<AIWorkflowController> _logger;
+    private readonly ILlmSelectorService _llmSelector;
 
-    public AIWorkflowController(ILogger<AIWorkflowController> logger)
+    public AIWorkflowController(ILogger<AIWorkflowController> logger, ILlmSelectorService llmSelector)
     {
         _logger = logger;
+        _llmSelector = llmSelector;
     }
 
     [HttpPost("chat")]
-    public IActionResult ChatWorkflow([FromBody] AIWorkflowRequest request)
+    public async Task<IActionResult> ChatWorkflow([FromBody] AIWorkflowRequest request)
     {
         try
         {
@@ -43,6 +46,90 @@ public class AIWorkflowController : ControllerBase
                     }
                 };
             }
+
+            // First try AI-powered workflow modification
+            try
+            {
+                var currentWorkflowJson = JsonSerializer.Serialize(wf, options);
+                var hasExistingWorkflow = wf.Steps.Any();
+                
+                var prompt = hasExistingWorkflow 
+                    ? $@"You are a banking workflow AI assistant. Modify the existing workflow based on the user's request.
+
+CURRENT WORKFLOW: {currentWorkflowJson}
+
+INSTRUCTIONS:
+1. Return ONLY valid JSON for the complete workflow definition
+2. Do not use markdown formatting or code blocks
+3. Keep the existing structure and modify/add as requested
+4. Use proper banking workflow steps: KYC, CREDIT_CHECK, RISK_ASSESSMENT, UNDERWRITER_REVIEW, SENIOR_MANAGER_REVIEW, LEGAL_COMPLIANCE, APPROVAL, COMPLETED
+5. Include 'workflowType', 'startStep', and 'steps' array
+6. Each step should have: name, next (optional), conditionExpressionId (optional), elseNext (optional), requiredActions (optional array)
+7. Use UPPERCASE for step names (e.g., 'KYC', not 'kyc')
+
+USER REQUEST: {request.Message}"
+                    : $@"You are a banking workflow AI assistant. Create a new loan origination workflow based on the user's request.
+
+INSTRUCTIONS:
+1. Return ONLY valid JSON for the complete workflow definition
+2. Do not use markdown formatting or code blocks  
+3. Create a standard banking loan workflow with these typical steps: KYC, CREDIT_CHECK, RISK_ASSESSMENT, UNDERWRITER_REVIEW, APPROVAL, COMPLETED
+4. Include 'workflowType', 'startStep', and 'steps' array
+5. Each step should have: name, next (optional), conditionExpressionId (optional), elseNext (optional), requiredActions (optional array)
+6. Use UPPERCASE for step names (e.g., 'KYC', not 'kyc')
+7. Set workflowType to 'LOAN_ORIGINATION'
+
+USER REQUEST: {request.Message}";
+
+                var aiReq = new ExpressionBuilderService.AI.AIExpressionRequest
+                {
+                    UserPrompt = prompt,
+                    Context = "workflow_generation"
+                };
+
+                var aiProvider = _llmSelector.GetProvider();
+                var response = await aiProvider.GenerateExpressionAsync(aiReq);
+                var aiJson = response?.Explanation ?? response?.SuggestedExpression ?? "";
+
+                if (!string.IsNullOrWhiteSpace(aiJson))
+                {
+                    // Clean up the JSON response
+                    aiJson = aiJson.Trim();
+                    if (aiJson.StartsWith("```json"))
+                        aiJson = aiJson.Substring(7);
+                    if (aiJson.StartsWith("```"))
+                        aiJson = aiJson.Substring(3);
+                    if (aiJson.EndsWith("```"))
+                        aiJson = aiJson.Substring(0, aiJson.Length - 3);
+                    aiJson = aiJson.Trim();
+
+                    // Validate and use AI response if valid
+                    try
+                    {
+                        var aiWorkflow = JsonSerializer.Deserialize<WorkflowDefinition>(aiJson, options);
+                        if (aiWorkflow?.Steps != null && aiWorkflow.Steps.Any())
+                        {
+                            _logger.LogInformation("AI successfully generated workflow, using AI result");
+                            return Content(aiJson, "application/json");
+                        }
+                    }
+                    catch (JsonException ex)
+                    {
+                        _logger.LogWarning(ex, "AI returned invalid JSON, falling back to deterministic patterns");
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("AI returned empty response, falling back to deterministic patterns");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "AI workflow generation failed, falling back to deterministic patterns");
+            }
+
+            // Fallback to deterministic pattern matching if AI fails
+            _logger.LogInformation("Using deterministic pattern matching for workflow modification");
 
             var lower = request.Message.ToLowerInvariant();
 
