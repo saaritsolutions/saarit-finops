@@ -2,6 +2,15 @@
 /// <reference types="@testing-library/cypress" />
 export {};
 
+// Global timeout configuration for OpenAI API calls
+const TIMEOUTS = {
+  OPENAI_API: 60000,        // 60 seconds for OpenAI API responses
+  FORM_SUBMISSION: 60000,   // 60 seconds for form submissions with AI processing
+  WORKFLOW_UPDATE: 60000,   // 60 seconds for workflow updates
+  STANDARD_WAIT: 7000,      // 7 seconds for standard UI operations
+  SHORT_WAIT: 500          // 500ms for quick UI transitions
+};
+
 // Helpers to interact with Admin Config workflow chat
 const openAdminConfig = () => {
   cy.visit('/admin/config');
@@ -23,10 +32,10 @@ const updateWorkflowByChat = (message: string) => {
       cy.contains(/apply/i).click({ force: true });
     });
   // Wait for the status banner to confirm update
-  cy.contains(/Workflow updated from AI/i, { timeout: 8000 }).should('exist');
+  cy.contains(/Workflow updated from AI/i, { timeout: TIMEOUTS.WORKFLOW_UPDATE }).should('exist');
   // Save workflow
   cy.contains(/save workflow/i).click({ force: true });
-  cy.contains(/Workflow saved/i, { timeout: 6000 }).should('exist');
+  cy.contains(/Workflow saved/i, { timeout: TIMEOUTS.WORKFLOW_UPDATE }).should('exist');
 };
 
 const closeAnyBackdrop = () => {
@@ -84,10 +93,10 @@ const fillBasicForm = (opts: { aadhar?: string } = {}) => {
 const submitAndExpectNoKyc = () => {
   closeAnyBackdrop();
   cy.contains('button', 'Pre-Validate').scrollIntoView().click({ force: true });
-  cy.contains(/Eligibility:/i, { timeout: 7000 });
+  cy.contains(/Eligibility:/i, { timeout: TIMEOUTS.FORM_SUBMISSION });
   closeAnyBackdrop();
   cy.contains('button', 'Submit').scrollIntoView().click({ force: true });
-  cy.contains(/Submission Result/i, { timeout: 7000 });
+  cy.contains(/Submission Result/i, { timeout: TIMEOUTS.FORM_SUBMISSION });
   // No required actions should be shown, and Advance Step should be enabled
   cy.contains(/Required:/i).should('not.exist');
   cy.contains('button', 'Advance Step').should('not.be.disabled');
@@ -96,7 +105,7 @@ const submitAndExpectNoKyc = () => {
 const submitAndExpectOptionalKyc = () => {
   closeAnyBackdrop();
   cy.contains('button', 'Submit').scrollIntoView().click({ force: true });
-  cy.contains(/Submission Result/i, { timeout: 7000 });
+  cy.contains(/Submission Result/i, { timeout: TIMEOUTS.FORM_SUBMISSION });
   // Optional KYC: show step or hint but allow Advance Step
   cy.contains(/KYC/i);
   cy.contains('button', 'Advance Step').should('not.be.disabled');
@@ -105,14 +114,14 @@ const submitAndExpectOptionalKyc = () => {
 const submitAndExpectMandatoryKyc = () => {
   closeAnyBackdrop();
   cy.contains('button', 'Submit').scrollIntoView().click({ force: true });
-  cy.contains(/Submission Result/i, { timeout: 7000 });
+  cy.contains(/Submission Result/i, { timeout: TIMEOUTS.FORM_SUBMISSION });
   // Try advancing if not disabled, then KYC required should surface and advance becomes disabled
   cy.contains('button', 'Advance Step').then(($btn) => {
     if (!$btn.is(':disabled')) {
       cy.wrap($btn).scrollIntoView().click({ force: true });
     }
   });
-  cy.contains(/Required:.*KYC/i, { timeout: 7000 });
+  cy.contains(/Required:.*KYC/i, { timeout: TIMEOUTS.STANDARD_WAIT });
   cy.contains('button', 'Advance Step').should('be.disabled');
 };
 
@@ -132,7 +141,7 @@ const completeKycAndAdvance = (aadhar: string) => {
   // Click KYC action button (label normalized in UI)
   closeAnyBackdrop();
   cy.contains('button', /\bKYC\b|Perform KYC/i).first().scrollIntoView().click({ force: true });
-  cy.wait(500);
+  cy.wait(TIMEOUTS.SHORT_WAIT);
   // Advance after KYC
   cy.contains('button', 'Advance Step').scrollIntoView().click({ force: true });
 };
@@ -161,10 +170,10 @@ describe('Loan Workflow & Dynamic Form E2E', () => {
     fillBasicForm({ aadhar: '123456789012' });
   closeAnyBackdrop();
   cy.contains('button', 'Pre-Validate').scrollIntoView().click({ force: true });
-    cy.contains(/Eligibility:/i, { timeout: 7000 });
+    cy.contains(/Eligibility:/i, { timeout: TIMEOUTS.FORM_SUBMISSION });
   closeAnyBackdrop();
   cy.contains('button', 'Submit').scrollIntoView().click({ force: true });
-    cy.contains(/Submission Result/i, { timeout: 7000 });
+    cy.contains(/Submission Result/i, { timeout: TIMEOUTS.FORM_SUBMISSION });
     // Even if KYC step name appears, advancing should be allowed if no RequiredActions
   cy.contains('button', 'Advance Step').scrollIntoView().click({ force: true });
   });

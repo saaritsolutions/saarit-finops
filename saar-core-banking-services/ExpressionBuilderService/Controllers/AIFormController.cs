@@ -30,35 +30,6 @@ public class AIFormController : ControllerBase
             // Log the bound request payload so we can see incoming flags (use Information so it appears in default logs)
             _logger.LogInformation("Bound AIFormRequest: {RequestJson}", System.Text.Json.JsonSerializer.Serialize(request));
 
-            // Basic deterministic handling for the demo Aadhar prompt
-            var lower = request.Message.ToLower();
-            if (lower.Contains("aadhar") || lower.Contains("aadhaar") || lower.Contains("aadhar number"))
-            {
-                var field = new SuggestedField
-                {
-                    Name = "aadharNumber",
-                    Label = "Aadhar Number",
-                    Type = "text",
-                    Required = true,
-                    ValidationRegex = "^[0-9]{12}$",
-                    MaxLength = 12,
-                    Description = "12-digit Aadhar number as per regulation"
-                };
-
-                var schema = new { fields = new[] { field } };
-                var resp = new AIFormResponse
-                {
-                    Explanation = "Adds a mandatory 12-digit Aadhar number field to the loan form.",
-                    SuggestedFields = new System.Collections.Generic.List<SuggestedField> { field },
-                    SchemaJson = JsonSerializer.Serialize(schema),
-                    Confidence = "high",
-                    IsValid = true,
-                    Transcript = request.Message
-                };
-
-                return Ok(resp);
-            }
-
             // If caller asked for JSON-only form, call the LLM and return sanitized schema
             if (request.FormOnly)
             {
