@@ -41,7 +41,9 @@ export default defineConfig({
     },
     baseUrl: process.env['CYPRESS_BASE_URL'] || 'http://localhost:3002',
     supportFile: 'cypress/support/e2e.ts',
-    defaultCommandTimeout: 12000,
+    defaultCommandTimeout: 60000,
+    requestTimeout: 60000,
+    responseTimeout: 60000,
     // Higher-resolution viewport for crisper recordings
     viewportWidth: 1920,
     viewportHeight: 1080,

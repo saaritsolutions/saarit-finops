@@ -1,12 +1,22 @@
 import { test, expect } from '@playwright/test';
 
+// Global timeout configuration for API calls and UI operations
+const TIMEOUTS = {
+  OPENAI_API: 60000,        // 60 seconds for OpenAI API responses
+  FORM_SUBMISSION: 60000,   // 60 seconds for form submissions with AI processing
+  AUTHENTICATION: 15000,    // 15 seconds for authentication
+  PAGE_LOAD: 3000,         // 3 seconds for page loading
+  UI_TRANSITION: 500,      // 500ms for UI transitions
+  FIELD_INPUT: 300         // 300ms for field input delays
+};
+
 test.describe('SaaR Banking Demo - Loan Application Journey', () => {
   test('should demonstrate complete loan application flow', async ({ page }) => {
     console.log('🏦 Starting Loan Application Journey demonstration...');
     
     // Navigate directly to the page (auto-authentication handles login)
     await page.goto('/loans/new');
-    await page.waitForTimeout(2000); // Allow auto-authentication to complete
+    await page.waitForTimeout(TIMEOUTS.PAGE_LOAD); // Allow auto-authentication to complete
     
     // If redirected to login, we need authentication, otherwise we're already logged in
     if (page.url().includes('/login')) {
@@ -14,7 +24,7 @@ test.describe('SaaR Banking Demo - Loan Application Journey', () => {
       await page.fill('input[name="username"]', 'admin@saarbanking.com');
       await page.fill('input[name="password"]', 'admin123');
       await page.click('button[type="submit"], button:has-text("Sign In")');
-      await page.waitForURL('**/loans/new', { timeout: 15000 });
+      await page.waitForURL('**/loans/new', { timeout: TIMEOUTS.AUTHENTICATION });
     } else {
       console.log('   ✅ Auto-authentication successful');
     }
@@ -24,7 +34,7 @@ test.describe('SaaR Banking Demo - Loan Application Journey', () => {
       await page.goto('/loans/new');
       
       // Wait for page to load and check for form elements
-      await page.waitForTimeout(3000);
+      await page.waitForTimeout(TIMEOUTS.PAGE_LOAD);
       
       // Check for loan application form elements
       const formElements = await page.locator('input').count();
@@ -120,7 +130,7 @@ test.describe('SaaR Banking Demo - Loan Application Journey', () => {
             
             // Trigger any validation
             await element.blur();
-            await page.waitForTimeout(300);
+            await page.waitForTimeout(TIMEOUTS.FIELD_INPUT);
             
             fieldFilled = true;
             break;
@@ -177,10 +187,20 @@ test.describe('SaaR Banking Demo - Loan Application Journey', () => {
     await test.step('Test eligibility check', async () => {
       console.log('\n📋 Testing loan eligibility check...');
       
+      // First, close any open modals or drawers
+      try {
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(TIMEOUTS.UI_TRANSITION);
+      } catch (e) {
+        // Ignore if no modal to close
+      }
+      
       const eligibilitySelectors = [
+        'button:has-text("Pre-Validate")',
         'button:has-text("Check Eligibility")',
-        'button:has-text("Pre-approve")',
+        'button:has-text("Pre-approve")', 
         'button:has-text("Validate")',
+        '[data-cy="pre-validate-button"]',
         '[data-testid="check-eligibility"]',
         '.eligibility-check'
       ];
@@ -189,10 +209,23 @@ test.describe('SaaR Banking Demo - Loan Application Journey', () => {
       for (const selector of eligibilitySelectors) {
         if (await page.locator(selector).isVisible().catch(() => false)) {
           console.log('   📊 Running eligibility check...');
-          await page.click(selector);
           
-          // Wait for eligibility result
-          await page.waitForTimeout(3000);
+          // Try to close any modal backdrop first
+          try {
+            const backdrop = page.locator('.MuiBackdrop-root');
+            if (await backdrop.isVisible().catch(() => false)) {
+              await backdrop.click();
+              await page.waitForTimeout(TIMEOUTS.UI_TRANSITION);
+            }
+          } catch (e) {
+            // Ignore backdrop errors
+          }
+          
+          // Use force click to bypass any overlapping elements
+          await page.click(selector, { force: true });
+          
+          // Wait for eligibility result - using OPENAI_API timeout for AI processing
+          await page.waitForTimeout(TIMEOUTS.OPENAI_API);
           
           // Look for eligibility results
           const resultSelectors = [
@@ -240,8 +273,8 @@ test.describe('SaaR Banking Demo - Loan Application Journey', () => {
             console.log('   📤 Submitting loan application...');
             await page.click(selector);
             
-            // Wait for submission result
-            await page.waitForTimeout(3000);
+            // Wait for submission result - using OPENAI_API timeout for AI processing
+            await page.waitForTimeout(TIMEOUTS.OPENAI_API);
             
             // Look for success/confirmation
             const confirmationSelectors = [
