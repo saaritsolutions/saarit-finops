@@ -29,12 +29,12 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
 - PROJECT_STATE.md, TASK_QUEUE.md, DECISIONS_LOG.md created as living context documents.
 - Milestone M1: Loan Wizard — EMI estimate in right-rail (P×r×(1+r)^n/((1+r)^n−1)), working file upload (PDF/JPG/PNG with list + remove), input masking for PAN / Aadhaar / mobile in SchemaForm (no extra library).
 - Milestone M2: WorkflowTimeline polish — status colour-coded icons (completed/active/failed/pending), SLA due-date chips ("Due in Xh" / "Overdue Xh"), retry button on failed steps, expandable notes via Collapse. LoanOrigination now pushes rich WorkflowEvent objects with timestamp and SLA. `.gitattributes` added to normalise CRLF on Windows.
+- Milestone M3: Expression Library — ExpressionSeedService seeds 10 banking rule expressions (incl. EXPR_1755237353842 + EXPR_INTEREST_RATE_001) on startup; 10 built-in templates in ExpressionTemplates.tsx; silent interest-rate fallback removed from LoanService (replaced with actionable error).
 
 ## In Progress
-- M3: Expression Library harness and removal of fallback logic in demo mode.
+- M4: Form builder MVP.
 
 ## Pending Next
-- M3: Expression Library harness and removal of fallback logic in demo mode.
 - M4: Form builder MVP; M5: Compliance (KFS, consent, PAN validation); M6: Admin console; M7: Demo polish; M8: Perf/obs.
 - TransactionService: double-entry ledger / posting engine (highest-impact missing backend).
 - CustomerService: KycStatus enum, PAN format endpoint, Aadhaar upload placeholder.
