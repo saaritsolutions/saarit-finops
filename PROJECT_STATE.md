@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-03-26
+**Last Updated:** 2026-03-26 (session 2)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -30,8 +30,8 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 - **Dynamic Forms** — DynamicFieldsSchemaService returns a 7-field demo schema; frontend renders forms from schema
 - **AI-Assisted Rule Generation** — OpenAI GPT generates expressions and forms from natural language prompts
 - **Workflow Visualization** — basic workflow timeline UI in React
-- **Basic CRUD** — CustomerService, AccountService, LoanService, AccountService each expose basic create/read/update/delete APIs
-- **Loan Wizard (In Progress M1)** — 5-step loan application flow in React; UX polish ongoing
+- **Basic CRUD** — CustomerService, AccountService, LoanService each expose basic create/read/update/delete APIs
+- **Loan Wizard (M1 Complete)** — Loan origination page with: dynamic schema-driven form, right-rail summary (Amount/Tenure/Income/Credit Score/Rate/Est. EMI), working file upload (PDF/JPG/PNG), input masking for PAN/Aadhaar/mobile, pre-validate eligibility check, workflow step advancement
 
 ### Partially Implemented
 - **LoanService** (~25%) — eligibility checking and interest rate framework work; origination-to-disbursement lifecycle missing
@@ -132,35 +132,38 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 
 ## 5. Recent Work Done
 
-### Last Commit: `cc10d2e` — Sep 27, 2025
-- Added strategic analysis documents: `EXECUTION_ROADMAP.md`, `HONEST_IMPLEMENTATION_REALITY_CHECK.md`, `ACTUAL_IMPLEMENTATION_DEPTH_ANALYSIS.md`, `VALUATION_METHODOLOGY_BREAKDOWN.md`, `CURRENT_ASSET_INVENTORY.md`
+### Session 2 Commits — 2026-03-26
+- `e0d20c4` — **M1 Loan Wizard complete**: EMI estimate in right-rail, working file upload with list/remove, PAN/Aadhaar/mobile input masking in SchemaForm (no library)
+- `6751022` — Added `cypress/screenshots/` and `cypress/videos/` to `.gitignore`
+- `012dace` — Restored git tracking (171 files re-staged after index clear); added PROJECT_STATE.md, TASK_QUEUE.md, DECISIONS_LOG.md
 
-### Prior Commits (most recent first)
-- `894e039` / `2bd606e` — E2E test changes and fixes (Cypress)
-- `0b4fde2` — Expression AI frontend integration (new AI controllers wired to React UI)
-- `d67c7a4` — OpenAI sample integrations
-- `f0fd8ba` / `286bc68` — Config updates and instruction docs
-- `b3d38b7` — OpenAI integration (ExpressionBuilderService AI controllers)
+### Prior Session Commits (most recent first)
+- `cc10d2e` — Added strategic analysis docs (EXECUTION_ROADMAP, HONEST_IMPLEMENTATION_REALITY_CHECK, ACTUAL_IMPLEMENTATION_DEPTH_ANALYSIS, VALUATION_METHODOLOGY_BREAKDOWN, CURRENT_ASSET_INVENTORY)
+- `894e039` / `2bd606e` — Cypress E2E test changes and fixes
+- `0b4fde2` — Expression AI frontend integration (AI controllers wired to React UI)
+- `d67c7a4` / `b3d38b7` — OpenAI integration in ExpressionBuilderService
 - `13f0d0b` — All updates for demo
 - `e9e814d` — Dynamic form field improvements
 
-### Git State as of 2026-03-26
-- **All files were untracked** (git index was cleared, likely by `git rm --cached`). Re-staged via `git add .` in this session.
-- 171 files re-staged as modified (CRLF normalization only)
-- 12 old Cypress screenshot PNGs staged for deletion (correct)
-- Recommend: commit this restored state
+### Key Files Changed This Session
+| File | Change |
+|---|---|
+| `frontend-react/src/pages/LoanOrigination.tsx` | EMI useMemo, file upload state + handlers, AttachFile/Close icons |
+| `frontend-react/src/components/forms/SchemaForm.tsx` | getMaskedHandler, getMaskedDisplay, getPlaceholder for PAN/Aadhaar/mobile |
+| `.gitignore` | Added cypress/screenshots and cypress/videos patterns |
+| `PROJECT_STATE.md` / `TASK_QUEUE.md` / `DECISIONS_LOG.md` | Created as living context documents |
 
 ---
 
 ## 6. Pending Work
 
 ### In Progress
-- **M1: 5-Step Loan Wizard** — UX polish, right-rail summary, masked inputs, file upload (per CONTEXT.md)
+- **M2: Workflow Timeline Polish** — SLA chips, retry/notes on WorkflowTimeline component
 
 ### Milestone Backlog (from CONTEXT.md)
 | Milestone | Description |
 |---|---|
-| M2 | Workflow timeline polish — SLA chips, retry/notes |
+| M2 | Workflow timeline polish — SLA chips, retry/notes (**In Progress**) |
 | M3 | Expression Library harness, remove demo fallback logic |
 | M4 | Form builder MVP |
 | M5 | Compliance — KFS disclosure, consent, PAN validation |
@@ -180,21 +183,19 @@ Per `EXECUTION_ROADMAP.md`:
 - No KYC workflow — CustomerService is basic CRUD
 - APIGateway has no auth, rate limiting, or circuit breakers
 - No inter-service communication implemented
-- `cypress/screenshots/` test artifacts were previously committed (should be gitignored)
-- Missing `.gitattributes` for cross-platform LF/CRLF consistency
+- Missing `.gitattributes` for cross-platform LF/CRLF consistency (CRLF warnings appear on Windows commits)
 
 ---
 
 ## 7. Next Recommended Steps (Ordered by Impact)
 
-1. **Commit the restored git state** — run `git commit` with the currently staged changes
-2. **Add `cypress/screenshots/` to `.gitignore`** — prevent test artifacts from being re-committed
-3. **Complete M1 Loan Wizard UX** — file upload, right-rail summary, input masking
-4. **TransactionService: double-entry ledger** — posting engine with idempotency; this is the highest-impact missing piece
-5. **CustomerService: KYC stub** — even a basic Aadhaar/PAN hook unlocks the demo story
-6. **APIGateway: JWT auth + routing** — required for any real service-to-service flow
-7. **InterestFeeService: daily accrual engine** — needed for savings account demo
-8. **WorkflowOrchestration: persisted state machine** — enables loan approval workflow demo
+1. **M2: Workflow Timeline polish** — add SLA chips, status colour coding, retry/notes to WorkflowTimeline component
+2. **TransactionService: double-entry ledger** — posting engine with idempotency; highest-impact missing backend piece
+3. **CustomerService: KYC stub** — `KycStatus` enum, PAN format endpoint, Aadhaar upload placeholder
+4. **APIGateway: JWT auth + routing** — required for any real service-to-service flow
+5. **Add `.gitattributes`** — `* text=auto` to eliminate CRLF warnings on Windows commits
+6. **InterestFeeService: daily accrual engine** — needed for savings account demo
+7. **WorkflowOrchestration: persisted state machine** — enables real loan approval workflow
 
 ---
 

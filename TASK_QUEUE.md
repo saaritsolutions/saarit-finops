@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-03-26
+**Last Updated:** 2026-03-26 (session 2)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,9 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Commit the restored git state** | Git index was cleared; 171 files are staged but uncommitted. All work since Sep 2025 is at risk. |
-| 2 | **Complete M1: Loan Wizard — file upload + right-rail summary** | Active milestone. Directly unblocks investor demo. |
-| 3 | **Add `cypress/screenshots/` to root `.gitignore`** | Test artifacts were previously committed; needs a one-line fix before next commit. |
+| 1 | **M2: Add SLA chip + status colour to WorkflowTimeline** | Active milestone; directly improves the loan approval demo story |
+| 2 | **M2: Add retry button and notes field to failed workflow steps** | Completes M2; needed for realistic demo of error recovery |
+| 3 | **Add `.gitattributes` (`* text=auto`)** | Eliminates CRLF warnings on every Windows commit; 1-line fix |
 
 ---
 
@@ -23,13 +23,12 @@
 
 ### Git & DevOps
 - [ ] Add `.gitattributes` to normalize LF/CRLF across platforms (eliminates CRLF warnings on Windows)
-- [ ] Verify `.gitignore` covers `cypress/screenshots/` and `cypress/videos/`
 
-### Frontend — Loan Wizard (M1)
-- [ ] Implement file upload component in Loan Wizard step (document attach)
-- [ ] Add right-rail summary panel (loan amount, rate, EMI estimate) visible across all 5 steps
-- [ ] Apply input masking to PAN, Aadhaar, phone number fields
-- [ ] Wire step 5 (review + submit) to call LoanService eligibility API
+### Frontend — Workflow Timeline (M2)
+- [ ] Add SLA due-date chip to each WorkflowTimeline step (show "Due in Xh" or "Overdue" based on timestamp)
+- [ ] Add status colour coding to steps: green = completed, amber = in-progress, red = failed/overdue
+- [ ] Add retry button on failed steps (calls `processWorkflow` with `RETRY` action)
+- [ ] Add notes/comment field on each step (expandable, read-only for completed steps)
 
 ### ExpressionBuilderService
 - [ ] Confirm active expression `EXPR_1755237353842` exists in the dev PostgreSQL instance (add seed script if not)
@@ -143,15 +142,18 @@
 
 ## 6. Recently Completed
 
-| Task | Completed |
-|---|---|
-| OpenAI integration in ExpressionBuilderService (AI controllers) | ~Sep 2025 |
-| Expression AI frontend integration (React UI wired to AI endpoints) | ~Sep 2025 |
-| Dynamic form field improvements | ~Sep 2025 |
-| Cypress E2E test suite for loan eligibility + expression builder | ~Sep 2025 |
-| Fixed ports, CORS, Swagger enabled for all services | Earlier 2025 |
-| Expression compat route `/api/Expressions/execute` integrated with LoanService | Earlier 2025 |
-| DynamicFieldsSchemaService 7-field demo schema | Earlier 2025 |
-| WorkflowClient: camelCase payloads, cancellation tokens, error logging | Earlier 2025 |
-| Strategic analysis docs added (EXECUTION_ROADMAP, VALUATION, etc.) | Sep 27, 2025 |
-| Git index restored (all 905 files re-staged after index clear) | 2026-03-26 |
+| Task | Commit | Date |
+|---|---|---|
+| M1: EMI estimate in right-rail (formula: P×r×(1+r)^n / ((1+r)^n−1)) | `e0d20c4` | 2026-03-26 |
+| M1: Working file upload in Documents card (PDF/JPG/PNG, list + remove) | `e0d20c4` | 2026-03-26 |
+| M1: Input masking for PAN / Aadhaar / mobile in SchemaForm (no library) | `e0d20c4` | 2026-03-26 |
+| Add cypress/screenshots and cypress/videos to .gitignore | `6751022` | 2026-03-26 |
+| Git index restored; PROJECT_STATE / TASK_QUEUE / DECISIONS_LOG created | `012dace` | 2026-03-26 |
+| OpenAI integration in ExpressionBuilderService (AI controllers) | — | ~Sep 2025 |
+| Expression AI frontend integration (React UI wired to AI endpoints) | — | ~Sep 2025 |
+| Dynamic form field improvements | — | ~Sep 2025 |
+| Cypress E2E test suite for loan eligibility + expression builder | — | ~Sep 2025 |
+| Fixed ports, CORS, Swagger enabled for all services | — | Earlier 2025 |
+| Expression compat route `/api/Expressions/execute` integrated with LoanService | — | Earlier 2025 |
+| DynamicFieldsSchemaService 7-field demo schema | — | Earlier 2025 |
+| WorkflowClient: camelCase payloads, cancellation tokens, error logging | — | Earlier 2025 |
