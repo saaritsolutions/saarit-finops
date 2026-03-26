@@ -133,7 +133,7 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ## 5. Recent Work Done
 
 ### Session 3 Commits — 2026-03-26
-- *(pending commit)* — **M2 WorkflowTimeline polish**: status colour icons, SLA chips, retry button, expandable notes; LoanOrigination updated to push rich WorkflowEvent objects; `.gitattributes` added
+- `8b0fc90` — **M2 WorkflowTimeline polish**: status colour icons, SLA chips, retry button, expandable notes; LoanOrigination updated to push rich WorkflowEvent objects; `.gitattributes` added
 
 ### Session 2 Commits — 2026-03-26
 - `e0d20c4` — **M1 Loan Wizard complete**: EMI estimate in right-rail, working file upload with list/remove, PAN/Aadhaar/mobile input masking in SchemaForm (no library)
