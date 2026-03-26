@@ -11,9 +11,9 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **TransactionService: double-entry ledger + posting engine** | Highest-impact missing backend; blocks end-to-end loan disbursement flow |
-| 2 | **CustomerService: KycStatus enum + PAN format endpoint** | Required for KYC step in loan workflow; needed before compliance milestone |
-| 3 | **APIGateway: JWT validation middleware + basic route table** | Required for any real service-to-service auth; needed before demo to investors |
+| 1 | **CustomerService: KycStatus enum + PAN format endpoint** | Required for KYC step in loan workflow; needed before compliance milestone |
+| 2 | **APIGateway: JWT validation middleware + basic route table** | Required for any real service-to-service auth; needed before demo to investors |
+| 3 | **M4: Form builder MVP** | Drag-and-drop form designer; needed to demo dynamic loan application forms |
 
 ---
 
@@ -35,11 +35,11 @@
 - [x] Add 10 built-in templates to `ExpressionTemplates.tsx`
 - [x] Remove hardcoded interest-rate fallback from LoanService (replaced with actionable error)
 
-### TransactionService — Double-entry Ledger (highest-impact missing piece)
-- [ ] Design journal/posting model: `Journal`, `JournalEntry` (debit/credit, account, amount, currency)
-- [ ] Implement posting engine with idempotency key
-- [ ] Add balance read API (current + available)
-- [ ] Write 50+ unit tests on posting correctness
+### TransactionService — Double-entry Ledger (COMPLETE — commit bab9b9c)
+- [x] Design journal/posting model: `Journal`, `JournalEntry` (debit/credit, account, amount, currency)
+- [x] Implement posting engine with idempotency key
+- [x] Add balance read API (LedgerController GET /api/ledger/balance/{code}, GET /api/ledger/balances)
+- [x] 16 unit tests on posting correctness (balanced, imbalanced, idempotency, balance accumulation, 3-legged entries)
 
 ### CustomerService — KYC Stub
 - [ ] Add `KycStatus` enum and field to Customer entity
@@ -147,6 +147,7 @@
 |---|---|---|
 | M3: ExpressionSeedService — 10 banking rules seeded on startup (incl. EXPR_1755237353842) | `9e81653` | 2026-03-26 |
 | M3: ExpressionTemplates.tsx expanded to 10 built-in templates | `9e81653` | 2026-03-26 |
+| M4-part1: TransactionService double-entry ledger, posting engine, 16 unit tests | `bab9b9c` | 2026-03-26 |
 | M3: LoanService silent interest-rate fallback replaced with actionable error | `9e81653` | 2026-03-26 |
 | M2: WorkflowTimeline — status icons, SLA chips, retry button, expandable notes | `8b0fc90` | 2026-03-26 |
 | M2: LoanOrigination updated to push rich WorkflowEvent objects with timestamps + SLA | `8b0fc90` | 2026-03-26 |
