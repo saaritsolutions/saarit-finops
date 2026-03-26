@@ -5,7 +5,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import CloseIcon from '@mui/icons-material/Close';
 import { getFormSchema, preValidate, submitApplication, processWorkflow, type PreValidateRequest, type ServerField, type WorkflowStepResult } from '../services/loanOriginationService';
-import WorkflowTimeline from '../components/workflow/WorkflowTimeline';
+import WorkflowTimeline, { type WorkflowEvent } from '../components/workflow/WorkflowTimeline';
 import { aiFormService } from '../services/aiFormService';
 import SchemaForm from '../components/forms/SchemaForm';
 import type { FormSchema } from '../services/aiFormService';
@@ -27,7 +27,7 @@ export default function LoanOrigination() {
   const [pre, setPre] = useState<{ eligibility?: string; interestRate?: number | null; message?: string; failureReasons?: string[]; error?: string; errors?: string[] } | null>(null);
   const [submit, setSubmit] = useState<{ status?: string; message?: string; applicationId?: string; workflowInstanceId?: string; currentStep?: string; error?: string } | null>(null);
   const [activeStep, setActiveStep] = useState(0);
-  const [timeline, setTimeline] = useState<string[]>([]);
+  const [timeline, setTimeline] = useState<WorkflowEvent[]>([]);
   const [availableActions, setAvailableActions] = useState<string[]>([]);
   const [uiError, setUiError] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
@@ -132,7 +132,29 @@ export default function LoanOrigination() {
     e.target.value = '';
   };
   const handleRemoveFile = (index: number) => {
-    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+    setUploadedFiles(prev => prev.filter((_: File, i: number) => i !== index));
+  };
+
+  /** Returns an ISO deadline string N hours from now (default 2h) */
+  const stepSla = (hoursFromNow = 2): string =>
+    new Date(Date.now() + hoursFromNow * 3_600_000).toISOString();
+
+  /** Promotes the last active step to completed, then appends a new event */
+  const pushTimelineEvent = (event: WorkflowEvent) => {
+    setTimeline((prev: WorkflowEvent[]) => [
+      ...prev.map((e: WorkflowEvent) =>
+        e.status === 'active' ? { ...e, status: 'completed' as const } : e
+      ),
+      event,
+    ]);
+  };
+
+  const onRetryStep = (index: number) => {
+    setTimeline((prev: WorkflowEvent[]) =>
+      prev.map((e: WorkflowEvent, i: number) =>
+        i === index ? { ...e, status: 'active' as const, slaDueAt: stepSla(2) } : e
+      )
+    );
   };
 
   const buildRequest = (data: FieldState): PreValidateRequest => ({
@@ -175,7 +197,13 @@ export default function LoanOrigination() {
       const res = await submitApplication(req);
       setSubmit({ status: res.status, message: res.message, applicationId: res.applicationId, workflowInstanceId: res.workflowInstanceId, currentStep: (res as any).currentStep });
       setActiveStep(2);
-      if ((res as any).currentStep) setTimeline([`Started: ${(res as any).currentStep}`]);
+      if ((res as any).currentStep)
+        setTimeline([{
+          label: `Started: ${(res as any).currentStep}`,
+          status: 'active',
+          timestamp: new Date().toISOString(),
+          slaDueAt: stepSla(2),
+        }]);
     } catch (e: any) {
       if (e?.status === 400 && e.body?.errors) setSubmit({ error: `Validation error: ${e.body.errors.join(', ')}` });
       else if (e?.status === 503) setSubmit({ error: 'Workflow service unavailable. Please retry later.' });
@@ -195,9 +223,9 @@ export default function LoanOrigination() {
       const next = res.nextStep || res.currentStep;
       setSubmit(s => s ? { ...s, currentStep: next, status: res.workflowStatus || s.status } : s);
       setAvailableActions(res.requiredActions || []);
-      setTimeline(t => [...t, `Advanced to: ${next}`]);
+      pushTimelineEvent({ label: `Advanced to: ${next}`, status: 'active', timestamp: new Date().toISOString(), slaDueAt: stepSla(2) });
     } catch (e: any) {
-      setTimeline(t => [...t, 'Advance failed']);
+      pushTimelineEvent({ label: 'Advance failed', status: 'failed', timestamp: new Date().toISOString(), notes: 'Click the retry button to attempt this step again.' });
     }
   };
 
@@ -228,7 +256,7 @@ export default function LoanOrigination() {
       const next = res.nextStep || res.currentStep;
       setSubmit(s => s ? { ...s, currentStep: next, status: res.workflowStatus || s.status, message: res.message || s.message } : s);
       setAvailableActions(res.requiredActions || []);
-      setTimeline(t => [...t, `Action ${action} -> ${next}`]);
+      pushTimelineEvent({ label: `Action ${action} → ${next}`, status: 'active', timestamp: new Date().toISOString(), slaDueAt: stepSla(2) });
     } catch (e: any) {
       setUiError(e?.message || `Action ${action} failed`);
     }
@@ -487,7 +515,7 @@ export default function LoanOrigination() {
                   )}
                   {timeline.length > 0 && (
                     <Box sx={{ mt: 2 }}>
-                      <WorkflowTimeline title="Workflow Timeline" events={timeline} />
+                      <WorkflowTimeline title="Workflow Timeline" events={timeline} onRetry={onRetryStep} />
                     </Box>
                   )}
                 </Box>

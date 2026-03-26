@@ -28,13 +28,17 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
 - Git index restored (905 tracked files re-staged after index clear); cypress/screenshots added to .gitignore.
 - PROJECT_STATE.md, TASK_QUEUE.md, DECISIONS_LOG.md created as living context documents.
 - Milestone M1: Loan Wizard — EMI estimate in right-rail (P×r×(1+r)^n/((1+r)^n−1)), working file upload (PDF/JPG/PNG with list + remove), input masking for PAN / Aadhaar / mobile in SchemaForm (no extra library).
+- Milestone M2: WorkflowTimeline polish — status colour-coded icons (completed/active/failed/pending), SLA due-date chips ("Due in Xh" / "Overdue Xh"), retry button on failed steps, expandable notes via Collapse. LoanOrigination now pushes rich WorkflowEvent objects with timestamp and SLA. `.gitattributes` added to normalise CRLF on Windows.
 
 ## In Progress
-- Milestone M2: Workflow timeline polish (SLA chips, retry/notes on WorkflowTimeline component).
+- M3: Expression Library harness and removal of fallback logic in demo mode.
 
 ## Pending Next
 - M3: Expression Library harness and removal of fallback logic in demo mode.
 - M4: Form builder MVP; M5: Compliance (KFS, consent, PAN validation); M6: Admin console; M7: Demo polish; M8: Perf/obs.
+- TransactionService: double-entry ledger / posting engine (highest-impact missing backend).
+- CustomerService: KycStatus enum, PAN format endpoint, Aadhaar upload placeholder.
+- APIGateway: JWT validation middleware + basic route table.
 
 ## Notes
 - Eligibility expression ID currently in use: EXPR_1755237353842.
