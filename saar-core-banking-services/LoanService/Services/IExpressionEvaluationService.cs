@@ -201,36 +201,13 @@ namespace LoanService.Services
                 _logger.LogWarning(ex, "Failed to fetch interest rate expression from ExpressionBuilderService");
             }
 
-            // Fallback: local calculation based on credit score (if available) or a default.
-            try
-            {
-                decimal creditScore = 700m;
-                if (loanContext != null)
-                {
-                    if (loanContext.TryGetValue("customer.creditScore", out var csObj) && csObj != null)
-                    {
-                        creditScore = Convert.ToDecimal(csObj);
-                    }
-                    else if (loanContext.TryGetValue("customer", out var custObj) && custObj != null)
-                    {
-                        // Attempt to read creditScore from nested customer object via JSON round-trip
-                        var json = System.Text.Json.JsonSerializer.Serialize(custObj);
-                        using var doc = System.Text.Json.JsonDocument.Parse(json);
-                        if (doc.RootElement.TryGetProperty("creditScore", out var el) && el.ValueKind == System.Text.Json.JsonValueKind.Number)
-                        {
-                            creditScore = el.GetDecimal();
-                        }
-                    }
-                }
-
-                var rateLocal = Math.Round(10m + Math.Max(0, 750 - creditScore) * 0.01m, 2);
-                return rateLocal;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to compute fallback interest rate");
-                return 10m; // safe default
-            }
+            // No silent fallback — a configured interest-rate expression is required.
+            // ExpressionBuilderService seeds EXPR_INTEREST_RATE_001 on startup; ensure the
+            // service is running before calling this method.
+            throw new InvalidOperationException(
+                "No active interest-rate expression found in ExpressionBuilderService " +
+                "(category=Interest, status=Active). " +
+                "Ensure ExpressionBuilderService is running — it seeds EXPR_INTEREST_RATE_001 automatically.");
         }
     }
 

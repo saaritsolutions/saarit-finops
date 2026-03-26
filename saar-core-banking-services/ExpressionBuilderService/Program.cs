@@ -95,6 +95,7 @@ builder.Services.AddScoped<IBankingFunctionLibrary, BankingFunctionLibrary>();
 builder.Services.AddScoped<ISecurityValidator, ExpressionSecurityValidator>();
 builder.Services.AddScoped<IExpressionEngine, RoslynExpressionEngine>();
 builder.Services.AddScoped<IExpressionService, ExpressionService>();
+builder.Services.AddScoped<ExpressionBuilderService.Data.ExpressionSeedService>();
 
 // AI Services Configuration (only OpenAI now)
 builder.Services.Configure<OpenAISettings>(
@@ -198,10 +199,14 @@ var context = scope.ServiceProvider.GetRequiredService<ExpressionDbContext>();
 try
 {
     await context.Database.EnsureCreatedAsync();
+
+    // Seed demo expressions + templates (idempotent — safe to run on every startup)
+    var seedService = scope.ServiceProvider.GetRequiredService<ExpressionBuilderService.Data.ExpressionSeedService>();
+    await seedService.SeedAsync();
 }
 catch (Exception dbEx)
 {
-    Log.Warning(dbEx, "Database ensure/create failed. Continuing startup as some endpoints don't require DB.");
+    Log.Warning(dbEx, "Database ensure/create or seed failed. Continuing startup as some endpoints don't require DB.");
 }
 
 Log.Information("Expression Builder Service starting up...");

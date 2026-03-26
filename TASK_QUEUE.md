@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-03-26 (session 3)
+**Last Updated:** 2026-03-26 (session 4)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,9 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **M3: Build expression template library (5–10 banking rules)** | Next active milestone; enables demo without manual expression setup |
-| 2 | **TransactionService: double-entry ledger + posting engine** | Highest-impact missing backend; blocks end-to-end loan disbursement flow |
-| 3 | **CustomerService: KycStatus enum + PAN format endpoint** | Required for KYC step in loan workflow; needed before compliance milestone |
+| 1 | **TransactionService: double-entry ledger + posting engine** | Highest-impact missing backend; blocks end-to-end loan disbursement flow |
+| 2 | **CustomerService: KycStatus enum + PAN format endpoint** | Required for KYC step in loan workflow; needed before compliance milestone |
+| 3 | **APIGateway: JWT validation middleware + basic route table** | Required for any real service-to-service auth; needed before demo to investors |
 
 ---
 
@@ -30,9 +30,10 @@
 - [x] Add retry button on failed steps
 - [x] Add expandable notes field on each step (Collapse)
 
-### ExpressionBuilderService
-- [ ] Confirm active expression `EXPR_1755237353842` exists in the dev PostgreSQL instance (add seed script if not)
-- [ ] Add expression seed/migration script so demos work from a clean DB without manual setup
+### ExpressionBuilderService (M3 — COMPLETE)
+- [x] Seed `EXPR_1755237353842` + 9 more banking rule expressions via `ExpressionSeedService` (runs on startup)
+- [x] Add 10 built-in templates to `ExpressionTemplates.tsx`
+- [x] Remove hardcoded interest-rate fallback from LoanService (replaced with actionable error)
 
 ### TransactionService — Double-entry Ledger (highest-impact missing piece)
 - [ ] Design journal/posting model: `Journal`, `JournalEntry` (debit/credit, account, amount, currency)
@@ -144,6 +145,9 @@
 
 | Task | Commit | Date |
 |---|---|---|
+| M3: ExpressionSeedService — 10 banking rules seeded on startup (incl. EXPR_1755237353842) | `*(pending)*` | 2026-03-26 |
+| M3: ExpressionTemplates.tsx expanded to 10 built-in templates | `*(pending)*` | 2026-03-26 |
+| M3: LoanService silent interest-rate fallback replaced with actionable error | `*(pending)*` | 2026-03-26 |
 | M2: WorkflowTimeline — status icons, SLA chips, retry button, expandable notes | `8b0fc90` | 2026-03-26 |
 | M2: LoanOrigination updated to push rich WorkflowEvent objects with timestamps + SLA | `8b0fc90` | 2026-03-26 |
 | Add `.gitattributes` (`* text=auto`) | `8b0fc90` | 2026-03-26 |

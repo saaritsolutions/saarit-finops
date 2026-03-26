@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-03-26 (session 3)
+**Last Updated:** 2026-03-26 (session 4)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -133,6 +133,7 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ## 5. Recent Work Done
 
 ### Session 3 Commits — 2026-03-26
+- *(pending)* — **M3 Expression Library**: ExpressionSeedService seeds 10 banking rules on startup; 10 built-in templates in ExpressionTemplates.tsx; LoanService silent interest-rate fallback replaced with actionable error
 - `8b0fc90` — **M2 WorkflowTimeline polish**: status colour icons, SLA chips, retry button, expandable notes; LoanOrigination updated to push rich WorkflowEvent objects; `.gitattributes` added
 
 ### Session 2 Commits — 2026-03-26
@@ -161,12 +162,13 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ## 6. Pending Work
 
 ### In Progress
-- **M3: Expression Library harness** — build 5–10 pre-built banking rule templates; remove demo fallback logic from LoanService
+- **M4: Form builder MVP** — drag-and-drop form builder UI; persist schemas to DynamicFieldsSchemaService
 
 ### Milestone Backlog (from CONTEXT.md)
 | Milestone | Description |
 |---|---|
 | M2 | Workflow timeline polish — SLA chips, retry/notes (**Complete**) |
+| M3 | Expression Library — seed service, 10 built-in templates, LoanService fallback removed (**Complete**) |
 | M3 | Expression Library harness, remove demo fallback logic |
 | M4 | Form builder MVP |
 | M5 | Compliance — KFS disclosure, consent, PAN validation |
