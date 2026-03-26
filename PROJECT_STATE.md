@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-03-26 (session 2)
+**Last Updated:** 2026-03-26 (session 3)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -29,7 +29,7 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 - **Expression Builder UI** — create, edit, test, and browse banking rule expressions from the React frontend
 - **Dynamic Forms** — DynamicFieldsSchemaService returns a 7-field demo schema; frontend renders forms from schema
 - **AI-Assisted Rule Generation** — OpenAI GPT generates expressions and forms from natural language prompts
-- **Workflow Visualization** — basic workflow timeline UI in React
+- **Workflow Visualization** — WorkflowTimeline component with status colour coding (completed/active/failed/pending icons), SLA due-date chips, retry button on failed steps, expandable notes (Collapse)
 - **Basic CRUD** — CustomerService, AccountService, LoanService each expose basic create/read/update/delete APIs
 - **Loan Wizard (M1 Complete)** — Loan origination page with: dynamic schema-driven form, right-rail summary (Amount/Tenure/Income/Credit Score/Rate/Est. EMI), working file upload (PDF/JPG/PNG), input masking for PAN/Aadhaar/mobile, pre-validate eligibility check, workflow step advancement
 
@@ -132,6 +132,9 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 
 ## 5. Recent Work Done
 
+### Session 3 Commits — 2026-03-26
+- *(pending commit)* — **M2 WorkflowTimeline polish**: status colour icons, SLA chips, retry button, expandable notes; LoanOrigination updated to push rich WorkflowEvent objects; `.gitattributes` added
+
 ### Session 2 Commits — 2026-03-26
 - `e0d20c4` — **M1 Loan Wizard complete**: EMI estimate in right-rail, working file upload with list/remove, PAN/Aadhaar/mobile input masking in SchemaForm (no library)
 - `6751022` — Added `cypress/screenshots/` and `cypress/videos/` to `.gitignore`
@@ -158,12 +161,12 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ## 6. Pending Work
 
 ### In Progress
-- **M2: Workflow Timeline Polish** — SLA chips, retry/notes on WorkflowTimeline component
+- **M3: Expression Library harness** — build 5–10 pre-built banking rule templates; remove demo fallback logic from LoanService
 
 ### Milestone Backlog (from CONTEXT.md)
 | Milestone | Description |
 |---|---|
-| M2 | Workflow timeline polish — SLA chips, retry/notes (**In Progress**) |
+| M2 | Workflow timeline polish — SLA chips, retry/notes (**Complete**) |
 | M3 | Expression Library harness, remove demo fallback logic |
 | M4 | Form builder MVP |
 | M5 | Compliance — KFS disclosure, consent, PAN validation |

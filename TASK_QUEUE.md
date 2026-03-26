@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-03-26 (session 2)
+**Last Updated:** 2026-03-26 (session 3)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,9 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **M2: Add SLA chip + status colour to WorkflowTimeline** | Active milestone; directly improves the loan approval demo story |
-| 2 | **M2: Add retry button and notes field to failed workflow steps** | Completes M2; needed for realistic demo of error recovery |
-| 3 | **Add `.gitattributes` (`* text=auto`)** | Eliminates CRLF warnings on every Windows commit; 1-line fix |
+| 1 | **M3: Build expression template library (5–10 banking rules)** | Next active milestone; enables demo without manual expression setup |
+| 2 | **TransactionService: double-entry ledger + posting engine** | Highest-impact missing backend; blocks end-to-end loan disbursement flow |
+| 3 | **CustomerService: KycStatus enum + PAN format endpoint** | Required for KYC step in loan workflow; needed before compliance milestone |
 
 ---
 
@@ -22,13 +22,13 @@
 > Core banking flow and demo-blocking items.
 
 ### Git & DevOps
-- [ ] Add `.gitattributes` to normalize LF/CRLF across platforms (eliminates CRLF warnings on Windows)
+- [x] Add `.gitattributes` (`* text=auto`) — eliminates CRLF warnings on Windows commits
 
-### Frontend — Workflow Timeline (M2)
-- [ ] Add SLA due-date chip to each WorkflowTimeline step (show "Due in Xh" or "Overdue" based on timestamp)
-- [ ] Add status colour coding to steps: green = completed, amber = in-progress, red = failed/overdue
-- [ ] Add retry button on failed steps (calls `processWorkflow` with `RETRY` action)
-- [ ] Add notes/comment field on each step (expandable, read-only for completed steps)
+### Frontend — Workflow Timeline (M2 — COMPLETE)
+- [x] Add SLA due-date chip to each WorkflowTimeline step ("Due in Xh" / "Overdue Xh")
+- [x] Add status colour coding (green=completed, blue=active, red=failed, grey=pending)
+- [x] Add retry button on failed steps
+- [x] Add expandable notes field on each step (Collapse)
 
 ### ExpressionBuilderService
 - [ ] Confirm active expression `EXPR_1755237353842` exists in the dev PostgreSQL instance (add seed script if not)
@@ -144,6 +144,9 @@
 
 | Task | Commit | Date |
 |---|---|---|
+| M2: WorkflowTimeline — status icons, SLA chips, retry button, expandable notes | *(pending)* | 2026-03-26 |
+| M2: LoanOrigination updated to push rich WorkflowEvent objects with timestamps + SLA | *(pending)* | 2026-03-26 |
+| Add `.gitattributes` (`* text=auto`) | *(pending)* | 2026-03-26 |
 | M1: EMI estimate in right-rail (formula: P×r×(1+r)^n / ((1+r)^n−1)) | `e0d20c4` | 2026-03-26 |
 | M1: Working file upload in Documents card (PDF/JPG/PNG, list + remove) | `e0d20c4` | 2026-03-26 |
 | M1: Input masking for PAN / Aadhaar / mobile in SchemaForm (no library) | `e0d20c4` | 2026-03-26 |
