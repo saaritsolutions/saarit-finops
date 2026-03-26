@@ -144,9 +144,9 @@
 
 | Task | Commit | Date |
 |---|---|---|
-| M2: WorkflowTimeline — status icons, SLA chips, retry button, expandable notes | *(pending)* | 2026-03-26 |
-| M2: LoanOrigination updated to push rich WorkflowEvent objects with timestamps + SLA | *(pending)* | 2026-03-26 |
-| Add `.gitattributes` (`* text=auto`) | *(pending)* | 2026-03-26 |
+| M2: WorkflowTimeline — status icons, SLA chips, retry button, expandable notes | `8b0fc90` | 2026-03-26 |
+| M2: LoanOrigination updated to push rich WorkflowEvent objects with timestamps + SLA | `8b0fc90` | 2026-03-26 |
+| Add `.gitattributes` (`* text=auto`) | `8b0fc90` | 2026-03-26 |
 | M1: EMI estimate in right-rail (formula: P×r×(1+r)^n / ((1+r)^n−1)) | `e0d20c4` | 2026-03-26 |
 | M1: Working file upload in Documents card (PDF/JPG/PNG, list + remove) | `e0d20c4` | 2026-03-26 |
 | M1: Input masking for PAN / Aadhaar / mobile in SchemaForm (no library) | `e0d20c4` | 2026-03-26 |
