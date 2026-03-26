@@ -9,17 +9,68 @@ export interface SchemaFormProps {
   readonly?: boolean;
 }
 
+// Returns a formatted display value for masked fields (Aadhaar spaced as XXXX XXXX XXXX)
+function getMaskedDisplay(name: string, val: any): string {
+  const n = name.toLowerCase();
+  if (n === 'aadharnumber' || n === 'aadhar' || n === 'aadhaar') {
+    const digits = String(val ?? '').replace(/\D/g, '');
+    return digits.replace(/(\d{4})(\d{0,4})(\d{0,4})/, (_, a, b, c) =>
+      [a, b, c].filter(Boolean).join(' ')
+    );
+  }
+  return val ?? '';
+}
+
+// Returns a masked onChange handler for PAN / Aadhaar / phone fields; null = use default
+function getMaskedHandler(
+  name: string,
+  onChange: (n: string, v: any) => void
+): ((e: React.ChangeEvent<HTMLInputElement>) => void) | null {
+  const n = name.toLowerCase();
+  if (n === 'pannumber' || n === 'pan') {
+    return (e) => {
+      const raw = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10);
+      onChange(name, raw);
+    };
+  }
+  if (n === 'aadharnumber' || n === 'aadhar' || n === 'aadhaar') {
+    return (e) => {
+      const digits = e.target.value.replace(/\D/g, '').slice(0, 12);
+      onChange(name, digits);
+    };
+  }
+  if (n === 'mobilenumber' || n === 'mobile' || n === 'phone') {
+    return (e) => {
+      const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+      onChange(name, digits);
+    };
+  }
+  return null;
+}
+
+function getPlaceholder(name: string): string {
+  const n = name.toLowerCase();
+  if (n === 'pannumber' || n === 'pan') return 'ABCDE1234F';
+  if (n === 'aadharnumber' || n === 'aadhar' || n === 'aadhaar') return 'XXXX XXXX XXXX';
+  if (n === 'mobilenumber' || n === 'mobile' || n === 'phone') return '9876543210';
+  return '';
+}
+
 const renderField = (f: FormField, val: any, onChange: (n: string, v: any) => void) => {
+  const maskedHandler = getMaskedHandler(f.name, onChange);
+  const displayValue = maskedHandler ? getMaskedDisplay(f.name, val) : (val ?? '');
+  const placeholder = getPlaceholder(f.name);
+
   const common = {
     fullWidth: true,
     label: f.label,
-    value: val ?? '',
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => onChange(f.name, e.target.value),
+    value: displayValue,
+    onChange: maskedHandler ?? ((e: React.ChangeEvent<HTMLInputElement>) => onChange(f.name, e.target.value)),
     required: !!f.required,
     helperText: f.description,
     size: 'small' as const,
     margin: 'dense' as const,
-    inputProps: { 'data-testid': `field-${f.name}`, name: f.name },
+    inputProps: { 'data-testid': `field-${f.name}`, name: f.name, ...(placeholder ? { placeholder } : {}) },
   };
 
   switch (f.type) {

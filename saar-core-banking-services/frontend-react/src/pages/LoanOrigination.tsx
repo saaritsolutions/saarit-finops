@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Button, Paper, TextField, Typography, Alert, Stack, Divider, Stepper, Step, StepLabel, Card, CardContent, CardHeader, Chip, Tooltip, IconButton } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import SettingsIcon from '@mui/icons-material/Settings';
+import AttachFileIcon from '@mui/icons-material/AttachFile';
+import CloseIcon from '@mui/icons-material/Close';
 import { getFormSchema, preValidate, submitApplication, processWorkflow, type PreValidateRequest, type ServerField, type WorkflowStepResult } from '../services/loanOriginationService';
 import WorkflowTimeline from '../components/workflow/WorkflowTimeline';
 import { aiFormService } from '../services/aiFormService';
@@ -28,6 +30,8 @@ export default function LoanOrigination() {
   const [timeline, setTimeline] = useState<string[]>([]);
   const [availableActions, setAvailableActions] = useState<string[]>([]);
   const [uiError, setUiError] = useState<string | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const PRODUCT_TYPE = 'personal_loan' as const;
   const kycRequired = useMemo(() => {
     const hasAction = availableActions.some(a => /kyc_verify/i.test(a));
@@ -111,6 +115,24 @@ export default function LoanOrigination() {
   const currency = (n: any) => {
     const num = Number(n || 0);
     return num.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+  };
+
+  const emi = useMemo(() => {
+    const p = Number(values['loanAmount'] || 0);
+    const n = Number(values['tenureMonths'] || 0);
+    const annualRate = pre?.interestRate;
+    if (!p || !n || annualRate == null || annualRate <= 0) return null;
+    const r = annualRate / 12 / 100;
+    return (p * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+  }, [values, pre?.interestRate]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setUploadedFiles(prev => [...prev, ...files]);
+    e.target.value = '';
+  };
+  const handleRemoveFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const buildRequest = (data: FieldState): PreValidateRequest => ({
@@ -301,21 +323,65 @@ export default function LoanOrigination() {
                       <Typography color="text.secondary">Credit Score</Typography>
                       <Typography fontWeight={600}>{values['creditScore'] || '-'}</Typography>
                     </Box>
+                    {pre?.interestRate != null && (
+                      <Box display="flex" justifyContent="space-between">
+                        <Typography color="text.secondary">Rate</Typography>
+                        <Typography fontWeight={600}>{pre.interestRate}% p.a.</Typography>
+                      </Box>
+                    )}
+                    {emi != null && (
+                      <Box display="flex" justifyContent="space-between">
+                        <Typography color="text.secondary">Est. EMI</Typography>
+                        <Typography fontWeight={700} color="primary">{currency(emi)}/mo</Typography>
+                      </Box>
+                    )}
                     {pre?.eligibility && (
                       <Chip color={pre.eligibility === 'APPROVED' ? 'success' : 'error'} label={`Eligibility: ${pre.eligibility}`} />
-                    )}
-                    {pre?.interestRate != null && (
-                      <Typography>Rate: <b>{pre.interestRate}%</b></Typography>
                     )}
                   </Stack>
                 </CardContent>
               </Card>
               <Card variant="outlined" sx={{ borderRadius: 3, mt: 2 }}>
-                <CardHeader title="Documents" subheader="Upload KYC" />
+                <CardHeader title="Documents" subheader="KYC &amp; Income Proof" />
                 <CardContent>
-                  <Box sx={{ p: 2, border: '1px dashed', borderColor: 'divider', borderRadius: 2, textAlign: 'center' }}>
-                    <Typography variant="body2" color="text.secondary">Drag & drop files here, or click to select</Typography>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    style={{ display: 'none' }}
+                    onChange={handleFileSelect}
+                  />
+                  <Box
+                    onClick={() => fileInputRef.current?.click()}
+                    sx={{
+                      p: 2, border: '1px dashed', borderColor: 'primary.main',
+                      borderRadius: 2, textAlign: 'center', cursor: 'pointer',
+                      '&:hover': { bgcolor: 'action.hover' },
+                    }}
+                  >
+                    <AttachFileIcon fontSize="small" sx={{ mr: 0.5, verticalAlign: 'middle', color: 'primary.main' }} />
+                    <Typography variant="body2" color="primary" component="span">Click to attach files</Typography>
+                    <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 0.5 }}>
+                      PDF, JPG, PNG accepted
+                    </Typography>
                   </Box>
+                  {uploadedFiles.length > 0 && (
+                    <Stack spacing={0.5} sx={{ mt: 1.5 }}>
+                      {uploadedFiles.map((file, i) => (
+                        <Box key={i} display="flex" alignItems="center" justifyContent="space-between"
+                          sx={{ px: 1.5, py: 0.75, bgcolor: 'action.selected', borderRadius: 1 }}>
+                          <Typography variant="body2" noWrap sx={{ flex: 1, mr: 1 }}>{file.name}</Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ mr: 1 }}>
+                            {(file.size / 1024).toFixed(0)} KB
+                          </Typography>
+                          <IconButton size="small" onClick={() => handleRemoveFile(i)} aria-label="Remove file">
+                            <CloseIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      ))}
+                    </Stack>
+                  )}
                 </CardContent>
               </Card>
             </Box>
