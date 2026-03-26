@@ -145,9 +145,9 @@
 
 | Task | Commit | Date |
 |---|---|---|
-| M3: ExpressionSeedService — 10 banking rules seeded on startup (incl. EXPR_1755237353842) | `*(pending)*` | 2026-03-26 |
-| M3: ExpressionTemplates.tsx expanded to 10 built-in templates | `*(pending)*` | 2026-03-26 |
-| M3: LoanService silent interest-rate fallback replaced with actionable error | `*(pending)*` | 2026-03-26 |
+| M3: ExpressionSeedService — 10 banking rules seeded on startup (incl. EXPR_1755237353842) | `9e81653` | 2026-03-26 |
+| M3: ExpressionTemplates.tsx expanded to 10 built-in templates | `9e81653` | 2026-03-26 |
+| M3: LoanService silent interest-rate fallback replaced with actionable error | `9e81653` | 2026-03-26 |
 | M2: WorkflowTimeline — status icons, SLA chips, retry button, expandable notes | `8b0fc90` | 2026-03-26 |
 | M2: LoanOrigination updated to push rich WorkflowEvent objects with timestamps + SLA | `8b0fc90` | 2026-03-26 |
 | Add `.gitattributes` (`* text=auto`) | `8b0fc90` | 2026-03-26 |
