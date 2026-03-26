@@ -25,12 +25,14 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
 - SimpleExpressionBuilder edit flow wired (GET/PUT) and working.
 - DynamicFieldsSchemaService returns a complete demo schema (7 fields).
 - WorkflowClient: camelCase payloads, cancellation tokens, and error logging.
+- Git index restored (905 tracked files re-staged after index clear); cypress/screenshots added to .gitignore.
+- PROJECT_STATE.md, TASK_QUEUE.md, DECISIONS_LOG.md created as living context documents.
+- Milestone M1: Loan Wizard — EMI estimate in right-rail (P×r×(1+r)^n/((1+r)^n−1)), working file upload (PDF/JPG/PNG with list + remove), input masking for PAN / Aadhaar / mobile in SchemaForm (no extra library).
 
 ## In Progress
-- Milestone M1: 5-step Loan Wizard (UX polish, right-rail summary, masked inputs, file upload).
+- Milestone M2: Workflow timeline polish (SLA chips, retry/notes on WorkflowTimeline component).
 
 ## Pending Next
-- M2: Workflow timeline polish (SLA chips, actions, retry/notes).
 - M3: Expression Library harness and removal of fallback logic in demo mode.
 - M4: Form builder MVP; M5: Compliance (KFS, consent, PAN validation); M6: Admin console; M7: Demo polish; M8: Perf/obs.
 
