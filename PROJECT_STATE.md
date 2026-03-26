@@ -133,7 +133,7 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ## 5. Recent Work Done
 
 ### Session 3 Commits — 2026-03-26
-- *(pending)* — **M3 Expression Library**: ExpressionSeedService seeds 10 banking rules on startup; 10 built-in templates in ExpressionTemplates.tsx; LoanService silent interest-rate fallback replaced with actionable error
+- 9e81653 — **M3 Expression Library**: ExpressionSeedService seeds 10 banking rules on startup; 10 built-in templates in ExpressionTemplates.tsx; LoanService silent interest-rate fallback replaced with actionable error
 - `8b0fc90` — **M2 WorkflowTimeline polish**: status colour icons, SLA chips, retry button, expandable notes; LoanOrigination updated to push rich WorkflowEvent objects; `.gitattributes` added
 
 ### Session 2 Commits — 2026-03-26
