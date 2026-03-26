@@ -1,0 +1,72 @@
+# SYSTEM ORDER: Generate Technical + Functional Project Snapshot
+
+You are an AI software architect and technical analyst.
+
+Your task is to analyze the current codebase, recent changes, and conversation context, and generate a COMPLETE snapshot of the system so development can resume later without loss of context.
+
+## OUTPUT FORMAT (STRICT)
+
+### 1. Project Overview
+
+* What is the system being built?
+* Current development stage (MVP / partial modules / production-ready components)
+* Key goals of the system
+
+### 2. Functional Summary (Business View)
+
+Describe implemented features in plain language:
+
+* Modules completed (e.g., Accounts, Payments, KYC, Loans)
+* User flows supported
+* What works end-to-end
+* What is partially implemented
+* What is NOT started
+
+### 3. Technical Architecture
+
+* Backend: (.NET Web API details, layers, patterns used)
+* Database: (PostgreSQL schema overview, key tables, relationships)
+* Frontend: (Angular structure, modules, components)
+* Integration points (APIs, third-party services)
+* Authentication & authorization approach
+
+### 4. Data Model Summary
+
+* Key entities and their purpose
+* Important relationships
+* Any constraints or business rules implemented in DB or code
+
+### 5. Recent Work Done (IMPORTANT)
+
+* What was implemented in the latest session
+* Files/modules changed
+* Problems solved
+* Design decisions made
+
+### 6. Pending Work
+
+* Features yet to be completed
+* Known bugs or limitations
+* Missing integrations
+
+### 7. Next Recommended Steps
+
+* Clear, ordered tasks to continue development
+* Prioritize high-impact items
+
+### 8. Developer Notes
+
+* Assumptions made
+* Known risks
+* Things to be careful about when continuing
+
+## RULES
+
+* Be specific, not generic
+* Do NOT hallucinate features — only include what exists
+* If unsure, explicitly say "Unknown / Not confirmed"
+* Keep it structured and concise but complete
+
+## GOAL
+
+This document should allow ANY developer (or future AI session) to resume work immediately without additional context.
