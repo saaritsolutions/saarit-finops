@@ -30,7 +30,13 @@ TestResults/
 .DS_Store
 Thumbs.db
 
-# angular 
+# angular
 .angular/cache
 /saar-core-banking-services/frontend-ui/.angular/cache
 /saar-core-banking-services/frontend-ui/dist
+
+# Cypress test artifacts
+cypress/screenshots/
+cypress/videos/
+**/cypress/screenshots/
+**/cypress/videos/
