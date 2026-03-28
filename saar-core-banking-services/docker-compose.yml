@@ -159,6 +159,7 @@ services:
       - transactionservice
     networks:
       - saar-net
+      - ai-consultant_default  # needed to proxy aiconsultant_frontend:80
 
 # ── Volumes ───────────────────────────────────────────────────────────────────
 volumes:
@@ -168,3 +169,5 @@ volumes:
 networks:
   saar-net:
     driver: bridge
+  ai-consultant_default:
+    external: true  # pre-existing network from the AI Consultant docker-compose
