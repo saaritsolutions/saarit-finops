@@ -8,11 +8,18 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// CORS — local dev origins + any extra domain from CORS:AllowedOrigins env var
+// In docker-compose: CORS__AllowedOrigins=https://demobank.saaritsolutions.com
+var extraCorsOrigins = (builder.Configuration["CORS:AllowedOrigins"] ?? "")
+    .Split(';', StringSplitOptions.RemoveEmptyEntries);
+
 const string CorsPolicy = "AllowLocalDev";
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(CorsPolicy, policy =>
-        policy.WithOrigins(
+    {
+        var origins = new List<string>
+        {
             "http://localhost:3000",
             "http://127.0.0.1:3000",
             "http://localhost:3001",
@@ -21,7 +28,10 @@ builder.Services.AddCors(options =>
             "http://127.0.0.1:3002",
             "http://localhost:5173",
             "http://127.0.0.1:5173"
-        ).AllowAnyHeader().AllowAnyMethod());
+        };
+        origins.AddRange(extraCorsOrigins);
+        policy.WithOrigins(origins.ToArray()).AllowAnyHeader().AllowAnyMethod();
+    });
 });
 
 var app = builder.Build();

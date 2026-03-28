@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using CustomerService.Data;
 using CustomerService.Models;
+using CustomerService.Services;
 
 namespace CustomerService.Controllers
 {
@@ -76,5 +77,23 @@ namespace CustomerService.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
+
+        // ── Document Validation ───────────────────────────────────────────────
+
+        [HttpPost("validate/pan")]
+        public IActionResult ValidatePan([FromBody] ValidateDocumentRequest request)
+        {
+            var result = PanValidationService.ValidatePan(request.Value);
+            return result.IsValid ? Ok(result) : BadRequest(result);
+        }
+
+        [HttpPost("validate/aadhaar")]
+        public IActionResult ValidateAadhaar([FromBody] ValidateDocumentRequest request)
+        {
+            var result = PanValidationService.ValidateAadhaar(request.Value);
+            return result.IsValid ? Ok(result) : BadRequest(result);
+        }
     }
+
+    public record ValidateDocumentRequest(string? Value);
 }

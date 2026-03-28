@@ -12,6 +12,26 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<AccountDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// CORS — local dev origins + any extra domain from CORS:AllowedOrigins env var
+// In docker-compose: CORS__AllowedOrigins=https://demobank.saaritsolutions.com
+var extraCorsOrigins = (builder.Configuration["CORS:AllowedOrigins"] ?? "")
+    .Split(';', StringSplitOptions.RemoveEmptyEntries);
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        var origins = new List<string>
+        {
+            "http://localhost:3000", "http://127.0.0.1:3000",
+            "http://localhost:3001", "http://127.0.0.1:3001",
+            "http://localhost:3002", "http://127.0.0.1:3002",
+            "http://localhost:5173", "http://127.0.0.1:5173"
+        };
+        origins.AddRange(extraCorsOrigins);
+        policy.WithOrigins(origins.ToArray()).AllowAnyHeader().AllowAnyMethod();
+    });
+});
+
 var app = builder.Build();
 
 // Apply migrations on startup for CI environment
@@ -28,6 +48,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseCors("AllowFrontend");
 app.UseAuthorization();
 app.MapControllers();
 

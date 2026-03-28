@@ -27,8 +27,14 @@ namespace CustomerService.Models
         public string? CreatedBy { get; set; }
         public string? ApprovedBy { get; set; }
         public string? ApprovalStatus { get; set; }
+        public MakerCheckerStatus MakerCheckerStatus { get; set; } = MakerCheckerStatus.Pending;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? ApprovedAt { get; set; }
-        // Navigation properties for microservice: remove or refactor as needed
+
+        // KYC fields
+        public KycStatus KycStatus { get; set; } = KycStatus.NotStarted;
+        public DateTime? KycVerifiedAt { get; set; }
+        public string? KycVerifiedBy { get; set; }
+        public string? KycRejectionReason { get; set; }
     }
 }
