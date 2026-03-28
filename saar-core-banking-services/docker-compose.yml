@@ -137,7 +137,9 @@ services:
         REACT_APP_EXPRESSION_API_URL: https://demobank.saaritsolutions.com
     restart: unless-stopped
     networks:
-      - saar-net
+      saar-net:
+        aliases:
+          - banking-frontend  # unique alias; avoids DNS clash with AI Consultant's "frontend" service
 
   # ── Nginx Reverse Proxy (80 + 443) ────────────────────────────────────────────
   nginx:
