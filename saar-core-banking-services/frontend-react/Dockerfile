@@ -17,6 +17,9 @@ ENV REACT_APP_LOAN_SERVICE_BASE_URL=$REACT_APP_LOAN_SERVICE_BASE_URL
 ENV REACT_APP_EXPRESSION_API_URL=$REACT_APP_EXPRESSION_API_URL
 # Give Node.js enough heap for the CRA/CRACO build
 ENV NODE_OPTIONS=--max-old-space-size=3072
+# Reduce webpack memory: skip source maps and ESLint (saves 300-500 MB)
+ENV GENERATE_SOURCEMAP=false
+ENV DISABLE_ESLINT_PLUGIN=true
 
 COPY . .
 RUN npm run build
