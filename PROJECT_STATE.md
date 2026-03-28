@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-03-26 (session 4)
+**Last Updated:** 2026-03-28 (session 5)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -131,6 +131,9 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 5 Commits — 2026-03-28
+- `70e08ec` — **Hosting infrastructure**: docker-compose.yml (postgres + 6 services + frontend + nginx), Dockerfiles for ExpressionBuilderService/WorkflowOrchestrationService/DynamicFieldsSchemaService/CustomerService/TransactionService/frontend-react, nginx reverse proxy with HTTPS for demobank.saaritsolutions.com (Hetzner), CORS env-var injection in 4 services, LoanService inter-service URLs made configurable via env, frontend port 5002→5004 bug fixed, CustomerService KYC stub (KycStatus enum, PanValidationService, PAN+Aadhaar validate endpoints, EF migration AddKycStatus)
 
 ### Session 3 Commits — 2026-03-26
 - 9e81653 — **M3 Expression Library**: ExpressionSeedService seeds 10 banking rules on startup; 10 built-in templates in ExpressionTemplates.tsx; LoanService silent interest-rate fallback replaced with actionable error
