@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-03-26 (session 4)
+**Last Updated:** 2026-03-28 (session 5)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,7 +11,7 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **CustomerService: KycStatus enum + PAN format endpoint** | Required for KYC step in loan workflow; needed before compliance milestone |
+| 1 | **Deploy to Hetzner** — copy `.env`, run certbot, `docker-compose up -d` | App is ready to host; see `nginx/README-SSL.md` |
 | 2 | **APIGateway: JWT validation middleware + basic route table** | Required for any real service-to-service auth; needed before demo to investors |
 | 3 | **M4: Form builder MVP** | Drag-and-drop form designer; needed to demo dynamic loan application forms |
 
@@ -145,6 +145,12 @@
 
 | Task | Commit | Date |
 |---|---|---|
+| docker-compose.yml + nginx reverse proxy for demobank.saaritsolutions.com (HTTPS, Hetzner) | `70e08ec` | 2026-03-28 |
+| Dockerfiles: ExpressionBuilderService, WorkflowOrchestration, DynamicFields, CustomerService, TransactionService, frontend-react | `70e08ec` | 2026-03-28 |
+| CORS env-var injection in LoanService, WorkflowOrchestration, DynamicFields, AccountService | `70e08ec` | 2026-03-28 |
+| LoanService WorkflowBaseUrl + DynamicFormsBaseUrl made configurable (Docker DNS) | `70e08ec` | 2026-03-28 |
+| Frontend REACT_APP_API_BASE_URL port 5002→5004 bug fixed | `70e08ec` | 2026-03-28 |
+| CustomerService KYC stub: KycStatus enum, PanValidationService, validate/pan + validate/aadhaar endpoints, EF migration | `70e08ec` | 2026-03-28 |
 | M3: ExpressionSeedService — 10 banking rules seeded on startup (incl. EXPR_1755237353842) | `9e81653` | 2026-03-26 |
 | M3: ExpressionTemplates.tsx expanded to 10 built-in templates | `9e81653` | 2026-03-26 |
 | M4-part1: TransactionService double-entry ledger, posting engine, 16 unit tests | `bab9b9c` | 2026-03-26 |
