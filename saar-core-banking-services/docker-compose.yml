@@ -1,5 +1,3 @@
-version: '3.8'
-
 # SaaR Core Banking Services — Docker Compose
 # Domain: demobank.saaritsolutions.com (Hetzner VPS)
 #
