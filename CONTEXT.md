@@ -33,11 +33,20 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
 - TransactionService M4-part1: Double-entry ledger + posting engine — Journal/JournalEntry/ChartOfAccount/LedgerBalance models; PostingEngine (idempotency key, debit==credit validation, atomic LedgerBalance update, InMemory + Postgres support); LedgerService (balance DTOs per account); LedgerSeedService (18 Chart of Accounts entries: 1xxx–5xxx); JournalController + LedgerController; CORS + Swagger + TXN_USE_INMEMORY_DB flag; 16 unit tests. Commit bab9b9c.
 - Hosting infrastructure (commit 70e08ec): docker-compose.yml (postgres + 6 services + frontend + nginx), Dockerfiles for all missing services, nginx reverse proxy for demobank.saaritsolutions.com (Hetzner VPS, HTTPS), CORS env-var injection in LoanService/WorkflowOrchestration/DynamicFields/AccountService, LoanService inter-service URLs made configurable, frontend port 5002→5004 bug fixed, CustomerService KYC stub complete (KycStatus enum, PanValidationService, PAN/Aadhaar validate endpoints, EF migration AddKycStatus).
 
+## Completed (continued)
+- Hetzner deployment LIVE (session 6, 2026-03-28): All 9 Docker containers running on 89.167.53.218.
+  HTTP→HTTPS redirect working, API endpoints responding. Self-signed cert in place.
+  Bug fixes along the way: NU1107 NuGet conflict, React OOM (fork-ts-checker disabled in prod build),
+  host nginx port conflict, nginx Docker DNS (resolver 127.0.0.11 + set $var proxy_pass).
+  Commits: f8cbe2c, 1445a56, a30d319, 6b8fcef, dd938b0.
+
 ## In Progress
 - M4: Form builder MVP (frontend drag-and-drop form builder; backend schema persistence).
 
 ## Pending Next
-- Deploy to Hetzner: copy .env, run certbot, docker-compose up -d (see nginx/README-SSL.md)
+- DNS: Add A record `demobank` → 89.167.53.218 in domain registrar for demobank.saaritsolutions.com.
+- SSL: After DNS propagates, run certbot for real cert: `certbot certonly --standalone -d demobank.saaritsolutions.com` on server, then docker compose restart nginx.
+- Re-enable systemd nginx on server for saaritsolutions.com (AI Consultant app) — currently stopped.
 - M4: Form builder MVP; M5: Compliance (KFS, consent, PAN validation); M6: Admin console; M7: Demo polish; M8: Perf/obs.
 - APIGateway: JWT validation middleware + basic route table.
 

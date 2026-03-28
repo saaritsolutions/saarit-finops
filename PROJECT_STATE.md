@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-03-28 (session 5)
+**Last Updated:** 2026-03-28 (session 6 — Hetzner deployment LIVE)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -131,6 +131,14 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 6 Commits — 2026-03-28 (deployment live)
+- `dd938b0` — nginx Docker DNS resolver + variable proxy_pass (fixes "host not found in upstream" at startup)
+- `6b8fcef` — Remove fork-ts-checker in production build (eliminates ~1 GB child-process OOM on VPS)
+- `a30d319` — Disable source maps + ESLint in Docker build (reduce webpack peak heap by ~400 MB)
+- `1445a56` — Increase Node.js heap to 3072 MB for React Docker build
+- `f8cbe2c` — Resolve ExpressionBuilderService NuGet NU1107 conflict; remove docker-compose version attr
+- **Server state:** 89.167.53.218 — all 9 containers up; HTTP 301→HTTPS 200; API 200; self-signed cert; DNS A record for demobank subdomain still needed
 
 ### Session 5 Commits — 2026-03-28
 - `70e08ec` — **Hosting infrastructure**: docker-compose.yml (postgres + 6 services + frontend + nginx), Dockerfiles for ExpressionBuilderService/WorkflowOrchestrationService/DynamicFieldsSchemaService/CustomerService/TransactionService/frontend-react, nginx reverse proxy with HTTPS for demobank.saaritsolutions.com (Hetzner), CORS env-var injection in 4 services, LoanService inter-service URLs made configurable via env, frontend port 5002→5004 bug fixed, CustomerService KYC stub (KycStatus enum, PanValidationService, PAN+Aadhaar validate endpoints, EF migration AddKycStatus)
