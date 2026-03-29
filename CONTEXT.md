@@ -39,15 +39,26 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   Bug fixes along the way: NU1107 NuGet conflict, React OOM (fork-ts-checker disabled in prod build),
   host nginx port conflict, nginx Docker DNS (resolver 127.0.0.11 + set $var proxy_pass).
   Commits: f8cbe2c, 1445a56, a30d319, 6b8fcef, dd938b0.
+- Dual-app hosting LIVE (session 7, 2026-03-28): Both https://demobank.saaritsolutions.com (banking demo)
+  and https://saaritsolutions.com (AI Consultant) running simultaneously on same VPS.
+  nginx joined to both Docker networks (saar-net + ai-consultant_default). Cloudflare DNS proxied
+  for both domains. SSL via Cloudflare (Full mode). No certbot needed — Cloudflare issues public cert.
+  All smoke tests passing: HTTP 301→HTTPS 200, API 200, AI Consultant 200.
+
+## Completed (continued)
+- Architecture documentation (session 8, 2026-03-29): Full ARCHITECTURE/ folder committed (4dcfd14).
+  12 ADRs covering all major design decisions (multi-tenancy, service decomposition, tech stack,
+  event architecture, parametrization, DB strategy, security, EOD/BOD, reporting, AI pipeline,
+  API gateway, deployment). 14 component docs for all services. Every ADR references IDRBT/RBI
+  sections for regulatory traceability.
 
 ## In Progress
-- M4: Form builder MVP (frontend drag-and-drop form builder; backend schema persistence).
+- Jira epics/stories creation from IDRBT CBS requirements (needs Atlassian credentials).
 
 ## Pending Next
-- DNS: Add A record `demobank` → 89.167.53.218 in domain registrar for demobank.saaritsolutions.com.
-- SSL: After DNS propagates, run certbot for real cert: `certbot certonly --standalone -d demobank.saaritsolutions.com` on server, then docker compose restart nginx.
-- Re-enable systemd nginx on server for saaritsolutions.com (AI Consultant app) — currently stopped.
-- M4: Form builder MVP; M5: Compliance (KFS, consent, PAN validation); M6: Admin console; M7: Demo polish; M8: Perf/obs.
+- Jira: Create all epics and stories in https://githubsaarit.atlassian.net/jira/software/projects/SCRUM/boards/1/backlog
+- M4: Form builder MVP (frontend drag-and-drop form builder; backend schema persistence).
+- CustomerService UI: live CRUD at /customers (plan exists in plan file staged-cuddling-coral.md).
 - APIGateway: JWT validation middleware + basic route table.
 
 ## Notes
