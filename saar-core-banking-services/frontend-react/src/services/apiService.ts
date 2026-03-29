@@ -84,7 +84,7 @@ export const apiService = {
 // Microservice-specific base URLs
 export const MICROSERVICE_URLS = {
   ACCOUNT_SERVICE: '/api/accounts',
-  CUSTOMER_SERVICE: '/api/customers',
+  CUSTOMER_SERVICE: '/api/customer',
   TRANSACTION_SERVICE: '/api/transactions',
   USER_ACCESS_SERVICE: '/api/users',
   LOAN_SERVICE: '/api/loans',
