@@ -79,19 +79,33 @@ namespace CustomerService.Controllers
         }
 
         // ── Document Validation ───────────────────────────────────────────────
+        // Always 200 OK with { isValid, message } so the frontend never has to
+        // catch an HTTP error just to read a validation failure message.
 
         [HttpPost("validate/pan")]
         public IActionResult ValidatePan([FromBody] ValidateDocumentRequest request)
         {
             var result = PanValidationService.ValidatePan(request.Value);
-            return result.IsValid ? Ok(result) : BadRequest(result);
+            return Ok(new
+            {
+                isValid = result.IsValid,
+                message = result.IsValid
+                    ? $"Valid PAN — {result.EntityType} (holder initial: {result.HolderInitial})"
+                    : result.Error,
+            });
         }
 
         [HttpPost("validate/aadhaar")]
         public IActionResult ValidateAadhaar([FromBody] ValidateDocumentRequest request)
         {
             var result = PanValidationService.ValidateAadhaar(request.Value);
-            return result.IsValid ? Ok(result) : BadRequest(result);
+            return Ok(new
+            {
+                isValid = result.IsValid,
+                message = result.IsValid
+                    ? $"Valid Aadhaar — masked: {result.MaskedUid}"
+                    : result.Error,
+            });
         }
     }
 

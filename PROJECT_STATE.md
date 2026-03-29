@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-03-28 (session 6 — Hetzner deployment LIVE)
+**Last Updated:** 2026-03-29 (session 8 — architecture docs, Jira creation, SCRUM-79 Customer UI)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -132,13 +132,25 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 
 ## 5. Recent Work Done
 
+### Session 8 — 2026-03-29 (architecture docs, 84 Jira issues, SCRUM-79 Customer UI fix)
+- **Architecture documentation**: Created 12 ADRs (ADR-001 to ADR-012) in `ARCHITECTURE/adr/` covering multi-tenancy, service decomposition, tech stack, event architecture, parametrization, DB strategy, security, EOD/BOD engine, reporting, AI pipeline, API gateway, and deployment
+- **14 component docs** in `ARCHITECTURE/components/` with responsibilities, API surfaces, data models, and IDRBT compliance mapping
+- **Gap analysis**: 12 critical/high/medium gaps identified (no Identity, no Maker-Checker enforcement, no multi-tenancy, etc.)
+- **Jira creation**: 84 issues created via REST API — 12 epics (SCRUM-1, 9, 17, 24, 32, 41, 49, 55, 61, 67, 73, 78) + 72 stories with ADF descriptions and acceptance criteria
+- **SCRUM-79 Customer Management UI**: Code was already implemented; fixed `ValidatePan`/`ValidateAadhaar` endpoints to always return HTTP 200 with `{ isValid, message }` format (previously returned 400 on invalid input, causing axios to throw and swallow the error message); fixed `apiService.ts` fallback port 5002 → 5004
+
+### Session 7 — 2026-03-28 (dual-app hosting + Cloudflare SSL)
+- Dual-app nginx: nginx container joined to both `saar-core-banking-services_saar-net` and `ai-consultant_default` networks
+- Added `saaritsolutions.com` server blocks to nginx.conf; nginx now proxies both banking demo and AI Consultant
+- Cloudflare DNS: `demobank` A record → 89.167.53.218 (proxied); Cloudflare SSL mode set to "Full"
+- **Server state:** https://demobank.saaritsolutions.com → 200 (valid cert, no browser warning); https://saaritsolutions.com → 200; API → 200. Both apps LIVE.
+
 ### Session 6 Commits — 2026-03-28 (deployment live)
 - `dd938b0` — nginx Docker DNS resolver + variable proxy_pass (fixes "host not found in upstream" at startup)
 - `6b8fcef` — Remove fork-ts-checker in production build (eliminates ~1 GB child-process OOM on VPS)
 - `a30d319` — Disable source maps + ESLint in Docker build (reduce webpack peak heap by ~400 MB)
 - `1445a56` — Increase Node.js heap to 3072 MB for React Docker build
 - `f8cbe2c` — Resolve ExpressionBuilderService NuGet NU1107 conflict; remove docker-compose version attr
-- **Server state:** 89.167.53.218 — all 9 containers up; HTTP 301→HTTPS 200; API 200; self-signed cert; DNS A record for demobank subdomain still needed
 
 ### Session 5 Commits — 2026-03-28
 - `70e08ec` — **Hosting infrastructure**: docker-compose.yml (postgres + 6 services + frontend + nginx), Dockerfiles for ExpressionBuilderService/WorkflowOrchestrationService/DynamicFieldsSchemaService/CustomerService/TransactionService/frontend-react, nginx reverse proxy with HTTPS for demobank.saaritsolutions.com (Hetzner), CORS env-var injection in 4 services, LoanService inter-service URLs made configurable via env, frontend port 5002→5004 bug fixed, CustomerService KYC stub (KycStatus enum, PanValidationService, PAN+Aadhaar validate endpoints, EF migration AddKycStatus)
