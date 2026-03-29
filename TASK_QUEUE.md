@@ -11,8 +11,13 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Jira epics/stories** — Create all epics and stories from IDRBT requirements (need Atlassian email + API token) | Formal requirement tracking before development sprint |
-| 2 | **CustomerService UI** — Implement live CRUD at /customers (plan ready) | Demo needs real data, not placeholder stubs |
+| 1 | **[ARC-GAP-001] IdentityService** — JWT login, RBAC, session management (SCRUM-1 to SCRUM-8) | Critical: all APIs currently unauthenticated |
+| 2 | **[ARC-GAP-003] Multi-Tenancy** — schema-per-tenant, TenantResolutionMiddleware (SCRUM-17 to SCRUM-23) | Critical: cannot onboard second bank |
+| 3 | **[ARC-GAP-012] CustomerService UI** — full CRUD at /customers (SCRUM-79) | Demo needs real content at demobank.saaritsolutions.com |
+
+### Recently Completed (session 8)
+- [x] Architecture documentation: 12 ADRs + 14 component docs committed (4dcfd14)
+- [x] **Jira backlog: 12 epics + 72 stories created (SCRUM-1 to SCRUM-84)** covering all architecture gaps
 | 3 | **APIGateway: JWT validation middleware + basic route table** | Required for any real service-to-service auth; needed before demo to investors |
 
 ### Recently Completed
