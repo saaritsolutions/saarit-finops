@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-03-28 (session 5)
+**Last Updated:** 2026-03-29 (session 8)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,13 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Deploy to Hetzner** — copy `.env`, run certbot, `docker-compose up -d` | App is ready to host; see `nginx/README-SSL.md` |
-| 2 | **APIGateway: JWT validation middleware + basic route table** | Required for any real service-to-service auth; needed before demo to investors |
-| 3 | **M4: Form builder MVP** | Drag-and-drop form designer; needed to demo dynamic loan application forms |
+| 1 | **Jira epics/stories** — Create all epics and stories from IDRBT requirements (need Atlassian email + API token) | Formal requirement tracking before development sprint |
+| 2 | **CustomerService UI** — Implement live CRUD at /customers (plan ready) | Demo needs real data, not placeholder stubs |
+| 3 | **APIGateway: JWT validation middleware + basic route table** | Required for any real service-to-service auth; needed before demo to investors |
+
+### Recently Completed
+- [x] Architecture documentation (session 8, commit 4dcfd14): 12 ADRs + 14 component docs in ARCHITECTURE/
+- [x] Hetzner deployment LIVE (session 6–7): demobank.saaritsolutions.com + saaritsolutions.com running
 
 ---
 
