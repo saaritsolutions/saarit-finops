@@ -126,6 +126,43 @@ services:
     networks:
       - saar-net
 
+  # ── UserAccessManagementService (port 5033) ──────────────────────────────────
+  useraccessmanagement:
+    build:
+      context: .
+      dockerfile: UserAccessManagementService/Dockerfile
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:5033
+      ConnectionStrings__DefaultConnection: "Host=postgres;Database=UserAccessDb;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-saar_demo_2026};Port=5432"
+      Jwt__Secret: ${JWT_SECRET:-SaarCoreBankingJwtSecret2026DemoKeyLongEnoughForHS256}
+      Jwt__Issuer: saar-banking
+      Jwt__Audience: saar-banking-clients
+      CORS__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-https://demobank.saaritsolutions.com}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - saar-net
+
+  # ── AccountService (port 5210) ────────────────────────────────────────────────
+  accountservice:
+    build:
+      context: .
+      dockerfile: AccountService/Dockerfile
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:5210
+      ConnectionStrings__DefaultConnection: "Host=postgres;Database=AccountServiceDb;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-saar_demo_2026};Port=5432"
+      CORS__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-https://demobank.saaritsolutions.com}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - saar-net
+
   # ── React Frontend ────────────────────────────────────────────────────────────
   frontend:
     build:
@@ -159,6 +196,8 @@ services:
       - dynamicfields
       - customerservice
       - transactionservice
+      - useraccessmanagement
+      - accountservice
     networks:
       - saar-net
       - ai-consultant_default  # needed to proxy aiconsultant_frontend:80
