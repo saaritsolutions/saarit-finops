@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using UserAccessManagementService.Models;
@@ -5,6 +6,7 @@ using UserAccessManagementService.Models;
 namespace UserAccessManagementService.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/[controller]")]
     public class UsersController : ControllerBase
     {
@@ -57,6 +59,7 @@ namespace UserAccessManagementService.Controllers
     }
 
     [ApiController]
+    [Authorize]
     [Route("api/[controller]")]
     public class RolesController : ControllerBase
     {

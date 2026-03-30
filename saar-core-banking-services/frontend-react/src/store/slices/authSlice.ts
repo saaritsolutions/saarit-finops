@@ -15,7 +15,42 @@ interface AuthState {
 // Get stored token and check if it's valid (or auto-authenticate in development)
 const storedToken = localStorage.getItem('auth-token');
 const isDevelopment = process.env.NODE_ENV === 'development';
-const isValidToken = Boolean(storedToken && storedToken.startsWith('mock-jwt-token-')) || isDevelopment;
+// Accept real JWTs (3 dot-separated base64 segments) as well as legacy mock tokens
+const isRealJwt   = Boolean(storedToken && storedToken.split('.').length === 3);
+const isMockToken = Boolean(storedToken && storedToken.startsWith('mock-jwt-token-'));
+const isValidToken = isRealJwt || isMockToken || isDevelopment;
+
+// ── Permission helpers ────────────────────────────────────────────────────────
+const ALL_PERMISSIONS = [
+  'dashboard.view',
+  'customer.view', 'customer.create', 'customer.edit',
+  'account.view', 'account.create', 'account.edit',
+  'transaction.view', 'transaction.create',
+  'loan.view', 'loan.create', 'loan.approve',
+  'reports.view',
+  'user.management',
+  'system.config',
+  'admin.expressions',
+];
+
+function buildPermissionsFromRoles(roles: string[]): string[] {
+  if (roles.includes('Admin')) return ALL_PERMISSIONS;
+  if (roles.includes('Maker')) return [
+    'dashboard.view',
+    'customer.view', 'customer.create', 'customer.edit',
+    'account.view', 'account.create',
+    'transaction.view', 'transaction.create',
+    'loan.view', 'loan.create',
+  ];
+  if (roles.includes('Checker')) return [
+    'dashboard.view',
+    'customer.view',
+    'account.view', 'account.edit',
+    'transaction.view',
+    'loan.view', 'loan.approve',
+  ];
+  return ['dashboard.view'];
+}
 
 // Initial state
 const initialState: AuthState = {
@@ -69,69 +104,85 @@ const initialState: AuthState = {
 export const loginUser = createAsyncThunk(
   'auth/loginUser',
   async (credentials: { username: string; password: string }, { rejectWithValue }) => {
+    const apiBase = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5004';
+
     try {
-      // Mock authentication for development
-      const mockUser: User = {
-        id: '1',
-        userId: 'admin001',
-        username: credentials.username,
-        firstName: 'Admin',
-        lastName: 'User',
-        email: credentials.username,
-        roles: [{
-          id: 'admin-role',
-          name: 'Administrator',
-          description: 'Full system access',
-          permissions: []
-        }],
-        permissions: [],
-        status: 'active' as UserStatus,
-        lastLoginAt: new Date(),
-        department: 'IT',
-        branch: 'Head Office',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      // ── Attempt real backend login ─────────────────────────────────────────
+      const response = await fetch(`${apiBase}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: credentials.username, password: credentials.password }),
+      });
 
-      const mockPermissions = [
-        'dashboard.view',
-        'customer.view',
-        'customer.create',
-        'customer.edit',
-        'account.view',
-        'account.create',
-        'account.edit',
-        'transaction.view',
-        'transaction.create',
-        'loan.view',
-        'loan.create',
-        'loan.approve',
-        'reports.view',
-        'user.management',
-        'system.config',
-        'admin.expressions',
-      ];
+      if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem('auth-token', data.token);
+        const roleNames: string[] = data.user?.roles ?? ['Admin'];
+        const permissions = buildPermissionsFromRoles(roleNames);
 
-      // Validate demo credentials
-      if (credentials.username === 'admin@saarbanking.com' && credentials.password === 'admin123') {
-        const mockToken = 'mock-jwt-token-' + Date.now();
-        
-        // Store token in localStorage
-        localStorage.setItem('auth-token', mockToken);
-        
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
         return {
-          user: mockUser,
-          token: mockToken,
-          permissions: mockPermissions,
-          sessionExpiry: new Date(Date.now() + 8 * 60 * 60 * 1000), // 8 hours
+          user: {
+            id:          data.user.id,
+            userId:      data.user.userId,
+            username:    data.user.username,
+            email:       data.user.email,
+            firstName:   data.user.firstName,
+            lastName:    data.user.lastName,
+            roles:       roleNames.map((r: string) => ({
+              id: r.toLowerCase(), name: r, description: `${r} role`, permissions: [],
+            })),
+            permissions: [],
+            status:      'active' as UserStatus,
+            lastLoginAt: new Date(),
+            department:  'Banking Operations',
+            branch:      'Head Office',
+            createdAt:   new Date(),
+            updatedAt:   new Date(),
+          } as User,
+          token:         data.token,
+          permissions,
+          sessionExpiry: new Date(Date.now() + 8 * 60 * 60 * 1000),
         };
-      } else {
-        throw new Error('Invalid credentials');
       }
+
+      // Backend returned an error response (e.g. 401 Invalid credentials)
+      const errBody = await response.json().catch(() => ({}));
+      throw new Error(errBody?.message || 'Invalid credentials');
+
     } catch (error: any) {
+      // ── Mock fallback: only for network errors (backend not reachable in local dev) ──
+      if (error instanceof TypeError) {
+        if (
+          credentials.username === 'admin@saarbanking.com'   && credentials.password === 'admin123' ||
+          credentials.username === 'maker@saarbanking.com'   && credentials.password === 'maker123' ||
+          credentials.username === 'checker@saarbanking.com' && credentials.password === 'checker123'
+        ) {
+          const role  = credentials.username.split('@')[0];
+          const roles = [role.charAt(0).toUpperCase() + role.slice(1)];
+          const mockToken = 'mock-jwt-token-' + Date.now();
+          localStorage.setItem('auth-token', mockToken);
+          await new Promise(resolve => setTimeout(resolve, 600));
+          return {
+            user: {
+              id: '1', userId: 'admin001',
+              username:  credentials.username,
+              email:     credentials.username,
+              firstName: role.charAt(0).toUpperCase() + role.slice(1),
+              lastName:  'User',
+              roles:     roles.map(r => ({ id: r.toLowerCase(), name: r, description: `${r} role`, permissions: [] })),
+              permissions: [],
+              status: 'active' as UserStatus,
+              lastLoginAt: new Date(), department: 'IT', branch: 'Head Office',
+              createdAt: new Date(), updatedAt: new Date(),
+            } as User,
+            token:         mockToken,
+            permissions:   buildPermissionsFromRoles(roles),
+            sessionExpiry: new Date(Date.now() + 8 * 60 * 60 * 1000),
+          };
+        }
+        return rejectWithValue('Invalid credentials');
+      }
+
       return rejectWithValue(error.message || 'Login failed');
     }
   }
