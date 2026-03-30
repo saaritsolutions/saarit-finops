@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-03-30 (session 9)
+**Last Updated:** 2026-03-30 (session 10)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,11 +11,18 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **[ARC-GAP-001] IdentityService** — JWT login, RBAC, session management (SCRUM-1 to SCRUM-8) | Critical: all APIs currently unauthenticated |
+| 1 | **Deploy to demobank** — git push → git pull on server → docker compose build useraccessmanagement accountservice frontend → up -d | 5 new screens need to be live for investor demo |
 | 2 | **[ARC-GAP-003] Multi-Tenancy** — schema-per-tenant, TenantResolutionMiddleware (SCRUM-17 to SCRUM-23) | Critical: cannot onboard second bank |
 | 3 | **[RBI-02] Deposit Account Management** — SB/FD/RD lifecycle (SCRUM-93 to SCRUM-99) | Core banking function; needed to show real deposit products |
 
-### Recently Completed (session 9)
+### Recently Completed (session 10 — 2026-03-30)
+- [x] **Phase 1 — Real JWT Auth** (SCRUM-2, SCRUM-3, SCRUM-4): UserAccessManagementService /api/auth/login, BCrypt seed users (admin/maker/checker), JWT 8h expiry, [Authorize] on users/roles endpoints (`6e98e07`)
+- [x] **Phase 2 — Account Management UI** (SCRUM-80): accountService.ts + AccountManagement.tsx — full CRUD + Approve/Close, product type select, maker-checker visual (`774176b`)
+- [x] **Phase 3 — Ledger UI** (SCRUM-81): transactionService.ts + TransactionManagement.tsx — Ledger Balances tab, Journal Entries tab, Post Journal Entry dialog with debit=credit balance validation (`eb02268`)
+- [x] **Phase 4 — User & Role Management UI** (SCRUM-82): userService.ts + UserManagement.tsx — Users/Roles tabs, Admin=red/Maker=blue/Checker=amber chips, New User/Role dialogs (`fbbaafd`)
+- [x] **Phase 5 — Loan Management List** (SCRUM-83): LoanManagement.tsx shows application list; GET /api/LoanOrigination endpoint added to LoanService; status chips for all states (`c8954e1`)
+
+### Recently Completed (session 9 — 2026-03-30)
 - [x] **RBI functional requirements Jira backlog**: 13 epics + 61 stories (SCRUM-85 to SCRUM-159) covering all RBI/IDRBT functional requirements
 - [x] SCRUM-79 (CustomerService UI) — validate endpoints fixed, marked Done in Jira (e1b629c)
 - [x] Branch cleanup: production fast-forwarded to HEAD; stale branches deleted; v0.1.0 tag created
@@ -50,11 +57,11 @@
 - [x] Add balance read API (LedgerController GET /api/ledger/balance/{code}, GET /api/ledger/balances)
 - [x] 16 unit tests on posting correctness (balanced, imbalanced, idempotency, balance accumulation, 3-legged entries)
 
-### CustomerService — KYC Stub
-- [ ] Add `KycStatus` enum and field to Customer entity
-- [ ] Implement PAN format validation (regex) endpoint
-- [ ] Add Aadhaar format stub (offline XML upload placeholder — no real external call needed for demo)
-- [ ] Add maker-checker approval status field
+### CustomerService — KYC Stub (COMPLETE — commit 70e08ec)
+- [x] Add `KycStatus` enum and field to Customer entity
+- [x] Implement PAN format validation (regex) endpoint
+- [x] Add Aadhaar format stub (offline XML upload placeholder — no real external call needed for demo)
+- [x] Add maker-checker approval status field (via AccountService approve/close workflow)
 
 ### APIGateway
 - [ ] Add JWT validation middleware (validate token against shared secret)
@@ -154,6 +161,11 @@
 
 | Task | Commit | Date |
 |---|---|---|
+| Phase 1: Real JWT auth — UserAccessManagementService /api/auth/login, BCrypt seed users, JWT 8h (SCRUM-2,3,4) | `6e98e07` | 2026-03-30 |
+| Phase 2: Account Management UI — accountService.ts + AccountManagement.tsx CRUD + Approve/Close (SCRUM-80) | `774176b` | 2026-03-30 |
+| Phase 3: Ledger UI — transactionService.ts + TransactionManagement.tsx balances + journal entries (SCRUM-81) | `eb02268` | 2026-03-30 |
+| Phase 4: User & Role Management UI — userService.ts + UserManagement.tsx Admin/Maker/Checker (SCRUM-82) | `fbbaafd` | 2026-03-30 |
+| Phase 5: Loan Management list — LoanManagement.tsx + GET /api/LoanOrigination endpoint (SCRUM-83) | `c8954e1` | 2026-03-30 |
 | docker-compose.yml + nginx reverse proxy for demobank.saaritsolutions.com (HTTPS, Hetzner) | `70e08ec` | 2026-03-28 |
 | Dockerfiles: ExpressionBuilderService, WorkflowOrchestration, DynamicFields, CustomerService, TransactionService, frontend-react | `70e08ec` | 2026-03-28 |
 | CORS env-var injection in LoanService, WorkflowOrchestration, DynamicFields, AccountService | `70e08ec` | 2026-03-28 |

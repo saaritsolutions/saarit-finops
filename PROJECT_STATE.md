@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-03-29 (session 8 — architecture docs, Jira creation, SCRUM-79 Customer UI)
+**Last Updated:** 2026-03-30 (session 10 — demo-focused architecture Jira implementation)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -29,19 +29,25 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 - **Expression Builder UI** — create, edit, test, and browse banking rule expressions from the React frontend
 - **Dynamic Forms** — DynamicFieldsSchemaService returns a 7-field demo schema; frontend renders forms from schema
 - **AI-Assisted Rule Generation** — OpenAI GPT generates expressions and forms from natural language prompts
-- **Workflow Visualization** — WorkflowTimeline component with status colour coding (completed/active/failed/pending icons), SLA due-date chips, retry button on failed steps, expandable notes (Collapse)
-- **Basic CRUD** — CustomerService, AccountService, LoanService each expose basic create/read/update/delete APIs
-- **Loan Wizard (M1 Complete)** — Loan origination page with: dynamic schema-driven form, right-rail summary (Amount/Tenure/Income/Credit Score/Rate/Est. EMI), working file upload (PDF/JPG/PNG), input masking for PAN/Aadhaar/mobile, pre-validate eligibility check, workflow step advancement
+- **Workflow Visualization** — WorkflowTimeline with SLA chips, status colours, retry button, expandable notes
+- **Customer Management UI** — full CRUD with PAN/Aadhaar validation (live at /customers)
+- **Account Management UI** — CRUD + Approve/Close wired to AccountService (live at /accounts; SCRUM-80)
+- **Ledger UI** — Ledger Balances + Journal Entries, Post Journal Entry with balance validation (SCRUM-81)
+- **User & Role Management UI** — Admin/Maker/Checker roles visible, seeded users (live at /admin; SCRUM-82)
+- **Loan Management UI** — loan application list with status chips + New Application link (SCRUM-83)
+- **Real JWT Auth** — UserAccessManagementService /api/auth/login endpoint, BCrypt seed users, JWT 8h (SCRUM-2,3,4)
+- **Double-entry Ledger Backend** — PostingEngine, idempotency, LedgerBalance, 16 unit tests (bab9b9c)
+- **Loan Wizard (M1 Complete)** — dynamic schema-driven form, EMI estimate, file upload, input masking
 
 ### Partially Implemented
-- **LoanService** (~25%) — eligibility checking and interest rate framework work; origination-to-disbursement lifecycle missing
-- **AccountService** (~20%) — basic account creation and product types; balance management, statements, lifecycle missing
-- **CustomerService** (~15%) — basic CRUD with PAN/UID uniqueness; KYC, risk profiling, CDD/AML missing
-- **TransactionService** (~5%) — entity models exist; no real transaction processing engine
+- **LoanService** (~35%) — eligibility, interest rate, origination, workflow steps; disbursement missing
+- **AccountService** (~30%) — full CRUD with nominees/passbooks/restrictions/lifecycle; statements missing
+- **CustomerService** (~25%) — CRUD, KYC stub, PAN/Aadhaar validation; full KYC workflow missing
+- **UserAccessManagementService** (~40%) — JWT login, seed users, role CRUD; password reset, MFA missing
 - **WorkflowOrchestrationService** (~3%) — placeholder only
 
 ### Not Started (Confirmed Empty / Stub)
-- Double-entry ledger / posting engine
+- EOD/BOD batch processing, InterestFeeService, ReportingMIS, full GL Chart of Accounts management
 - InterestFeeService (accrual logic)
 - Payment rails (IMPS, NEFT, RTGS, UPI)
 - Full KYC/eKYC workflow
