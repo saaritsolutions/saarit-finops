@@ -37,6 +37,27 @@ namespace LoanService.Controllers
             _localWF = localWF ?? new NullWorkflowOrchestrator();
         }
 
+        /// <summary>List all loan applications, newest first.</summary>
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<LoanApplication>>> GetAll(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 50)
+        {
+            var apps = await _db.LoanApplications
+                .OrderByDescending(a => a.CreatedAt)
+                .Skip((page - 1) * pageSize).Take(pageSize)
+                .ToListAsync();
+            return Ok(apps);
+        }
+
+        /// <summary>Get a single loan application by ID.</summary>
+        [HttpGet("{id:guid}")]
+        public async Task<ActionResult<LoanApplication>> GetById(Guid id)
+        {
+            var app = await _db.LoanApplications.FindAsync(id);
+            return app == null ? NotFound() : Ok(app);
+        }
+
         /// <summary>
         /// Get dynamic form schema for a loan product
         /// </summary>
