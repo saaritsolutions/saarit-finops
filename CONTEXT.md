@@ -52,14 +52,25 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   API gateway, deployment). 14 component docs for all services. Every ADR references IDRBT/RBI
   sections for regulatory traceability.
 
+## Completed (continued)
+- Architecture Jira backlog (session 9, 2026-03-30): RBI functional requirements — 13 epics + 61 stories
+  (SCRUM-85 to SCRUM-159) created. Architecture gaps — 12 epics + 72 stories (SCRUM-1 to SCRUM-84).
+  v0.1.0 tag created at d002f20 (base before architecture docs).
+- Demo-focused architecture implementation (session 10, 2026-03-30): 5 phases committed:
+  - Phase 1 (6e98e07): Real JWT auth — UserAccessManagementService login endpoint + seed users (SCRUM-2,3,4)
+  - Phase 2 (774176b): Account Management CRUD UI wired to AccountService (SCRUM-80)
+  - Phase 3 (eb02268): Ledger Balances + Journal Entries view wired to TransactionService (SCRUM-81)
+  - Phase 4 (fbbaafd): User & Role Management screen (Admin=red, Maker=blue, Checker=amber) (SCRUM-82)
+  - Phase 5 (c8954e1): Loan application list + LoanOrigination GET endpoint (SCRUM-83)
+
 ## In Progress
-- Jira epics/stories creation from IDRBT CBS requirements (needs Atlassian credentials).
+- Deploy updated containers to demobank.saaritsolutions.com (git pull + docker compose build + up)
 
 ## Pending Next
-- Jira: Create all epics and stories in https://githubsaarit.atlassian.net/jira/software/projects/SCRUM/boards/1/backlog
-- M4: Form builder MVP (frontend drag-and-drop form builder; backend schema persistence).
-- CustomerService UI: live CRUD at /customers (plan exists in plan file staged-cuddling-coral.md).
-- APIGateway: JWT validation middleware + basic route table.
+- Deploy to demobank: git pull → docker compose build useraccessmanagement accountservice frontend → up -d
+- Update Jira stories SCRUM-2,3,4,80,81,82,83 to Done with commit hashes
+- Verify all 5 screens at demobank.saaritsolutions.com post-deploy
+- Next architecture batch: Maker-Checker workflow engine (SCRUM-9 to SCRUM-16), full parametrization (SCRUM-24 to SCRUM-31)
 
 ## Notes
 - Eligibility expression ID currently in use: EXPR_1755237353842.
