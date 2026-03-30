@@ -132,6 +132,25 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 
 ## 5. Recent Work Done
 
+### Session 9 — 2026-03-30 (RBI functional requirements Jira backlog)
+- **RBI requirements research**: reviewed KYC Master Directions (UCB) 2025, IRAC Master Circular 2024/2025, PSL Master Directions 2024 (60% ANBC), Interest Rate Directions 2025, Management of Advances 2025, Cyber Security Framework UCBs, ALM guidelines, IDRBT CBS requirements
+- **Jira backlog — RBI requirements**: 13 epics + 61 stories (SCRUM-85 to SCRUM-159):
+  - SCRUM-85: KYC & AML (7 stories — UCIC, CDD tiers, periodic re-KYC, CKYC/CERSAI, PEP/EDD, STR/FIU, V-CIP)
+  - SCRUM-93: Deposit Account Management (6 stories — SB, FD, RD, TDS, dormant, nomination)
+  - SCRUM-100: Loan Origination & Credit Appraisal (7 stories — application, KFS, DSCR, exposure limits, small-value loan, collateral, disbursement)
+  - SCRUM-108: NPA Management & IRAC (5 stories — SMA, NPA classification, provisioning, recovery, write-off)
+  - SCRUM-114: Interest & Fee Engine (4 stories — accrual, penal charges, fee matrix, rate management)
+  - SCRUM-119: Payments & Clearing (6 stories — NEFT, RTGS, CTS, NACH, UPI, DD)
+  - SCRUM-126: Regulatory Returns (6 stories — CRR, SLR, DSB-01, CRILC, CRAR, ALM)
+  - SCRUM-133: Priority Sector Lending (3 stories — PSL tagging, ANBC, dashboard)
+  - SCRUM-137: Branch Operations & Cash (3 stories — teller drawer, vault, EOD balancing)
+  - SCRUM-141: General Ledger & Financials (4 stories — COA, double-entry, financial statements, statutory reserve)
+  - SCRUM-146: Government Schemes (4 stories — PMMY, PMJJBY/PMSBY, KCC, SHG)
+  - SCRUM-151: Digital Banking & Cyber Security (3 stories — internet banking, OTP, RBI cyber controls)
+  - SCRUM-155: Customer Service & Grievance (3 stories — grievance, ombudsman, multilingual)
+- **Total Jira backlog**: 25 epics + 133 stories (SCRUM-1 to SCRUM-159)
+- **v0.1.0 tag** created at d002f20 (stable demo baseline before architecture work)
+
 ### Session 8 — 2026-03-29 (architecture docs, 84 Jira issues, SCRUM-79 Customer UI fix)
 - **Architecture documentation**: Created 12 ADRs (ADR-001 to ADR-012) in `ARCHITECTURE/adr/` covering multi-tenancy, service decomposition, tech stack, event architecture, parametrization, DB strategy, security, EOD/BOD engine, reporting, AI pipeline, API gateway, and deployment
 - **14 component docs** in `ARCHITECTURE/components/` with responsibilities, API surfaces, data models, and IDRBT compliance mapping

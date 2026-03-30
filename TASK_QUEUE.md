@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-03-29 (session 8)
+**Last Updated:** 2026-03-30 (session 9)
 **Single source of truth for what to do next.**
 
 ---
@@ -13,16 +13,16 @@
 |---|---|---|
 | 1 | **[ARC-GAP-001] IdentityService** — JWT login, RBAC, session management (SCRUM-1 to SCRUM-8) | Critical: all APIs currently unauthenticated |
 | 2 | **[ARC-GAP-003] Multi-Tenancy** — schema-per-tenant, TenantResolutionMiddleware (SCRUM-17 to SCRUM-23) | Critical: cannot onboard second bank |
-| 3 | **[ARC-GAP-012] CustomerService UI** — full CRUD at /customers (SCRUM-79) | Demo needs real content at demobank.saaritsolutions.com |
+| 3 | **[RBI-02] Deposit Account Management** — SB/FD/RD lifecycle (SCRUM-93 to SCRUM-99) | Core banking function; needed to show real deposit products |
+
+### Recently Completed (session 9)
+- [x] **RBI functional requirements Jira backlog**: 13 epics + 61 stories (SCRUM-85 to SCRUM-159) covering all RBI/IDRBT functional requirements
+- [x] SCRUM-79 (CustomerService UI) — validate endpoints fixed, marked Done in Jira (e1b629c)
+- [x] Branch cleanup: production fast-forwarded to HEAD; stale branches deleted; v0.1.0 tag created
 
 ### Recently Completed (session 8)
 - [x] Architecture documentation: 12 ADRs + 14 component docs committed (4dcfd14)
-- [x] **Jira backlog: 12 epics + 72 stories created (SCRUM-1 to SCRUM-84)** covering all architecture gaps
-| 3 | **APIGateway: JWT validation middleware + basic route table** | Required for any real service-to-service auth; needed before demo to investors |
-
-### Recently Completed
-- [x] Architecture documentation (session 8, commit 4dcfd14): 12 ADRs + 14 component docs in ARCHITECTURE/
-- [x] Hetzner deployment LIVE (session 6–7): demobank.saaritsolutions.com + saaritsolutions.com running
+- [x] **Architecture gap Jira backlog: 12 epics + 72 stories (SCRUM-1 to SCRUM-84)** covering all architecture gaps
 
 ---
 
