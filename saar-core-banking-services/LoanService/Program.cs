@@ -86,6 +86,14 @@ else
 
 var app = builder.Build();
 
+// Apply EF migrations on startup (creates LoanApplications table if not present)
+if (!app.Environment.IsEnvironment("IntegrationTesting"))
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<LoanDbContext>();
+    db.Database.Migrate();
+}
+
 // Enable Swagger in all environments for demos/testing
 app.UseSwagger();
 app.UseSwaggerUI();
