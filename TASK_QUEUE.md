@@ -11,9 +11,8 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Update Jira** — SCRUM-2,3,4,80,81,82,83 + SCRUM-17 to SCRUM-23 → Done | Backlog hygiene |
-| 2 | **Deploy multi-tenancy to Hetzner** — `docker-compose up --build` on VPS | Multi-tenancy needs live DB with schemas provisioned |
-| 3 | **[RBI-02] Deposit Account Management** — SB/FD/RD lifecycle (SCRUM-93 to SCRUM-99) | Core banking function; show real deposit products |
+| 1 | **Deploy multi-tenancy to Hetzner** — `docker-compose up --build` on VPS | Multi-tenancy needs live DB with schemas provisioned |
+| 2 | **[RBI-02] Deposit Account Management** — SB/FD/RD lifecycle (SCRUM-93 to SCRUM-99) | Core banking function; show real deposit products |
 
 ### Recently Completed (session 12 — 2026-04-04)
 - [x] **Multi-Tenancy (SCRUM-17 to SCRUM-23)** — schema-per-tenant across UAM + 4 services
