@@ -79,10 +79,9 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - Demo users: admin/maker@ucb-demo.com (ucb123), admin/maker@nbfc-demo.com (nbfc123)
 
 ## In Progress
-- Update Jira stories SCRUM-2,3,4,80,81,82,83 to Done with commit hashes
+- Deploy multi-tenancy to Hetzner VPS (docker-compose up --build)
 
 ## Pending Next
-- Update Jira stories SCRUM-2,3,4,80,81,82,83 to Done with commit hashes
 - Deploy multi-tenancy to Hetzner VPS (docker-compose up --build)
 - Deposit Account Management — SB/FD/RD lifecycle (SCRUM-93 to SCRUM-99)
 - Maker-Checker workflow engine (SCRUM-9 to SCRUM-16)
