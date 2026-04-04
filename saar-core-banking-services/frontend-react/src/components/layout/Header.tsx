@@ -40,6 +40,7 @@ const Header: React.FC = () => {
   const sidebarOpen = useSelector(selectSidebarOpen);
   const themeMode = useSelector(selectTheme);
   const currentUser = useSelector(selectUser);
+  const bankName = currentUser?.tenantName ?? 'SaaR Core Banking';
   
   // Local state for menus
   const [userMenuAnchor, setUserMenuAnchor] = React.useState<null | HTMLElement>(null);
@@ -130,7 +131,7 @@ const Header: React.FC = () => {
               color: 'inherit',
             }}
           >
-            SaaR Core Banking
+            {bankName}
           </Typography>
         </Box>
 

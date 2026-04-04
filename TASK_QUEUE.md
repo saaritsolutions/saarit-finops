@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-03-30 (session 10)
+**Last Updated:** 2026-04-04 (session 12)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,23 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Deploy to demobank** — git push → git pull on server → docker compose build useraccessmanagement accountservice frontend → up -d | 5 new screens need to be live for investor demo |
-| 2 | **[ARC-GAP-003] Multi-Tenancy** — schema-per-tenant, TenantResolutionMiddleware (SCRUM-17 to SCRUM-23) | Critical: cannot onboard second bank |
-| 3 | **[RBI-02] Deposit Account Management** — SB/FD/RD lifecycle (SCRUM-93 to SCRUM-99) | Core banking function; needed to show real deposit products |
+| 1 | **Update Jira** — SCRUM-2,3,4,80,81,82,83 + SCRUM-17 to SCRUM-23 → Done | Backlog hygiene |
+| 2 | **Deploy multi-tenancy to Hetzner** — `docker-compose up --build` on VPS | Multi-tenancy needs live DB with schemas provisioned |
+| 3 | **[RBI-02] Deposit Account Management** — SB/FD/RD lifecycle (SCRUM-93 to SCRUM-99) | Core banking function; show real deposit products |
+
+### Recently Completed (session 12 — 2026-04-04)
+- [x] **Multi-Tenancy (SCRUM-17 to SCRUM-23)** — schema-per-tenant across UAM + 4 services
+  - UAM: Tenant table + EF migration, 3 tenants seeded (public/ucb_demo/nbfc_demo), TenantId on User, JWT `tenant_id` claim
+  - 4 services: ITenantService, TenantResolutionMiddleware, TenantModelCacheKeyFactory, schema-aware DbContext (HasDefaultSchema), TenantSchemaProvisioner (CREATE SCHEMA + MigrateAsync on startup)
+  - Frontend: `resolveTenantName()` in authSlice, `bankName` in Header.tsx
+  - Demo users: admin/maker@ucb-demo.com (ucb123), admin/maker@nbfc-demo.com (nbfc123)
+  - All 5 services build with 0 errors
+
+### Recently Completed (session 11 — 2026-04-01)
+- [x] **Deployed all 5 new screens to demobank.saaritsolutions.com** — all endpoints smoke-tested green
+- [x] **c70dbd7** — AccountService schema rebuild (EnsureDeleted+EnsureCreated on stale schema); 6 product types seeded; `ReferenceHandler.IgnoreCycles` in AccountService + UAM
+- [x] **af2c648** — LoanService `db.Database.Migrate()` on startup; LoanServiceDb created in Postgres
+- [x] nginx `--force-recreate` required (bind-mount nginx.conf needs full container restart, not just `nginx -s reload`)
 
 ### Recently Completed (session 10 — 2026-03-30)
 - [x] **Phase 1 — Real JWT Auth** (SCRUM-2, SCRUM-3, SCRUM-4): UserAccessManagementService /api/auth/login, BCrypt seed users (admin/maker/checker), JWT 8h expiry, [Authorize] on users/roles endpoints (`6e98e07`)
@@ -161,6 +175,7 @@
 
 | Task | Commit | Date |
 |---|---|---|
+| Deployed all 5 screens LIVE; 3 bug fixes (JSON cycle, schema rebuild, LoanService migrate) | `c70dbd7` `af2c648` | 2026-04-01 |
 | Phase 1: Real JWT auth — UserAccessManagementService /api/auth/login, BCrypt seed users, JWT 8h (SCRUM-2,3,4) | `6e98e07` | 2026-03-30 |
 | Phase 2: Account Management UI — accountService.ts + AccountManagement.tsx CRUD + Approve/Close (SCRUM-80) | `774176b` | 2026-03-30 |
 | Phase 3: Ledger UI — transactionService.ts + TransactionManagement.tsx balances + journal entries (SCRUM-81) | `eb02268` | 2026-03-30 |

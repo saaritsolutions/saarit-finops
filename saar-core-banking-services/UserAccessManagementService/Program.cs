@@ -90,6 +90,7 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<UserAccessDbContext>();
     db.Database.Migrate();
+    await SeedTenants(db);
     await SeedDemoData(db);
 }
 
@@ -108,6 +109,22 @@ app.Run();
 
 // ── Demo data seeder ──────────────────────────────────────────────────────────
 
+async Task SeedTenants(UserAccessDbContext db)
+{
+    var tenants = new[]
+    {
+        new Tenant { Id = "public",    Name = "System Default",       ThemeColor = null,      CreatedAt = DateTime.UtcNow },
+        new Tenant { Id = "ucb_demo",  Name = "UCB Cooperative Bank", ThemeColor = "#1565C0", CreatedAt = DateTime.UtcNow },
+        new Tenant { Id = "nbfc_demo", Name = "SaaR NBFC",            ThemeColor = "#2E7D32", CreatedAt = DateTime.UtcNow },
+    };
+    foreach (var t in tenants)
+    {
+        if (!db.Tenants.Any(x => x.Id == t.Id))
+            db.Tenants.Add(t);
+    }
+    await db.SaveChangesAsync();
+}
+
 async Task SeedDemoData(UserAccessDbContext db)
 {
     // Seed roles
@@ -122,13 +139,21 @@ async Task SeedDemoData(UserAccessDbContext db)
     var makerRole   = db.Roles.First(r => r.Name == "Maker");
     var checkerRole = db.Roles.First(r => r.Name == "Checker");
 
-    // Seed users (idempotent by email)
-    await EnsureUser(db, "admin@saarbanking.com",   "admin123",   adminRole);
-    await EnsureUser(db, "maker@saarbanking.com",   "maker123",   makerRole);
-    await EnsureUser(db, "checker@saarbanking.com", "checker123", checkerRole);
+    // Default (public) tenant users
+    await EnsureUser(db, "admin@saarbanking.com",   "admin123",   adminRole,   "public");
+    await EnsureUser(db, "maker@saarbanking.com",   "maker123",   makerRole,   "public");
+    await EnsureUser(db, "checker@saarbanking.com", "checker123", checkerRole, "public");
+
+    // UCB demo tenant users
+    await EnsureUser(db, "admin@ucb-demo.com",  "ucb123",  adminRole, "ucb_demo");
+    await EnsureUser(db, "maker@ucb-demo.com",  "ucb123",  makerRole, "ucb_demo");
+
+    // NBFC demo tenant users
+    await EnsureUser(db, "admin@nbfc-demo.com", "nbfc123", adminRole, "nbfc_demo");
+    await EnsureUser(db, "maker@nbfc-demo.com", "nbfc123", makerRole, "nbfc_demo");
 }
 
-async Task EnsureUser(UserAccessDbContext db, string email, string password, Role role)
+async Task EnsureUser(UserAccessDbContext db, string email, string password, Role role, string tenantId = "public")
 {
     if (db.Users.Any(u => u.Email == email))
         return;
@@ -139,6 +164,7 @@ async Task EnsureUser(UserAccessDbContext db, string email, string password, Rol
         Email        = email,
         PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
         IsActive     = true,
+        TenantId     = tenantId,
     };
     db.Users.Add(user);
     await db.SaveChangesAsync();

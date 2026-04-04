@@ -1,11 +1,27 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using TransactionService.Models;
+using TransactionService.Services;
 
 namespace TransactionService.Data
 {
     public class TransactionDbContext : DbContext
     {
-        public TransactionDbContext(DbContextOptions<TransactionDbContext> options) : base(options) { }
+        public string TenantSchema { get; }
+
+        // DI constructor (runtime)
+        public TransactionDbContext(DbContextOptions<TransactionDbContext> options, ITenantService tenantService)
+            : base(options)
+        {
+            TenantSchema = tenantService.TenantId;
+        }
+
+        // Design-time constructor (EF tooling)
+        public TransactionDbContext(DbContextOptions<TransactionDbContext> options)
+            : base(options)
+        {
+            TenantSchema = "public";
+        }
 
         // ── Existing tables ─────────────────────────────────────────────────
         public DbSet<Receipt> Receipts { get; set; }
@@ -20,6 +36,7 @@ namespace TransactionService.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.HasDefaultSchema(TenantSchema);
 
             // ── Journal ──────────────────────────────────────────────────────
             modelBuilder.Entity<Journal>(e =>
@@ -49,7 +66,7 @@ namespace TransactionService.Data
                 e.Property(je => je.CreditAmount).HasPrecision(18, 2);
                 e.Property(je => je.Currency).HasMaxLength(3);
                 e.Property(je => je.Narration).HasMaxLength(500);
-                e.HasIndex(je => je.AccountCode); // fast ledger entry lookup
+                e.HasIndex(je => je.AccountCode);
             });
 
             // ── ChartOfAccount ───────────────────────────────────────────────
@@ -71,6 +88,11 @@ namespace TransactionService.Data
                 e.Property(b => b.DebitTotal).HasPrecision(18, 2);
                 e.Property(b => b.CreditTotal).HasPrecision(18, 2);
             });
+        }
+
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            optionsBuilder.ReplaceService<IModelCacheKeyFactory, TenantModelCacheKeyFactory>();
         }
     }
 }

@@ -63,14 +63,29 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - Phase 4 (fbbaafd): User & Role Management screen (Admin=red, Maker=blue, Checker=amber) (SCRUM-82)
   - Phase 5 (c8954e1): Loan application list + LoanOrigination GET endpoint (SCRUM-83)
 
+## Completed (continued)
+- Session 11 deployment (2026-04-01): All 5 new screens deployed and smoke-tested LIVE.
+  Bug fixes applied during deployment:
+  - c70dbd7: AccountService schema rebuild on startup (EnsureDeleted+EnsureCreated when AccountProductTypes missing); 6 product types seeded; ReferenceHandler.IgnoreCycles in both AccountService and UAM
+  - af2c648: LoanService DB migrations on startup (db.Database.Migrate() added to Program.cs); LoanServiceDb created in Postgres
+  - nginx --force-recreate needed to pick up new location blocks (reload not sufficient for bind-mount)
+  All endpoints verified: Login ✅ /api/users ✅ /api/account ✅ /api/LoanOrigination ✅ /api/ledger/balances ✅ Frontend ✅
+
+## Completed (continued)
+- Multi-Tenancy session 12 (2026-04-04): Schema-per-tenant isolation implemented across UAM + 4 core services.
+  - UAM: Tenant table, 3 tenants seeded (public/ucb_demo/nbfc_demo), TenantId on User, JWT gains tenant_id claim
+  - AccountService, CustomerService, LoanService, TransactionService: TenantResolutionMiddleware, IModelCacheKeyFactory, HasDefaultSchema per request, TenantSchemaProvisioner (CREATE SCHEMA + MigrateAsync on startup)
+  - Frontend: resolveTenantName in authSlice, bankName in Header.tsx shows "UCB Cooperative Bank" / "SaaR NBFC" per login
+  - Demo users: admin/maker@ucb-demo.com (ucb123), admin/maker@nbfc-demo.com (nbfc123)
+
 ## In Progress
-- Deploy updated containers to demobank.saaritsolutions.com (git pull + docker compose build + up)
+- Update Jira stories SCRUM-2,3,4,80,81,82,83 to Done with commit hashes
 
 ## Pending Next
-- Deploy to demobank: git pull → docker compose build useraccessmanagement accountservice frontend → up -d
 - Update Jira stories SCRUM-2,3,4,80,81,82,83 to Done with commit hashes
-- Verify all 5 screens at demobank.saaritsolutions.com post-deploy
-- Next architecture batch: Maker-Checker workflow engine (SCRUM-9 to SCRUM-16), full parametrization (SCRUM-24 to SCRUM-31)
+- Deploy multi-tenancy to Hetzner VPS (docker-compose up --build)
+- Deposit Account Management — SB/FD/RD lifecycle (SCRUM-93 to SCRUM-99)
+- Maker-Checker workflow engine (SCRUM-9 to SCRUM-16)
 
 ## Notes
 - Eligibility expression ID currently in use: EXPR_1755237353842.
