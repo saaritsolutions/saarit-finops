@@ -60,6 +60,7 @@ namespace UserAccessManagementService.Controllers
                     firstName,
                     lastName  = "User",
                     roles,
+                    tenantId  = user.TenantId,
                     isActive  = user.IsActive,
                 },
             });
@@ -82,6 +83,7 @@ namespace UserAccessManagementService.Controllers
                 new(JwtRegisteredClaimNames.Email, user.Email),
                 new(JwtRegisteredClaimNames.Name,  user.Username),
                 new(JwtRegisteredClaimNames.Jti,   Guid.NewGuid().ToString()),
+                new("tenant_id", user.TenantId),
             };
             foreach (var role in roles)
                 claims.Add(new Claim(ClaimTypes.Role, role));

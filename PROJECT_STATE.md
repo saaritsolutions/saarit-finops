@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-03-30 (session 10 — demo-focused architecture Jira implementation)
+**Last Updated:** 2026-04-04 (session 12 — multi-tenancy schema-per-tenant)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -57,7 +57,7 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 - Card/ATM processing
 - Remittance/Payments
 - HRMS
-- Multi-tenancy
+- Maker-Checker enforcement (SCRUM-9 to SCRUM-16)
 
 ---
 

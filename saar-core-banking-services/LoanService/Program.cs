@@ -1,8 +1,36 @@
 using LoanService.Data;
 using LoanService.Services;
+using LoanService.Middleware;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ── JWT (read tenant_id claim — same config as UAM) ───────────────────────────
+var jwtSecret   = builder.Configuration["Jwt:Secret"]   ?? "SaarCoreBankingJwtSecret2026DemoKeyLongEnoughForHS256";
+var jwtIssuer   = builder.Configuration["Jwt:Issuer"]   ?? "saar-banking";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "saar-banking-clients";
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(opts =>
+    {
+        opts.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer           = true,
+            ValidateAudience         = true,
+            ValidateLifetime         = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer              = jwtIssuer,
+            ValidAudience            = jwtAudience,
+            IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+        };
+    });
+
+// ── Multi-tenancy ─────────────────────────────────────────────────────────────
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<LoanService.Services.ITenantService, LoanService.Services.HttpContextTenantService>();
 
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -86,12 +114,11 @@ else
 
 var app = builder.Build();
 
-// Apply EF migrations on startup (creates LoanApplications table if not present)
+// Apply EF migrations + provision tenant schemas on startup
 if (!app.Environment.IsEnvironment("IntegrationTesting"))
 {
     using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<LoanDbContext>();
-    db.Database.Migrate();
+    await TenantSchemaProvisioner.ProvisionAllSchemasAsync(scope.ServiceProvider);
 }
 
 // Enable Swagger in all environments for demos/testing
@@ -104,7 +131,9 @@ if (!app.Environment.IsEnvironment("IntegrationTesting"))
 }
 app.UseRouting();
 app.UseCors(CorsPolicy);
+app.UseAuthentication();
 app.UseAuthorization();
+app.UseTenantResolution();
 app.MapControllers();
 
 var summaries = new[]

@@ -1,8 +1,33 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 using AccountService.Data;
 using AccountService.Models;
+using AccountService.Services;
+using AccountService.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ── JWT (same secret/issuer/audience as UAM — needed to read tenant_id claim) ─
+var jwtSecret   = builder.Configuration["Jwt:Secret"]   ?? "SaarCoreBankingJwtSecret2026DemoKeyLongEnoughForHS256";
+var jwtIssuer   = builder.Configuration["Jwt:Issuer"]   ?? "saar-banking";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "saar-banking-clients";
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(opts =>
+    {
+        opts.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer           = true,
+            ValidateAudience         = true,
+            ValidateLifetime         = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer              = jwtIssuer,
+            ValidAudience            = jwtAudience,
+            IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+        };
+    });
 
 // Add services to the container.
 builder.Services.AddControllers()
@@ -11,6 +36,10 @@ builder.Services.AddControllers()
             System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// ── Multi-tenancy ─────────────────────────────────────────────────────────────
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ITenantService, HttpContextTenantService>();
 
 // Add PostgreSQL DbContext
 builder.Services.AddDbContext<AccountDbContext>(options =>
@@ -38,40 +67,10 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Apply migrations on startup; if schema is out-of-date (missing tables from model
-// changes after InitialCreate), drop and recreate. Acceptable for demo environment.
+// ── Startup: provision tenant schemas + seed data ────────────────────────────
 using (var scope = app.Services.CreateScope())
 {
-    var context = scope.ServiceProvider.GetRequiredService<AccountDbContext>();
-    try
-    {
-        context.Database.Migrate();
-        // Probe for a table that wasn't in InitialCreate — if it doesn't exist, schema is stale
-        _ = context.AccountProductTypes.Count();
-    }
-    catch
-    {
-        // Schema is stale or tables are missing — wipe and recreate from current EF model
-        context.Database.EnsureDeleted();
-        context.Database.EnsureCreated();
-    }
-    await SeedProductTypes(context);
-}
-
-async Task SeedProductTypes(AccountDbContext db)
-{
-    if (db.AccountProductTypes.Any()) return;
-    var products = new[]
-    {
-        new AccountProductType { Name = "Savings",  Description = "Standard savings account", MinimumOpeningAmount = 500,   IsActive = true },
-        new AccountProductType { Name = "Current",  Description = "Current/OD account",        MinimumOpeningAmount = 5000,  IsActive = true },
-        new AccountProductType { Name = "FD",       Description = "Fixed deposit",              MinimumOpeningAmount = 1000,  IsActive = true },
-        new AccountProductType { Name = "RD",       Description = "Recurring deposit",          MinimumOpeningAmount = 500,   IsActive = true },
-        new AccountProductType { Name = "NRE",      Description = "Non-resident external",      MinimumOpeningAmount = 10000, IsActive = true },
-        new AccountProductType { Name = "NRO",      Description = "Non-resident ordinary",      MinimumOpeningAmount = 10000, IsActive = true },
-    };
-    db.AccountProductTypes.AddRange(products);
-    await db.SaveChangesAsync();
+    await TenantSchemaProvisioner.ProvisionAllSchemasAsync(scope.ServiceProvider);
 }
 
 // Configure the HTTP request pipeline.
@@ -82,7 +81,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowFrontend");
+app.UseAuthentication();
 app.UseAuthorization();
+app.UseTenantResolution();
 app.MapControllers();
 
 app.Run();

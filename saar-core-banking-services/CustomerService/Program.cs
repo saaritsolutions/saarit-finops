@@ -1,12 +1,41 @@
-using CustomerService.Data;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using CustomerService.Data;
+using CustomerService.Services;
+using CustomerService.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ── JWT (read tenant_id claim — same config as UAM) ───────────────────────────
+var jwtSecret   = builder.Configuration["Jwt:Secret"]   ?? "SaarCoreBankingJwtSecret2026DemoKeyLongEnoughForHS256";
+var jwtIssuer   = builder.Configuration["Jwt:Issuer"]   ?? "saar-banking";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "saar-banking-clients";
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(opts =>
+    {
+        opts.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer           = true,
+            ValidateAudience         = true,
+            ValidateLifetime         = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer              = jwtIssuer,
+            ValidAudience            = jwtAudience,
+            IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+        };
+    });
 
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// ── Multi-tenancy ─────────────────────────────────────────────────────────────
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ITenantService, HttpContextTenantService>();
 
 // Configure PostgreSQL DbContext
 builder.Services.AddDbContext<CustomerDbContext>(options =>
@@ -25,11 +54,10 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Apply migrations on startup for CI environment
+// ── Startup: provision tenant schemas ────────────────────────────────────────
 using (var scope = app.Services.CreateScope())
 {
-    var context = scope.ServiceProvider.GetRequiredService<CustomerDbContext>();
-    context.Database.Migrate();
+    await TenantSchemaProvisioner.ProvisionAllSchemasAsync(scope.ServiceProvider);
 }
 
 // Configure the HTTP request pipeline.
@@ -40,11 +68,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
 app.UseCors("AllowAll");
-
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseTenantResolution();
 app.MapControllers();
 
 app.Run();

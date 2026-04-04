@@ -1,8 +1,36 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 using TransactionService.Data;
 using TransactionService.Services;
+using TransactionService.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ── JWT (read tenant_id claim — same config as UAM) ───────────────────────────
+var jwtSecret   = builder.Configuration["Jwt:Secret"]   ?? "SaarCoreBankingJwtSecret2026DemoKeyLongEnoughForHS256";
+var jwtIssuer   = builder.Configuration["Jwt:Issuer"]   ?? "saar-banking";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "saar-banking-clients";
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(opts =>
+    {
+        opts.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer           = true,
+            ValidateAudience         = true,
+            ValidateLifetime         = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer              = jwtIssuer,
+            ValidAudience            = jwtAudience,
+            IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+        };
+    });
+
+// ── Multi-tenancy ─────────────────────────────────────────────────────────────
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ITenantService, HttpContextTenantService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -76,20 +104,29 @@ app.UseSwaggerUI(c =>
 
 // app.UseHttpsRedirection();   // disabled for local HTTP demo
 app.UseCors("ReactFrontend");
+app.UseAuthentication();
 app.UseAuthorization();
+app.UseTenantResolution();
 app.MapControllers();
 
 // ── Health endpoint ──────────────────────────────────────────────────────────
 app.MapGet("/health", () => Results.Json(new { status = "ok", service = "TransactionService" }));
 
-// ── Startup: ensure DB + seed chart of accounts ──────────────────────────────
+// ── Startup: provision tenant schemas + seed chart of accounts ───────────────
 using var scope = app.Services.CreateScope();
-var db = scope.ServiceProvider.GetRequiredService<TransactionDbContext>();
 try
 {
-    await db.Database.EnsureCreatedAsync();
-    var seed = scope.ServiceProvider.GetRequiredService<LedgerSeedService>();
-    await seed.SeedAsync();
+    await TenantSchemaProvisioner.ProvisionAllSchemasAsync(scope.ServiceProvider);
+    // Seed chart of accounts in each tenant schema
+    var txnOptions = scope.ServiceProvider.GetRequiredService<Microsoft.EntityFrameworkCore.DbContextOptions<TransactionDbContext>>();
+    var loggerFactory = scope.ServiceProvider.GetRequiredService<ILoggerFactory>();
+    foreach (var tenantId in new[] { "public", "ucb_demo", "nbfc_demo" })
+    {
+        using var tenantCtx = new TransactionDbContext(txnOptions, new StaticTenantService(tenantId));
+        var seedLogger = loggerFactory.CreateLogger<LedgerSeedService>();
+        var seed = new LedgerSeedService(tenantCtx, seedLogger);
+        await seed.SeedAsync();
+    }
 }
 catch (Exception ex)
 {

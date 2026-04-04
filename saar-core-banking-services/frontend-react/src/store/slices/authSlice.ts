@@ -33,6 +33,12 @@ const ALL_PERMISSIONS = [
   'admin.expressions',
 ];
 
+function resolveTenantName(tenantId?: string): string {
+  if (tenantId === 'ucb_demo')  return 'UCB Cooperative Bank';
+  if (tenantId === 'nbfc_demo') return 'SaaR NBFC';
+  return 'SaaR Core Banking';
+}
+
 function buildPermissionsFromRoles(roles: string[]): string[] {
   if (roles.includes('Admin')) return ALL_PERMISSIONS;
   if (roles.includes('Maker')) return [
@@ -120,6 +126,8 @@ export const loginUser = createAsyncThunk(
         const roleNames: string[] = data.user?.roles ?? ['Admin'];
         const permissions = buildPermissionsFromRoles(roleNames);
 
+        const tenantId   = data.user.tenantId ?? 'public';
+        const tenantName = resolveTenantName(tenantId);
         return {
           user: {
             id:          data.user.id,
@@ -138,6 +146,8 @@ export const loginUser = createAsyncThunk(
             branch:      'Head Office',
             createdAt:   new Date(),
             updatedAt:   new Date(),
+            tenantId,
+            tenantName,
           } as User,
           token:         data.token,
           permissions,

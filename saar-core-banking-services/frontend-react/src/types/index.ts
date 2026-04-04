@@ -187,7 +187,8 @@ export interface User extends BaseEntity {
   roles: Role[];
   permissions: Permission[];
   status: UserStatus;
-  tenantId?: string; // Added for multi-tenant support
+  tenantId?: string;   // Added for multi-tenant support
+  tenantName?: string; // Resolved display name, e.g. "UCB Cooperative Bank"
   lastLoginAt?: Date;
   department?: string;
   branch?: string;
