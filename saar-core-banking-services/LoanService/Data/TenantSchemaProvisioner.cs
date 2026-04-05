@@ -15,8 +15,14 @@ namespace LoanService.Data
 
         private static async Task ProvisionSchemaAsync(IServiceProvider services, string tenantId)
         {
-            var options = services.GetRequiredService<DbContextOptions<LoanDbContext>>();
-            using var context = new LoanDbContext(options, new StaticTenantService(tenantId));
+            var baseOptions = services.GetRequiredService<DbContextOptions<LoanDbContext>>();
+
+            string tenantConnStr;
+            using (var tmp = new LoanDbContext(baseOptions, new StaticTenantService(tenantId)))
+                tenantConnStr = new Npgsql.NpgsqlConnectionStringBuilder(tmp.Database.GetConnectionString()!) { SearchPath = tenantId }.ToString();
+
+            var tenantOptsBuilder = new DbContextOptionsBuilder<LoanDbContext>().UseNpgsql(tenantConnStr);
+            using var context = new LoanDbContext(tenantOptsBuilder.Options, new StaticTenantService(tenantId));
 
             var conn = context.Database.GetDbConnection();
             await conn.OpenAsync();

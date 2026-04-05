@@ -15,8 +15,14 @@ namespace CustomerService.Data
 
         private static async Task ProvisionSchemaAsync(IServiceProvider services, string tenantId)
         {
-            var options = services.GetRequiredService<DbContextOptions<CustomerDbContext>>();
-            using var context = new CustomerDbContext(options, new StaticTenantService(tenantId));
+            var baseOptions = services.GetRequiredService<DbContextOptions<CustomerDbContext>>();
+
+            string tenantConnStr;
+            using (var tmp = new CustomerDbContext(baseOptions, new StaticTenantService(tenantId)))
+                tenantConnStr = new Npgsql.NpgsqlConnectionStringBuilder(tmp.Database.GetConnectionString()!) { SearchPath = tenantId }.ToString();
+
+            var tenantOptsBuilder = new DbContextOptionsBuilder<CustomerDbContext>().UseNpgsql(tenantConnStr);
+            using var context = new CustomerDbContext(tenantOptsBuilder.Options, new StaticTenantService(tenantId));
 
             var conn = context.Database.GetDbConnection();
             await conn.OpenAsync();

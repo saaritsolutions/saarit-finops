@@ -15,8 +15,16 @@ namespace AccountService.Data
 
         private static async Task ProvisionSchemaAsync(IServiceProvider services, string tenantId)
         {
-            var options = services.GetRequiredService<DbContextOptions<AccountDbContext>>();
-            using var context = new AccountDbContext(options, new StaticTenantService(tenantId));
+            var baseOptions = services.GetRequiredService<DbContextOptions<AccountDbContext>>();
+
+            // Build a tenant-specific connection string with search_path set.
+            // This ensures unqualified table names in migration SQL resolve to the tenant schema.
+            string tenantConnStr;
+            using (var tmp = new AccountDbContext(baseOptions, new StaticTenantService(tenantId)))
+                tenantConnStr = new Npgsql.NpgsqlConnectionStringBuilder(tmp.Database.GetConnectionString()!) { SearchPath = tenantId }.ToString();
+
+            var tenantOptsBuilder = new DbContextOptionsBuilder<AccountDbContext>().UseNpgsql(tenantConnStr);
+            using var context = new AccountDbContext(tenantOptsBuilder.Options, new StaticTenantService(tenantId));
 
             // 1. Create the PostgreSQL schema if it does not exist
             var conn = context.Database.GetDbConnection();
@@ -26,7 +34,7 @@ namespace AccountService.Data
             await cmd.ExecuteNonQueryAsync();
             await conn.CloseAsync();
 
-            // 2. Apply all pending EF migrations for this schema
+            // 2. Apply all pending EF migrations (search_path routes table creation to tenant schema)
             await context.Database.MigrateAsync();
 
             // 3. Seed product types (idempotent)
