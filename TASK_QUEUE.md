@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-05 (session 14 — world-class UI redesign complete)
+**Last Updated:** 2026-04-05 (session 14 cont. — UI redesign deployed LIVE)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,14 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Deploy UI to Hetzner** — `docker compose up -d --build frontend` | UI redesign done; push live for investor demo |
-| 2 | **[RBI-02] Deposit Account Management** — SB/FD/RD lifecycle (SCRUM-93 to SCRUM-99) | Core banking function; show real deposit products |
-| 3 | **Maker-Checker workflow engine** (SCRUM-9 to SCRUM-16) | Required for any real approval flow |
+| 1 | **[RBI-02] Deposit Account Management** — SB/FD/RD lifecycle (SCRUM-93 to SCRUM-99) | Core banking function; show real deposit products |
+| 2 | **Maker-Checker workflow engine** (SCRUM-9 to SCRUM-16) | Required for any real approval flow |
+| 3 | **APIGateway** — JWT validation + route table + correlation ID logging | Security foundation before adding more services |
+
+### Recently Completed (session 14 cont. — 2026-04-05)
+- [x] **UI redesign deployed to Hetzner** — all 11 containers healthy, demobank.saaritsolutions.com LIVE with new design
+  - Fix: Dockerfile `npm ci` → `npm install --legacy-peer-deps` (npm 11 lock file vs Docker npm 10 mismatch)
+  - Commits: `444db60` (redesign), `b257255` (Dockerfile fix)
 
 ### Recently Completed (session 14 — 2026-04-05)
 - [x] **World-class UI redesign** — Stripe/Linear aesthetic across all screens

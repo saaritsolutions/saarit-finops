@@ -95,12 +95,16 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - Loan Origination: custom step indicator, section headers, styled EMI panel, document upload
   - Common components: StatCard, PageHeader, EmptyState created
   - recharts@2.15.3 added to package.json
+  - Commit: 444db60
+- UI redesign deployed to Hetzner (session 14 cont., 2026-04-05): World-class UI live at demobank.saaritsolutions.com.
+  - Fix: Dockerfile switched from `npm ci` to `npm install --legacy-peer-deps` (npm 11 lock file incompatible with Docker node:20-alpine npm 10)
+  - Build time: ~108s webpack compilation; all 11 containers healthy
+  - Commit: b257255
 
 ## In Progress
 - (none)
 
 ## Pending Next
-- Deploy UI redesign to Hetzner (`docker compose up -d --build frontend`)
 - Deposit Account Management — SB/FD/RD lifecycle (SCRUM-93 to SCRUM-99)
 - Maker-Checker workflow engine (SCRUM-9 to SCRUM-16)
 
