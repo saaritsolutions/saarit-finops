@@ -85,10 +85,22 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - SearchPath=tenantId in connection strings routes unqualified migration DDL to correct tenant schema
   - Commits: 6ead6b8 (SearchPath + ConfigureWarnings + AddAccountServiceSchema migration), 767c5d4 (__EFMigrationsHistory pre-create fix)
 
+## Completed (continued)
+- World-class UI redesign (session 14, 2026-04-05): Stripe/Linear aesthetic applied across all screens for investor demo.
+  - Theme: Inter font, #2563EB blue, slate neutrals, custom shadow system, dark mode tokens
+  - Sidebar: permanent on desktop (260px/68px), section labels, active left-border accent, collapse toggle
+  - Header: white AppBar, center search bar, tenant chip with color coding, notification panel, user dropdown
+  - Dashboard: KPI StatCards with trend badges, Recharts AreaChart + BarChart, activity timeline, quick actions
+  - Account Management: filter bar, status chips, skeleton loaders, EmptyState component
+  - Loan Origination: custom step indicator, section headers, styled EMI panel, document upload
+  - Common components: StatCard, PageHeader, EmptyState created
+  - recharts@2.15.3 added to package.json
+
 ## In Progress
 - (none)
 
 ## Pending Next
+- Deploy UI redesign to Hetzner (`docker compose up -d --build frontend`)
 - Deposit Account Management — SB/FD/RD lifecycle (SCRUM-93 to SCRUM-99)
 - Maker-Checker workflow engine (SCRUM-9 to SCRUM-16)
 

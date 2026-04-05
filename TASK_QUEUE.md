@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-04 (session 13 — multi-tenancy LIVE on Hetzner)
+**Last Updated:** 2026-04-05 (session 14 — world-class UI redesign complete)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,8 +11,22 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **[RBI-02] Deposit Account Management** — SB/FD/RD lifecycle (SCRUM-93 to SCRUM-99) | Core banking function; show real deposit products |
-| 2 | **Maker-Checker workflow engine** (SCRUM-9 to SCRUM-16) | Required for any real approval flow |
+| 1 | **Deploy UI to Hetzner** — `docker compose up -d --build frontend` | UI redesign done; push live for investor demo |
+| 2 | **[RBI-02] Deposit Account Management** — SB/FD/RD lifecycle (SCRUM-93 to SCRUM-99) | Core banking function; show real deposit products |
+| 3 | **Maker-Checker workflow engine** (SCRUM-9 to SCRUM-16) | Required for any real approval flow |
+
+### Recently Completed (session 14 — 2026-04-05)
+- [x] **World-class UI redesign** — Stripe/Linear aesthetic across all screens
+  - Theme: Inter font, #2563EB blue, slate neutrals, shadow system, dark mode (theme.ts full rewrite)
+  - Sidebar: permanent 260/68px, section labels, left-border active state, collapse toggle (Sidebar.tsx rewrite)
+  - Header: white AppBar, search bar, tenant chip, notification panel, avatar+chevron (Header.tsx rewrite)
+  - Layout: permanent sidebar on desktop with smooth content shift (Layout.tsx updated)
+  - Dashboard: KPI StatCards, Recharts AreaChart + BarChart, timeline, quick actions (Dashboard.tsx rewrite)
+  - Account Management: filter bar, status chips (StatusChip), skeleton loaders, EmptyState (AccountManagement.tsx polish)
+  - Loan Origination: custom step indicator, section headers, EMI panel, document upload (LoanOrigination.tsx polish)
+  - Common: StatCard, PageHeader, EmptyState new components
+  - Cross-cutting: Inter body font, thin scrollbar, page fade-in, recharts styles (index.css)
+  - recharts@2.15.3 added, installed, TS errors fixed
 
 ### Recently Completed (session 13 — 2026-04-04)
 - [x] **Multi-tenancy deployed to Hetzner** — All 11 containers LIVE, 3 schemas per service
