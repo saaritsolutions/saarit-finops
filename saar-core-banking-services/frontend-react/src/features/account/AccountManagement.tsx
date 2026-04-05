@@ -17,6 +17,7 @@ import {
   MenuItem,
   Paper,
   Select,
+  Skeleton,
   Switch,
   Table,
   TableBody,
@@ -27,49 +28,95 @@ import {
   TextField,
   Tooltip,
   Typography,
+  InputAdornment,
+  useTheme,
 } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import LockIcon from '@mui/icons-material/Lock';
+import AddIcon          from '@mui/icons-material/Add';
+import EditIcon         from '@mui/icons-material/Edit';
+import DeleteIcon       from '@mui/icons-material/Delete';
+import CheckCircleIcon  from '@mui/icons-material/CheckCircle';
+import LockIcon         from '@mui/icons-material/Lock';
+import SearchIcon       from '@mui/icons-material/Search';
+import AccountBoxIcon   from '@mui/icons-material/AccountBox';
 import { accountService, AccountRecord, CreateAccountDto } from '../../services/accountService';
+import PageHeader from '../../components/common/PageHeader';
+import EmptyState from '../../components/common/EmptyState';
 
-// ── Status chip colours ────────────────────────────────────────────────────────
-const statusColour = (s?: string): 'success' | 'warning' | 'error' | 'default' => {
-  const m: Record<string, 'success' | 'warning' | 'error' | 'default'> = {
-    Active: 'success', Approved: 'success',
-    Pending: 'warning',
-    Frozen: 'error', Closed: 'error', Rejected: 'error',
-  };
-  return m[s ?? ''] ?? 'default';
+// ─── Design tokens ─────────────────────────────────────────────────────────
+const SLATE_200 = '#E2E8F0';
+const SLATE_400 = '#94A3B8';
+const SLATE_500 = '#64748B';
+
+// ─── Status config ──────────────────────────────────────────────────────────
+const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string }> = {
+  Active:   { bg: '#ECFDF5', text: '#059669', border: '#10B98120' },
+  Approved: { bg: '#ECFDF5', text: '#059669', border: '#10B98120' },
+  Pending:  { bg: '#FFFBEB', text: '#D97706', border: '#F59E0B20' },
+  Frozen:   { bg: '#FEF2F2', text: '#DC2626', border: '#EF444420' },
+  Closed:   { bg: '#F8FAFC', text: '#64748B', border: '#94A3B820' },
+  Rejected: { bg: '#FEF2F2', text: '#DC2626', border: '#EF444420' },
 };
 
+const StatusChip: React.FC<{ label?: string }> = ({ label = 'Unknown' }) => {
+  const cfg = STATUS_CONFIG[label] ?? { bg: '#F8FAFC', text: '#64748B', border: '#94A3B820' };
+  return (
+    <Box
+      component="span"
+      sx={{
+        display:         'inline-flex',
+        alignItems:      'center',
+        px:              1,
+        py:              0.25,
+        borderRadius:    6,
+        fontSize:        '0.75rem',
+        fontWeight:      600,
+        backgroundColor: cfg.bg,
+        color:           cfg.text,
+        border:          `1px solid ${cfg.border}`,
+        letterSpacing:   '0.01em',
+      }}
+    >
+      {label}
+    </Box>
+  );
+};
+
+// ─── Constants ──────────────────────────────────────────────────────────────
 const PRODUCT_TYPES = ['Savings', 'Current', 'FD', 'RD', 'NRE', 'NRO', 'FCNR'];
 const MODES         = ['SingleOperator', 'JointOperator', 'JointOperatorEither', 'Guardian'];
 
 const BLANK: CreateAccountDto = {
-  accountNumber:    '',
-  customerId:       0,
-  productTypeId:    undefined,
-  balance:          0,
-  modeOfOperation:  'SingleOperator',
-  isMinor:          false,
+  accountNumber:     '',
+  customerId:        0,
+  productTypeId:     undefined,
+  balance:           0,
+  modeOfOperation:   'SingleOperator',
+  isMinor:           false,
   legalGuardianName: '',
   branchId:          undefined,
 };
 
-const AccountManagement: React.FC = () => {
-  const [accounts, setAccounts]       = useState<AccountRecord[]>([]);
-  const [loading, setLoading]         = useState(true);
-  const [error, setError]             = useState<string | null>(null);
-  const [dialogOpen, setDialogOpen]   = useState(false);
-  const [editing, setEditing]         = useState<AccountRecord | null>(null);
-  const [form, setForm]               = useState<CreateAccountDto>(BLANK);
-  const [saving, setSaving]           = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
+type StatusFilter = 'All' | 'Active' | 'Pending' | 'Closed' | 'Frozen';
+const STATUS_FILTERS: StatusFilter[] = ['All', 'Active', 'Pending', 'Closed', 'Frozen'];
 
-  // ── Load ─────────────────────────────────────────────────────────────────────
+// ─── Component ──────────────────────────────────────────────────────────────
+
+const AccountManagement: React.FC = () => {
+  const theme  = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+
+  const [accounts,      setAccounts]      = useState<AccountRecord[]>([]);
+  const [loading,       setLoading]       = useState(true);
+  const [error,         setError]         = useState<string | null>(null);
+  const [dialogOpen,    setDialogOpen]    = useState(false);
+  const [editing,       setEditing]       = useState<AccountRecord | null>(null);
+  const [form,          setForm]          = useState<CreateAccountDto>(BLANK);
+  const [saving,        setSaving]        = useState(false);
+  const [actionError,   setActionError]   = useState<string | null>(null);
+  const [searchQuery,   setSearchQuery]   = useState('');
+  const [statusFilter,  setStatusFilter]  = useState<StatusFilter>('All');
+
+  // ── Load ──────────────────────────────────────────────────────────────────
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -84,7 +131,18 @@ const AccountManagement: React.FC = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  // ── Dialog ───────────────────────────────────────────────────────────────────
+  // ── Filtering ─────────────────────────────────────────────────────────────
+  const filtered = accounts.filter(acc => {
+    const q = searchQuery.toLowerCase();
+    const matchSearch = !q
+      || (acc.accountNumber ?? '').toLowerCase().includes(q)
+      || String(acc.customerId).includes(q)
+      || (acc.productType?.name ?? '').toLowerCase().includes(q);
+    const matchStatus = statusFilter === 'All' || acc.status === statusFilter;
+    return matchSearch && matchStatus;
+  });
+
+  // ── Dialog helpers ────────────────────────────────────────────────────────
   const openCreate = () => {
     setEditing(null);
     setForm(BLANK);
@@ -95,12 +153,12 @@ const AccountManagement: React.FC = () => {
   const openEdit = (acc: AccountRecord) => {
     setEditing(acc);
     setForm({
-      accountNumber:    acc.accountNumber ?? '',
-      customerId:       acc.customerId,
-      productTypeId:    acc.productTypeId,
-      balance:          acc.balance,
-      modeOfOperation:  acc.modeOfOperation ?? 'SingleOperator',
-      isMinor:          acc.isMinor ?? false,
+      accountNumber:     acc.accountNumber ?? '',
+      customerId:        acc.customerId,
+      productTypeId:     acc.productTypeId,
+      balance:           acc.balance,
+      modeOfOperation:   acc.modeOfOperation ?? 'SingleOperator',
+      isMinor:           acc.isMinor ?? false,
       legalGuardianName: '',
       branchId:          acc.branchId,
     });
@@ -129,122 +187,187 @@ const AccountManagement: React.FC = () => {
     }
   };
 
-  // ── Row actions ───────────────────────────────────────────────────────────────
+  // ── Row actions ────────────────────────────────────────────────────────────
   const handleDelete = async (acc: AccountRecord) => {
     if (!window.confirm(`Delete account ${acc.accountNumber ?? acc.accountId}?`)) return;
-    try {
-      await accountService.remove(acc.accountId);
-      await load();
-    } catch (e: any) {
-      setError(e?.response?.data ?? e?.message ?? 'Delete failed.');
-    }
+    try { await accountService.remove(acc.accountId); await load(); }
+    catch (e: any) { setError(e?.response?.data ?? e?.message ?? 'Delete failed.'); }
   };
 
   const handleApprove = async (acc: AccountRecord) => {
-    try {
-      await accountService.approve(acc.accountId);
-      await load();
-    } catch (e: any) {
-      setError(e?.response?.data ?? e?.message ?? 'Approve failed.');
-    }
+    try { await accountService.approve(acc.accountId); await load(); }
+    catch (e: any) { setError(e?.response?.data ?? e?.message ?? 'Approve failed.'); }
   };
 
   const handleClose = async (acc: AccountRecord) => {
     if (!window.confirm(`Close account ${acc.accountNumber ?? acc.accountId}? This cannot be undone.`)) return;
-    try {
-      await accountService.close(acc.accountId);
-      await load();
-    } catch (e: any) {
-      setError(e?.response?.data ?? e?.message ?? 'Close failed.');
-    }
+    try { await accountService.close(acc.accountId); await load(); }
+    catch (e: any) { setError(e?.response?.data ?? e?.message ?? 'Close failed.'); }
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────────
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <Box>
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" fontWeight={600}>Account Management</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
-          New Account
-        </Button>
-      </Box>
+      <PageHeader
+        title="Account Management"
+        subtitle="View and manage customer accounts across all product types"
+        breadcrumbs={[{ label: 'Banking' }, { label: 'Account Management' }]}
+        actions={
+          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
+            New Account
+          </Button>
+        }
+      />
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>
       )}
 
+      {/* Filter bar */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2.5, flexWrap: 'wrap' }}>
+        <TextField
+          size="small"
+          placeholder="Search by account #, customer, product…"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon sx={{ fontSize: 16, color: isDark ? SLATE_500 : SLATE_400 }} />
+              </InputAdornment>
+            ),
+          }}
+          sx={{ minWidth: 280 }}
+        />
+        <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+          {STATUS_FILTERS.map(s => {
+            const active = statusFilter === s;
+            const cfg    = s !== 'All' ? (STATUS_CONFIG[s] ?? {}) : null;
+            return (
+              <Chip
+                key={s}
+                label={s}
+                size="small"
+                onClick={() => setStatusFilter(s)}
+                sx={{
+                  height:          28,
+                  fontWeight:      active ? 600 : 500,
+                  fontSize:        '0.8125rem',
+                  cursor:          'pointer',
+                  backgroundColor: active
+                    ? (cfg ? cfg.bg : (isDark ? '#1E3A5F' : '#EFF6FF'))
+                    : (isDark ? '#1F2937' : '#F8FAFC'),
+                  color: active
+                    ? (cfg ? cfg.text : '#2563EB')
+                    : (isDark ? SLATE_400 : SLATE_500),
+                  border: active
+                    ? `1px solid ${cfg ? cfg.border : '#2563EB30'}`
+                    : `1px solid ${isDark ? '#1F2937' : SLATE_200}`,
+                  '&:hover': {
+                    backgroundColor: cfg ? cfg.bg : (isDark ? '#1E3A5F' : '#EFF6FF'),
+                    color:           cfg ? cfg.text : '#2563EB',
+                  },
+                }}
+              />
+            );
+          })}
+        </Box>
+        <Typography sx={{ fontSize: '0.8125rem', color: isDark ? SLATE_500 : SLATE_400, ml: 'auto' }}>
+          {loading ? '—' : `${filtered.length} account${filtered.length !== 1 ? 's' : ''}`}
+        </Typography>
+      </Box>
+
+      {/* Table */}
       {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
-          <CircularProgress />
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {[...Array(5)].map((_, i) => (
+            <Skeleton key={i} variant="rectangular" height={44} sx={{ borderRadius: 2 }} />
+          ))}
         </Box>
       ) : (
-        <TableContainer component={Paper}>
+        <TableContainer
+          component={Paper}
+          sx={{
+            border:       `1px solid ${isDark ? '#1F2937' : SLATE_200}`,
+            borderRadius: 2,
+            boxShadow:    'none',
+            overflow:     'hidden',
+          }}
+        >
           <Table size="small">
             <TableHead>
-              <TableRow sx={{ '& th': { fontWeight: 700, bgcolor: 'grey.50' } }}>
-                <TableCell>Account #</TableCell>
-                <TableCell>Customer ID</TableCell>
-                <TableCell>Product Type</TableCell>
-                <TableCell align="right">Balance (₹)</TableCell>
-                <TableCell>Mode</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Approval</TableCell>
-                <TableCell align="center">Actions</TableCell>
+              <TableRow>
+                {['Account #', 'Customer', 'Product Type', 'Balance (₹)', 'Mode', 'Status', 'Approval', 'Actions'].map(h => (
+                  <TableCell key={h} align={h === 'Balance (₹)' ? 'right' : h === 'Actions' ? 'center' : 'left'}>
+                    {h}
+                  </TableCell>
+                ))}
               </TableRow>
             </TableHead>
             <TableBody>
-              {accounts.length === 0 ? (
+              {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 5, color: 'text.secondary' }}>
-                    No accounts yet — click <strong>New Account</strong> to create one.
+                  <TableCell colSpan={8} sx={{ p: 0, border: 0 }}>
+                    <EmptyState
+                      icon={<AccountBoxIcon sx={{ fontSize: 40 }} />}
+                      title={searchQuery || statusFilter !== 'All' ? 'No matching accounts' : 'No accounts yet'}
+                      description={
+                        searchQuery || statusFilter !== 'All'
+                          ? 'Try adjusting your search or filter criteria.'
+                          : 'Create your first account by clicking New Account above.'
+                      }
+                      actionLabel={searchQuery || statusFilter !== 'All' ? undefined : 'New Account'}
+                      onAction={searchQuery || statusFilter !== 'All' ? undefined : openCreate}
+                    />
                   </TableCell>
                 </TableRow>
               ) : (
-                accounts.map(acc => (
-                  <TableRow key={acc.accountId} hover>
-                    <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                filtered.map(acc => (
+                  <TableRow key={acc.accountId}>
+                    <TableCell sx={{ fontFamily: 'ui-monospace,monospace', fontSize: '0.8125rem', fontWeight: 600, color: isDark ? '#93C5FD' : '#2563EB' }}>
                       {acc.accountNumber ?? `ACC-${acc.accountId}`}
                     </TableCell>
-                    <TableCell>{acc.customerId}</TableCell>
-                    <TableCell>{acc.productType?.name ?? `Type ${acc.productTypeId ?? '—'}`}</TableCell>
-                    <TableCell align="right" sx={{ fontFamily: 'monospace' }}>
+                    <TableCell sx={{ fontSize: '0.875rem', color: isDark ? '#F1F5F9' : '#334155' }}>
+                      {acc.customerId}
+                    </TableCell>
+                    <TableCell sx={{ fontSize: '0.875rem' }}>
+                      {acc.productType?.name ?? `Type ${acc.productTypeId ?? '—'}`}
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontFamily: 'ui-monospace,monospace', fontSize: '0.875rem', fontWeight: 600 }}>
                       {acc.balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem' }}>{acc.modeOfOperation ?? '—'}</TableCell>
-                    <TableCell>
-                      <Chip label={acc.status ?? 'Active'} color={statusColour(acc.status)} size="small" />
+                    <TableCell sx={{ fontSize: '0.8125rem', color: isDark ? SLATE_400 : SLATE_500 }}>
+                      {acc.modeOfOperation ?? '—'}
                     </TableCell>
                     <TableCell>
-                      <Chip
-                        label={acc.approvalStatus ?? 'Pending'}
-                        color={statusColour(acc.approvalStatus)}
-                        size="small" variant="outlined"
-                      />
+                      <StatusChip label={acc.status ?? 'Active'} />
+                    </TableCell>
+                    <TableCell>
+                      <StatusChip label={acc.approvalStatus ?? 'Pending'} />
                     </TableCell>
                     <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>
                       <Tooltip title="Edit">
-                        <IconButton size="small" onClick={() => openEdit(acc)}>
-                          <EditIcon fontSize="small" />
+                        <IconButton size="small" onClick={() => openEdit(acc)} sx={{ color: isDark ? SLATE_400 : SLATE_500, '&:hover': { color: '#2563EB' } }}>
+                          <EditIcon sx={{ fontSize: '1rem' }} />
                         </IconButton>
                       </Tooltip>
                       {acc.approvalStatus === 'Pending' && (
-                        <Tooltip title="Approve (Checker action)">
-                          <IconButton size="small" color="success" onClick={() => handleApprove(acc)}>
-                            <CheckCircleIcon fontSize="small" />
+                        <Tooltip title="Approve">
+                          <IconButton size="small" onClick={() => handleApprove(acc)} sx={{ color: '#059669', '&:hover': { color: '#047857', backgroundColor: '#ECFDF5' } }}>
+                            <CheckCircleIcon sx={{ fontSize: '1rem' }} />
                           </IconButton>
                         </Tooltip>
                       )}
                       {acc.status !== 'Closed' && (
                         <Tooltip title="Close Account">
-                          <IconButton size="small" color="warning" onClick={() => handleClose(acc)}>
-                            <LockIcon fontSize="small" />
+                          <IconButton size="small" onClick={() => handleClose(acc)} sx={{ color: '#D97706', '&:hover': { color: '#B45309', backgroundColor: '#FFFBEB' } }}>
+                            <LockIcon sx={{ fontSize: '1rem' }} />
                           </IconButton>
                         </Tooltip>
                       )}
                       <Tooltip title="Delete">
-                        <IconButton size="small" color="error" onClick={() => handleDelete(acc)}>
-                          <DeleteIcon fontSize="small" />
+                        <IconButton size="small" onClick={() => handleDelete(acc)} sx={{ color: isDark ? SLATE_500 : SLATE_400, '&:hover': { color: '#DC2626', backgroundColor: '#FEF2F2' } }}>
+                          <DeleteIcon sx={{ fontSize: '1rem' }} />
                         </IconButton>
                       </Tooltip>
                     </TableCell>
@@ -262,80 +385,44 @@ const AccountManagement: React.FC = () => {
         <DialogContent dividers>
           {actionError && <Alert severity="error" sx={{ mb: 2 }}>{actionError}</Alert>}
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="Account Number" fullWidth size="small"
-                value={form.accountNumber}
-                onChange={e => setForm(f => ({ ...f, accountNumber: e.target.value }))}
-                placeholder="Leave blank to auto-generate"
-              />
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField label="Account Number" fullWidth size="small" value={form.accountNumber} onChange={e => setForm(f => ({ ...f, accountNumber: e.target.value }))} placeholder="Leave blank to auto-generate" />
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="Customer ID *" fullWidth size="small" type="number"
-                value={form.customerId || ''}
-                onChange={e => setForm(f => ({ ...f, customerId: +e.target.value }))}
-              />
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField label="Customer ID *" fullWidth size="small" type="number" value={form.customerId || ''} onChange={e => setForm(f => ({ ...f, customerId: +e.target.value }))} />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth size="small">
                 <InputLabel>Product Type</InputLabel>
-                <Select
-                  label="Product Type"
-                  value={form.productTypeId ?? ''}
-                  onChange={e => setForm(f => ({ ...f, productTypeId: +e.target.value || undefined }))}
-                >
+                <Select label="Product Type" value={form.productTypeId ?? ''} onChange={e => setForm(f => ({ ...f, productTypeId: +e.target.value || undefined }))}>
                   <MenuItem value=""><em>Select type</em></MenuItem>
-                  {PRODUCT_TYPES.map((pt, i) => (
-                    <MenuItem key={pt} value={i + 1}>{pt}</MenuItem>
-                  ))}
+                  {PRODUCT_TYPES.map((pt, i) => <MenuItem key={pt} value={i + 1}>{pt}</MenuItem>)}
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="Opening Balance (₹)" fullWidth size="small" type="number"
-                value={form.balance ?? 0}
-                onChange={e => setForm(f => ({ ...f, balance: +e.target.value }))}
-              />
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField label="Opening Balance (₹)" fullWidth size="small" type="number" value={form.balance ?? 0} onChange={e => setForm(f => ({ ...f, balance: +e.target.value }))} />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth size="small">
                 <InputLabel>Mode of Operation</InputLabel>
-                <Select
-                  label="Mode of Operation"
-                  value={form.modeOfOperation ?? 'SingleOperator'}
-                  onChange={e => setForm(f => ({ ...f, modeOfOperation: e.target.value }))}
-                >
+                <Select label="Mode of Operation" value={form.modeOfOperation ?? 'SingleOperator'} onChange={e => setForm(f => ({ ...f, modeOfOperation: e.target.value }))}>
                   {MODES.map(m => <MenuItem key={m} value={m}>{m}</MenuItem>)}
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="Branch ID" fullWidth size="small" type="number"
-                value={form.branchId ?? ''}
-                onChange={e => setForm(f => ({ ...f, branchId: +e.target.value || undefined }))}
-              />
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField label="Branch ID" fullWidth size="small" type="number" value={form.branchId ?? ''} onChange={e => setForm(f => ({ ...f, branchId: +e.target.value || undefined }))} />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <FormControlLabel
-                control={
-                  <Switch
-                    checked={form.isMinor ?? false}
-                    onChange={e => setForm(f => ({ ...f, isMinor: e.target.checked }))}
-                  />
-                }
+                control={<Switch checked={form.isMinor ?? false} onChange={e => setForm(f => ({ ...f, isMinor: e.target.checked }))} />}
                 label="Minor Account"
               />
             </Grid>
             {form.isMinor && (
-              <Grid item xs={12}>
-                <TextField
-                  label="Legal Guardian Name" fullWidth size="small"
-                  value={form.legalGuardianName ?? ''}
-                  onChange={e => setForm(f => ({ ...f, legalGuardianName: e.target.value }))}
-                />
+              <Grid size={{ xs: 12 }}>
+                <TextField label="Legal Guardian Name" fullWidth size="small" value={form.legalGuardianName ?? ''} onChange={e => setForm(f => ({ ...f, legalGuardianName: e.target.value }))} />
               </Grid>
             )}
           </Grid>
@@ -343,7 +430,7 @@ const AccountManagement: React.FC = () => {
         <DialogActions>
           <Button onClick={closeDialog} disabled={saving}>Cancel</Button>
           <Button variant="contained" onClick={handleSave} disabled={saving}>
-            {saving ? <CircularProgress size={20} /> : 'Save'}
+            {saving ? <CircularProgress size={18} /> : 'Save'}
           </Button>
         </DialogActions>
       </Dialog>
