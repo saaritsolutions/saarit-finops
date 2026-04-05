@@ -195,11 +195,20 @@ const Sidebar: React.FC = () => {
 
   const handleMenuClick = (item: MenuItem) => {
     if (item.children) {
-      setExpandedMenus(prev =>
-        prev.includes(item.id)
-          ? prev.filter(id => id !== item.id)
-          : [...prev, item.id]
-      );
+      if (!sidebarOpen) {
+        // Collapsed mode: navigate to first child with a path instead of expanding
+        const firstPath = item.children.find(c => c.path)?.path;
+        if (firstPath) {
+          navigate(firstPath);
+          if (isMobile) handleDrawerClose();
+        }
+      } else {
+        setExpandedMenus(prev =>
+          prev.includes(item.id)
+            ? prev.filter(id => id !== item.id)
+            : [...prev, item.id]
+        );
+      }
     } else if (item.path) {
       navigate(item.path);
       if (isMobile) handleDrawerClose();
@@ -286,7 +295,7 @@ const Sidebar: React.FC = () => {
     return (
       <React.Fragment key={item.id}>
         <ListItem disablePadding sx={{ display: 'block' }}>
-          {!sidebarOpen && item.path ? (
+          {!sidebarOpen ? (
             <Tooltip title={item.title} placement="right" arrow>
               {button}
             </Tooltip>
