@@ -26,11 +26,20 @@ namespace AccountService.Data
             var tenantOptsBuilder = new DbContextOptionsBuilder<AccountDbContext>().UseNpgsql(tenantConnStr);
             using var context = new AccountDbContext(tenantOptsBuilder.Options, new StaticTenantService(tenantId));
 
-            // 1. Create the PostgreSQL schema if it does not exist
+            // 1. Create the PostgreSQL schema and __EFMigrationsHistory table if they do not exist.
+            // Note: EF Core 8 + NpgsqlMigrator does not call CreateIfNotExistsAsync before
+            // GetAppliedMigrationsAsync, so we must create the history table manually here
+            // (with search_path=tenantId active so it lands in the correct schema).
             var conn = context.Database.GetDbConnection();
             await conn.OpenAsync();
             using var cmd = conn.CreateCommand();
-            cmd.CommandText = $"CREATE SCHEMA IF NOT EXISTS \"{tenantId}\"";
+            cmd.CommandText = $@"
+                CREATE SCHEMA IF NOT EXISTS ""{tenantId}"";
+                CREATE TABLE IF NOT EXISTS ""__EFMigrationsHistory"" (
+                    ""MigrationId"" character varying(150) NOT NULL,
+                    ""ProductVersion"" character varying(32) NOT NULL,
+                    CONSTRAINT ""PK___EFMigrationsHistory"" PRIMARY KEY (""MigrationId"")
+                );";
             await cmd.ExecuteNonQueryAsync();
             await conn.CloseAsync();
 
