@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Copy package files first for better layer caching
 COPY package*.json ./
-RUN npm ci --silent
+RUN npm install --legacy-peer-deps --silent
 
 # Build args — baked into the static bundle at build time
 ARG REACT_APP_API_BASE_URL=http://localhost:5004
