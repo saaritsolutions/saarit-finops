@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-04 (session 12)
+**Last Updated:** 2026-04-04 (session 13 — multi-tenancy LIVE on Hetzner)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,8 +11,13 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Deploy multi-tenancy to Hetzner** — `docker-compose up --build` on VPS | Multi-tenancy needs live DB with schemas provisioned |
-| 2 | **[RBI-02] Deposit Account Management** — SB/FD/RD lifecycle (SCRUM-93 to SCRUM-99) | Core banking function; show real deposit products |
+| 1 | **[RBI-02] Deposit Account Management** — SB/FD/RD lifecycle (SCRUM-93 to SCRUM-99) | Core banking function; show real deposit products |
+| 2 | **Maker-Checker workflow engine** (SCRUM-9 to SCRUM-16) | Required for any real approval flow |
+
+### Recently Completed (session 13 — 2026-04-04)
+- [x] **Multi-tenancy deployed to Hetzner** — All 11 containers LIVE, 3 schemas per service
+  - Root cause fixed: EF Core 8 NpgsqlMigrator doesn't call CreateIfNotExistsAsync before GetAppliedMigrationsAsync (unlike EF9); fix: pre-create __EFMigrationsHistory with search_path=tenantId
+  - Commits: `6ead6b8`, `767c5d4`
 
 ### Recently Completed (session 12 — 2026-04-04)
 - [x] **Multi-Tenancy (SCRUM-17 to SCRUM-23)** — schema-per-tenant across UAM + 4 services
@@ -174,6 +179,7 @@
 
 | Task | Commit | Date |
 |---|---|---|
+| Multi-tenancy deployed LIVE — 11 containers, 3 schemas each; EF Core 8 __EFMigrationsHistory fix | `6ead6b8` `767c5d4` | 2026-04-04 |
 | Deployed all 5 screens LIVE; 3 bug fixes (JSON cycle, schema rebuild, LoanService migrate) | `c70dbd7` `af2c648` | 2026-04-01 |
 | Phase 1: Real JWT auth — UserAccessManagementService /api/auth/login, BCrypt seed users, JWT 8h (SCRUM-2,3,4) | `6e98e07` | 2026-03-30 |
 | Phase 2: Account Management UI — accountService.ts + AccountManagement.tsx CRUD + Approve/Close (SCRUM-80) | `774176b` | 2026-03-30 |

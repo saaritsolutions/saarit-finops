@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-04 (session 12 — multi-tenancy schema-per-tenant)
+**Last Updated:** 2026-04-04 (session 13 — multi-tenancy deployed to Hetzner)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---

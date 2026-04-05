@@ -78,11 +78,17 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - Frontend: resolveTenantName in authSlice, bankName in Header.tsx shows "UCB Cooperative Bank" / "SaaR NBFC" per login
   - Demo users: admin/maker@ucb-demo.com (ucb123), admin/maker@nbfc-demo.com (nbfc123)
 
+## Completed (continued)
+- Hetzner multi-tenancy deployment (session 13, 2026-04-04): All 11 containers LIVE with schema-per-tenant.
+  - EF Core 8 fix: AccountService TenantSchemaProvisioner now manually creates __EFMigrationsHistory before MigrateAsync (EF8 NpgsqlMigrator doesn't call CreateIfNotExistsAsync first unlike EF9)
+  - All 4 core services provisioned 3 schemas each (public, ucb_demo, nbfc_demo) on startup
+  - SearchPath=tenantId in connection strings routes unqualified migration DDL to correct tenant schema
+  - Commits: 6ead6b8 (SearchPath + ConfigureWarnings + AddAccountServiceSchema migration), 767c5d4 (__EFMigrationsHistory pre-create fix)
+
 ## In Progress
-- Deploy multi-tenancy to Hetzner VPS (docker-compose up --build)
+- (none)
 
 ## Pending Next
-- Deploy multi-tenancy to Hetzner VPS (docker-compose up --build)
 - Deposit Account Management — SB/FD/RD lifecycle (SCRUM-93 to SCRUM-99)
 - Maker-Checker workflow engine (SCRUM-9 to SCRUM-16)
 
