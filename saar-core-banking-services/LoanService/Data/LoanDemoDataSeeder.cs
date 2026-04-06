@@ -131,7 +131,7 @@ namespace LoanService.Data
                 PurposeOfLoan         = "Medical expenses and home renovation",
 
                 ApplicantName         = "Priya Sharma",
-                DateOfBirth           = new DateTime(1990, 6, 15),
+                DateOfBirth           = new DateTime(1990, 6, 15, 0, 0, 0, DateTimeKind.Utc),
                 Gender                = "F",
                 MaritalStatus         = "MARRIED",
                 PanNumber             = "BCLPS4821K",
@@ -212,7 +212,7 @@ namespace LoanService.Data
                 PurposeOfLoan         = "Purchase of 2BHK residential flat in Whitefield, Bengaluru",
 
                 ApplicantName         = "Rajesh Kumar",
-                DateOfBirth           = new DateTime(1982, 3, 22),
+                DateOfBirth           = new DateTime(1982, 3, 22, 0, 0, 0, DateTimeKind.Utc),
                 Gender                = "M",
                 MaritalStatus         = "MARRIED",
                 PanNumber             = "ARQPK3218M",
@@ -305,7 +305,7 @@ namespace LoanService.Data
                 PurposeOfLoan         = "Working capital — raw material purchase for textile export season",
 
                 ApplicantName         = "Anjali Mehta",
-                DateOfBirth           = new DateTime(1978, 11, 5),
+                DateOfBirth           = new DateTime(1978, 11, 5, 0, 0, 0, DateTimeKind.Utc),
                 Gender                = "F",
                 MaritalStatus         = "MARRIED",
                 PanNumber             = "CLNPM6743G",
@@ -405,7 +405,7 @@ namespace LoanService.Data
                 PurposeOfLoan         = "Business working capital — seasonal inventory procurement",
 
                 ApplicantName         = "Vikram Nair",
-                DateOfBirth           = new DateTime(1970, 8, 18),
+                DateOfBirth           = new DateTime(1970, 8, 18, 0, 0, 0, DateTimeKind.Utc),
                 Gender                = "M",
                 MaritalStatus         = "MARRIED",
                 PanNumber             = "ADNPN8821V",
@@ -505,7 +505,7 @@ namespace LoanService.Data
                 PurposeOfLoan         = "Purchase of Maruti Suzuki Brezza ZXi+ 2026",
 
                 ApplicantName         = "Sunita Patel",
-                DateOfBirth           = new DateTime(1995, 2, 14),
+                DateOfBirth           = new DateTime(1995, 2, 14, 0, 0, 0, DateTimeKind.Utc),
                 Gender                = "F",
                 MaritalStatus         = "SINGLE",
                 PanNumber             = "FKTPS9123B",
