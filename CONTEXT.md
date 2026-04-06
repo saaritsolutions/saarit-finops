@@ -101,12 +101,26 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - Build time: ~108s webpack compilation; all 11 containers healthy
   - Commit: b257255
 
+## Completed (continued)
+- E2E Loan Origination session 15 (2026-04-06): Enterprise-grade loan flow implemented end-to-end.
+  - **Jira backlog**: 4 epics (SCRUM-160–163) + 26 stories (SCRUM-164–189) created
+  - **Backend models**: LoanApplication extended to 50+ fields, LoanProduct (5 seeded), LoanDocument, LoanApprovalAction
+  - **EF migration**: EnhancedLoanOrigination — all new tables + enhanced columns
+  - **APIs**: LoanProductController (products + checklist), LoanEligibilityController (FOIR/LTV/EMI/eligibility),
+    LoanApplicationsController (paginated list, detail, approval actions, pending-approval queue)
+  - **State machine**: DRAFT→SUBMITTED→IN_REVIEW→CREDIT_APPROVED→APPROVED→DISBURSED / REJECTED
+  - **Frontend**: 6-step real banking form (Personal/KYC, Employment/Income, Loan Parameters,
+    Co-Applicant, Documents, Review & Submit), LoanManagement (2-tab polished list with filters/export),
+    LoanDetail (full detail + MUI Lab Timeline + action buttons)
+  - Commits: a4def55 (models/APIs/6-step form), a192e92 (list/detail/approval dashboard)
+
 ## In Progress
 - (none)
 
 ## Pending Next
 - Deposit Account Management — SB/FD/RD lifecycle (SCRUM-93 to SCRUM-99)
 - Maker-Checker workflow engine (SCRUM-9 to SCRUM-16)
+- Seed realistic demo data (3 loan applications per tenant in different states — SCRUM-188)
 
 ## Notes
 - Eligibility expression ID currently in use: EXPR_1755237353842.

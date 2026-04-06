@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-05 (session 14 cont. — UI redesign deployed LIVE)
+**Last Updated:** 2026-04-06 (session 15 — E2E loan origination complete)
 **Single source of truth for what to do next.**
 
 ---
@@ -12,8 +12,17 @@
 | # | Task | Why Now |
 |---|---|---|
 | 1 | **[RBI-02] Deposit Account Management** — SB/FD/RD lifecycle (SCRUM-93 to SCRUM-99) | Core banking function; show real deposit products |
-| 2 | **Maker-Checker workflow engine** (SCRUM-9 to SCRUM-16) | Required for any real approval flow |
-| 3 | **APIGateway** — JWT validation + route table + correlation ID logging | Security foundation before adding more services |
+| 2 | **Demo data seeder** — 3 loan apps per tenant in different states (SCRUM-188) | Make approval flow demo-able immediately |
+| 3 | **Maker-Checker workflow engine** (SCRUM-9 to SCRUM-16) | Required for any real approval flow |
+
+### Recently Completed (session 15 — 2026-04-06)
+- [x] **E2E Loan Origination** (SCRUM-164 to SCRUM-185):
+  - LoanApplication extended (50+ fields), LoanProduct (5), LoanDocument, LoanApprovalAction entities + EF migration
+  - LoanProductController, LoanEligibilityController (FOIR/LTV/EMI), LoanApplicationsController (approval state machine)
+  - 6-step real banking form (Personal/KYC, Employment/Income, Loan Parameters, Co-Applicant, Documents, Review)
+  - LoanManagement: 2-tab polished list (All + Pending Approval), filters, CSV export, CIBIL/FOIR columns
+  - LoanDetail: full detail page with Timeline, action buttons, document checklist
+  - Commits: `a4def55`, `a192e92`; deployed to Hetzner
 
 ### Recently Completed (session 14 cont. — 2026-04-05)
 - [x] **UI redesign deployed to Hetzner** — all 11 containers healthy, demobank.saaritsolutions.com LIVE with new design
@@ -198,6 +207,7 @@
 
 | Task | Commit | Date |
 |---|---|---|
+| E2E Loan Origination — models, APIs, 6-step form, approval dashboard (SCRUM-164–185) | `a4def55` `a192e92` | 2026-04-06 |
 | Multi-tenancy deployed LIVE — 11 containers, 3 schemas each; EF Core 8 __EFMigrationsHistory fix | `6ead6b8` `767c5d4` | 2026-04-04 |
 | Deployed all 5 screens LIVE; 3 bug fixes (JSON cycle, schema rebuild, LoanService migrate) | `c70dbd7` `af2c648` | 2026-04-01 |
 | Phase 1: Real JWT auth — UserAccessManagementService /api/auth/login, BCrypt seed users, JWT 8h (SCRUM-2,3,4) | `6e98e07` | 2026-03-30 |
