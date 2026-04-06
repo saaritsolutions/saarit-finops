@@ -1,116 +1,255 @@
 import axios from 'axios';
 
-export interface PreValidateRequest {
-  customerId: string;
-  loanAmount: number;
-  tenureMonths: number;
-  creditScore: number;
-  monthlyIncome: number;
-  debtToIncomeRatio: number;
-  productType?: string;
+const BASE_URL = process.env.REACT_APP_LOAN_SERVICE_BASE_URL || 'http://localhost:5130';
+const API_ROOT       = `${BASE_URL}/api/LoanOrigination`;
+const PRODUCTS_ROOT  = `${BASE_URL}/api/loan-products`;
+const LOANS_ROOT     = `${BASE_URL}/api/loans`;
+
+const norm = (d: any, ...keys: string[]) => {
+  for (const k of keys) {
+    const lo = k[0].toLowerCase() + k.slice(1);
+    const up = k[0].toUpperCase() + k.slice(1);
+    if (d[lo] !== undefined) return d[lo];
+    if (d[up] !== undefined) return d[up];
+  }
+  return undefined;
+};
+
+// ── Loan Products ─────────────────────────────────────────────────────────────
+export interface LoanProduct {
+  id: string;
+  productCode: string;
+  name: string;
+  description?: string;
+  category: string;          // SECURED | UNSECURED
+  minAmount: number;
+  maxAmount: number;
+  minTenureMonths: number;
+  maxTenureMonths: number;
+  baseRatePercent: number;
+  maxRatePercent: number;
+  processingFeePercent: number;
+  minCibilScore: number;
+  minMonthlyIncome: number;
+  maxFoirPercent: number;
+  maxLtvPercent: number;
+  requiresCollateral: boolean;
+  allowsCoApplicant: boolean;
 }
 
-export interface PreValidateResponse {
-  eligibility: string;
-  interestRate?: number | null;
-  message?: string;
-  failureReasons?: string[];
+export interface DocumentChecklistItem {
+  documentType: string;
+  documentLabel: string;
+  isMandatory: boolean;
+  acceptedFormats: string[];
+}
+
+export interface DocumentChecklist {
+  productCode: string;
+  productName: string;
+  items: DocumentChecklistItem[];
+}
+
+export async function getLoanProducts(): Promise<LoanProduct[]> {
+  const res = await axios.get(PRODUCTS_ROOT);
+  return res.data as LoanProduct[];
+}
+
+export async function getDocumentChecklist(productCode: string): Promise<DocumentChecklist> {
+  const res = await axios.get(`${PRODUCTS_ROOT}/${productCode}/checklist`);
+  return res.data as DocumentChecklist;
+}
+
+// ── Eligibility ───────────────────────────────────────────────────────────────
+export interface EligibilityRequest {
+  productType: string;
+  requestedAmount: number;
+  tenureMonths: number;
+  grossMonthlyIncome: number;
+  existingMonthlyEMI: number;
+  proposedMonthlyEMI: number;
+  cibilScore: number;
+  collateralValue: number;
+}
+
+export interface EligibilityResult {
+  isEligible: boolean;
+  maxEligibleAmount: number;
+  recommendedRatePercent: number;
+  foirPercent: number;
+  ltvPercent?: number;
+  proposedMonthlyEMI: number;
+  processingFee: number;
+  cibilBand: string;
+  rejectionReasons: string[];
+}
+
+export async function checkEligibility(req: EligibilityRequest): Promise<EligibilityResult> {
+  const res = await axios.post(`${LOANS_ROOT}/check-eligibility`, req);
+  const d = res.data;
+  return {
+    isEligible:             norm(d, 'IsEligible', 'isEligible') ?? false,
+    maxEligibleAmount:      norm(d, 'MaxEligibleAmount', 'maxEligibleAmount') ?? 0,
+    recommendedRatePercent: norm(d, 'RecommendedRatePercent', 'recommendedRatePercent') ?? 0,
+    foirPercent:            norm(d, 'FOIRPercent', 'foirPercent', 'fOIRPercent') ?? 0,
+    ltvPercent:             norm(d, 'LTVPercent', 'ltvPercent', 'lTVPercent'),
+    proposedMonthlyEMI:     norm(d, 'ProposedMonthlyEMI', 'proposedMonthlyEMI') ?? 0,
+    processingFee:          norm(d, 'ProcessingFee', 'processingFee') ?? 0,
+    cibilBand:              norm(d, 'CibilBand', 'cibilBand') ?? '',
+    rejectionReasons:       norm(d, 'RejectionReasons', 'rejectionReasons') ?? [],
+  };
+}
+
+// ── EMI Calculator ────────────────────────────────────────────────────────────
+export interface EmiResult {
+  monthlyEMI: number;
+  totalPayment: number;
+  totalInterest: number;
+  principal: number;
+  annualRate: number;
+  tenureMonths: number;
+}
+
+export async function calculateEMI(
+  principal: number,
+  tenureMonths: number,
+  annualRatePercent: number,
+): Promise<EmiResult> {
+  const res = await axios.get(`${LOANS_ROOT}/calculate-emi`, {
+    params: { principal, tenureMonths, annualRatePercent },
+  });
+  const d = res.data;
+  return {
+    monthlyEMI:    norm(d, 'MonthlyEMI', 'monthlyEMI') ?? 0,
+    totalPayment:  norm(d, 'TotalPayment', 'totalPayment') ?? 0,
+    totalInterest: norm(d, 'TotalInterest', 'totalInterest') ?? 0,
+    principal:     norm(d, 'Principal', 'principal') ?? 0,
+    annualRate:    norm(d, 'AnnualRate', 'annualRate') ?? 0,
+    tenureMonths:  norm(d, 'TenureMonths', 'tenureMonths') ?? 0,
+  };
+}
+
+// ── Full Loan Application Submit ──────────────────────────────────────────────
+export interface FullLoanApplicationRequest {
+  // Step 1
+  applicantName: string;
+  dateOfBirth: string;
+  gender: string;
+  maritalStatus: string;
+  panNumber: string;
+  aadhaarLast4: string;
+  mobileNumber: string;
+  email: string;
+  currentAddressLine1: string;
+  currentAddressLine2?: string;
+  currentCity: string;
+  currentState: string;
+  currentPinCode: string;
+  residenceType: string;
+  sameAsCurrent: boolean;
+  permanentAddressLine1?: string;
+  permanentAddressLine2?: string;
+  permanentCity?: string;
+  permanentState?: string;
+  permanentPinCode?: string;
+  // Step 2
+  employmentType: string;
+  employerName: string;
+  designation: string;
+  yearsAtCurrentJob: number;
+  grossMonthlyIncome: number;
+  netMonthlyIncome: number;
+  otherMonthlyIncome: number;
+  existingMonthlyEMI: number;
+  monthlyObligations: number;
+  cibilScore: number;
+  // Step 3
+  productType: string;
+  requestedAmount: number;
+  tenureMonths: number;
+  purposeOfLoan: string;
+  collateralType?: string;
+  collateralValue?: number;
+  collateralDescription?: string;
+  // Step 4
+  hasCoApplicant: boolean;
+  coApplicantJson?: string;
+  // Misc
+  loanAmount?: number; // backward compat
+  creditScore?: number;
+  monthlyIncome?: number;
+  debtToIncomeRatio?: number;
+  customerId?: string;
 }
 
 export interface SubmitApplicationResponse {
   status: string;
   applicationId?: string;
+  applicationNumber?: string;
   workflowInstanceId?: string;
   currentStep?: string;
   interestRate?: number;
   message?: string;
 }
 
-export interface WorkflowStepResult {
-  instanceId: string;
-  success: boolean;
-  currentStep: string;
-  nextStep?: string;
-  workflowStatus?: string;
-  message?: string;
-  requiredActions?: string[];
-  autoActions?: string[];
-  notifications?: string[];
+export async function submitFullApplication(payload: FullLoanApplicationRequest): Promise<SubmitApplicationResponse> {
+  // Map to the legacy submit endpoint (backward compat)
+  const legacyPayload = {
+    customerId: payload.applicantName,
+    loanAmount: payload.requestedAmount,
+    tenureMonths: payload.tenureMonths,
+    creditScore: payload.cibilScore,
+    monthlyIncome: payload.grossMonthlyIncome,
+    debtToIncomeRatio: payload.existingMonthlyEMI / Math.max(payload.grossMonthlyIncome, 1),
+    productType: payload.productType,
+    // Extended fields sent as extras
+    formDataJson: JSON.stringify(payload),
+  };
+  const res = await axios.post(`${API_ROOT}/submit`, legacyPayload);
+  const d = res.data;
+  return {
+    status:              norm(d, 'Status', 'status') ?? '',
+    applicationId:       norm(d, 'ApplicationId', 'applicationId'),
+    applicationNumber:   norm(d, 'ApplicationNumber', 'applicationNumber'),
+    workflowInstanceId:  norm(d, 'WorkflowInstanceId', 'workflowInstanceId'),
+    currentStep:         norm(d, 'CurrentStep', 'currentStep'),
+    interestRate:        norm(d, 'InterestRate', 'interestRate'),
+    message:             norm(d, 'Message', 'message'),
+  };
 }
 
-export interface ServerField {
-  name?: string;
-  label?: string;
-  type?: string;
-  required?: boolean;
-  min?: number | null;
-  max?: number | null;
+// ── Loan Application List ────────────────────────────────────────────────────
+export interface LoanApplicationSummary {
+  id: string;
+  applicationNumber: string;
+  applicantName: string;
+  productType: string;
+  requestedAmount: number;
+  status: string;
+  createdAt: string;
+  assignedTo?: string;
+  interestRate?: number;
 }
 
-const BASE_URL = process.env.REACT_APP_LOAN_SERVICE_BASE_URL || 'http://localhost:5130';
-const API_ROOT = `${BASE_URL}/api/LoanOrigination`;
-
-export async function getFormSchema(productType: string): Promise<{ productType?: string; fields?: ServerField[] } | any> {
-  const res = await axios.get(`${API_ROOT}/form-schema/${productType}`);
-  return res.data;
+export async function getLoanApplications(page = 1, pageSize = 50): Promise<LoanApplicationSummary[]> {
+  const res = await axios.get(API_ROOT, { params: { page, pageSize } });
+  return (res.data as any[]).map(d => ({
+    id:                norm(d, 'Id', 'id') ?? '',
+    applicationNumber: norm(d, 'ApplicationNumber', 'applicationNumber') ?? norm(d, 'Id', 'id') ?? '',
+    applicantName:     norm(d, 'ApplicantName', 'applicantName') ?? norm(d, 'CustomerId', 'customerId') ?? 'Unknown',
+    productType:       norm(d, 'ProductType', 'productType') ?? '',
+    requestedAmount:   norm(d, 'RequestedAmount', 'requestedAmount') ?? norm(d, 'Amount', 'amount') ?? 0,
+    status:            norm(d, 'Status', 'status') ?? '',
+    createdAt:         norm(d, 'CreatedAt', 'createdAt') ?? '',
+    assignedTo:        norm(d, 'AssignedTo', 'assignedTo'),
+    interestRate:      norm(d, 'InterestRate', 'interestRate'),
+  }));
 }
 
-export async function preValidate(payload: PreValidateRequest): Promise<PreValidateResponse> {
-  try {
-    const res = await axios.post(`${API_ROOT}/pre-validate`, payload, {
-      headers: { 'Content-Type': 'application/json' },
-    });
-  // Backend returns PascalCase (Eligibility, InterestRate). Normalize to camelCase.
-  const data = res.data ?? {};
-  const eligibility = data.eligibility ?? data.Eligibility ?? data.eligibilityStatus ?? data.EligibilityStatus;
-  const interestRate = data.interestRate ?? data.InterestRate ?? null;
-  const message = data.message ?? data.Message ?? null;
-  const failureReasons = data.failureReasons ?? data.FailureReasons ?? null;
-  return { eligibility, interestRate, message, failureReasons } as PreValidateResponse;
-  } catch (e: any) {
-    const status = e?.response?.status;
-    const body = e?.response?.data;
-    throw Object.assign(new Error('Pre-validate failed'), { status, body });
-  }
-}
+// ── Legacy exports (backward compat with old LoanOrigination.tsx) ──────────
+export type { PreValidateRequest } from './loanOriginationServiceLegacy';
+export type { ServerField }        from './loanOriginationServiceLegacy';
+export type { WorkflowStepResult } from './loanOriginationServiceLegacy';
 
-export async function submitApplication(payload: PreValidateRequest): Promise<SubmitApplicationResponse> {
-  try {
-    const res = await axios.post(`${API_ROOT}/submit`, payload, {
-      headers: { 'Content-Type': 'application/json' },
-    });
-    // Normalize PascalCase fields from backend to camelCase expected by UI
-    const d = res.data ?? {};
-    return {
-      status: d.status ?? d.Status,
-      applicationId: d.applicationId ?? d.ApplicationId,
-      workflowInstanceId: d.workflowInstanceId ?? d.WorkflowInstanceId,
-      currentStep: d.currentStep ?? d.CurrentStep,
-      interestRate: d.interestRate ?? d.InterestRate,
-      message: d.message ?? d.Message,
-    } as SubmitApplicationResponse;
-  } catch (e: any) {
-    const status = e?.response?.status;
-    const body = e?.response?.data;
-    throw Object.assign(new Error('Submit failed'), { status, body });
-  }
-}
-
-export async function processWorkflow(
-  workflowInstanceId: string,
-  action: string = 'NEXT',
-  context: Record<string, any> = {}
-): Promise<WorkflowStepResult> {
-  try {
-    const res = await axios.post(
-      `${API_ROOT}/${workflowInstanceId}/process`,
-      { action, context },
-      { headers: { 'Content-Type': 'application/json' } }
-    );
-    return res.data as WorkflowStepResult;
-  } catch (e: any) {
-    const status = e?.response?.status;
-    const body = e?.response?.data;
-    throw Object.assign(new Error('Workflow process failed'), { status, body });
-  }
-}
+export { getFormSchema, preValidate, submitApplication, processWorkflow }
+  from './loanOriginationServiceLegacy';

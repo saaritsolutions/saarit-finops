@@ -5,6 +5,13 @@ namespace LoanService.Services
         string TenantId { get; }
     }
 
+    /// <summary>Fixed-tenant implementation used by background seeders.</summary>
+    public class FixedTenantService : ITenantService
+    {
+        public FixedTenantService(string tenantId) => TenantId = tenantId;
+        public string TenantId { get; }
+    }
+
     public class HttpContextTenantService : ITenantService
     {
         private readonly IHttpContextAccessor _httpContextAccessor;

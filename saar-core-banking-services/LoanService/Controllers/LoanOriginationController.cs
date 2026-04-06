@@ -269,15 +269,21 @@ namespace LoanService.Controllers
                 });
             }
 
-            // 2) Persist LoanApplication (Phase 1)
+            // 2) Persist LoanApplication
+            var appNumber = $"LAP-{DateTime.UtcNow:yyyy}-{new Random().Next(100000, 999999)}";
             var app = new LoanApplication
             {
                 Id = Guid.NewGuid(),
+                ApplicationNumber = appNumber,
                 CustomerId = request.CustomerId,
                 ProductType = request.ProductType ?? "PERSONAL_LOAN",
-                Amount = request.LoanAmount,
+                RequestedAmount = request.LoanAmount,
                 TenureMonths = request.TenureMonths,
                 Status = "SUBMITTED",
+                ApplicantName = request.CustomerId,
+                GrossMonthlyIncome = request.MonthlyIncome,
+                ExistingMonthlyEMI = 0,
+                CibilScore = request.CreditScore,
                 FormDataJson = null
             };
             _db.LoanApplications.Add(app);
