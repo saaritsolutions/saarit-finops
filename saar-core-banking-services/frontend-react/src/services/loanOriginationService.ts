@@ -246,6 +246,130 @@ export async function getLoanApplications(page = 1, pageSize = 50): Promise<Loan
   }));
 }
 
+// ── Application List/Detail/Approval ─────────────────────────────────────────
+const APPS_ROOT = `${BASE_URL}/api/loans/applications`;
+
+export interface ApplicationSummary {
+  id: string;
+  applicationNumber: string;
+  applicantName: string;
+  mobileNumber?: string;
+  email?: string;
+  productType: string;
+  requestedAmount: number;
+  tenureMonths: number;
+  interestRate?: number;
+  status: string;
+  cibilScore?: number;
+  foirPercent?: number;
+  grossMonthlyIncome: number;
+  purposeOfLoan?: string;
+  assignedTo?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ApplicationListResult {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: ApplicationSummary[];
+}
+
+export interface ApplicationDetail {
+  application: Record<string, any>;
+  documents:   Record<string, any>[];
+  actions:     ApprovalAction[];
+}
+
+export interface ApprovalAction {
+  id: string;
+  loanApplicationId: string;
+  action: string;
+  actionBy: string;
+  role: string;
+  comments?: string;
+  fromStatus: string;
+  toStatus: string;
+  actionAt: string;
+}
+
+export interface LoanActionRequest {
+  action: string;
+  actionBy?: string;
+  role?: string;
+  comments?: string;
+  sanctionedAmount?: number;
+}
+
+export async function getApplicationsList(params: {
+  status?: string;
+  search?: string;
+  productType?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<ApplicationListResult> {
+  const res = await axios.get(APPS_ROOT, { params });
+  const d = res.data;
+  return {
+    total:    d.total    ?? d.Total    ?? 0,
+    page:     d.page     ?? d.Page     ?? 1,
+    pageSize: d.pageSize ?? d.PageSize ?? 20,
+    items: (d.items ?? d.Items ?? []).map((a: any) => ({
+      id:                a.id                ?? a.Id                ?? '',
+      applicationNumber: a.applicationNumber ?? a.ApplicationNumber ?? '',
+      applicantName:     a.applicantName     ?? a.ApplicantName     ?? '',
+      mobileNumber:      a.mobileNumber      ?? a.MobileNumber,
+      email:             a.email             ?? a.Email,
+      productType:       a.productType       ?? a.ProductType       ?? '',
+      requestedAmount:   a.requestedAmount   ?? a.RequestedAmount   ?? 0,
+      tenureMonths:      a.tenureMonths      ?? a.TenureMonths      ?? 0,
+      interestRate:      a.interestRate      ?? a.InterestRate,
+      status:            a.status            ?? a.Status            ?? '',
+      cibilScore:        a.cibilScore        ?? a.CibilScore,
+      foirPercent:       a.foirPercent       ?? a.FOIRPercent       ?? a.fOIRPercent,
+      grossMonthlyIncome:a.grossMonthlyIncome?? a.GrossMonthlyIncome?? 0,
+      purposeOfLoan:     a.purposeOfLoan     ?? a.PurposeOfLoan,
+      assignedTo:        a.assignedTo        ?? a.AssignedTo,
+      createdAt:         a.createdAt         ?? a.CreatedAt         ?? '',
+      updatedAt:         a.updatedAt         ?? a.UpdatedAt         ?? '',
+    })),
+  };
+}
+
+export async function getPendingApprovalList(): Promise<ApplicationSummary[]> {
+  const res = await axios.get(`${APPS_ROOT}/pending-approval`);
+  return (res.data as any[]).map((a: any) => ({
+    id:                a.id                ?? a.Id                ?? '',
+    applicationNumber: a.applicationNumber ?? a.ApplicationNumber ?? '',
+    applicantName:     a.applicantName     ?? a.ApplicantName     ?? '',
+    mobileNumber:      a.mobileNumber      ?? a.MobileNumber,
+    email:             a.email             ?? a.Email,
+    productType:       a.productType       ?? a.ProductType       ?? '',
+    requestedAmount:   a.requestedAmount   ?? a.RequestedAmount   ?? 0,
+    tenureMonths:      a.tenureMonths      ?? a.TenureMonths      ?? 0,
+    interestRate:      a.interestRate      ?? a.InterestRate,
+    status:            a.status            ?? a.Status            ?? '',
+    cibilScore:        a.cibilScore        ?? a.CibilScore,
+    foirPercent:       a.foirPercent       ?? a.FOIRPercent       ?? a.fOIRPercent,
+    grossMonthlyIncome:a.grossMonthlyIncome?? a.GrossMonthlyIncome?? 0,
+    purposeOfLoan:     a.purposeOfLoan     ?? a.PurposeOfLoan,
+    assignedTo:        a.assignedTo        ?? a.AssignedTo,
+    createdAt:         a.createdAt         ?? a.CreatedAt         ?? '',
+    updatedAt:         a.updatedAt         ?? a.UpdatedAt         ?? '',
+  }));
+}
+
+export async function getApplicationDetail(id: string): Promise<ApplicationDetail> {
+  const res = await axios.get(`${APPS_ROOT}/${id}`);
+  return res.data as ApplicationDetail;
+}
+
+export async function takeApplicationAction(id: string, req: LoanActionRequest): Promise<ApplicationDetail> {
+  const res = await axios.post(`${APPS_ROOT}/${id}/action`, req);
+  return res.data as ApplicationDetail;
+}
+
 // ── Legacy exports (backward compat with old LoanOrigination.tsx) ──────────
 export type { PreValidateRequest } from './loanOriginationServiceLegacy';
 export type { ServerField }        from './loanOriginationServiceLegacy';
