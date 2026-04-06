@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-06 (session 17 cont. — repayment schedule amortization table)
+**Last Updated:** 2026-04-06 (session 18 — test quality initiative)
 **Single source of truth for what to do next.**
 
 ---
@@ -14,6 +14,14 @@
 | 1 | **[RBI-02] Deposit Account Management** — SB/FD/RD lifecycle (SCRUM-93 to SCRUM-99) | Core banking function; show real deposit products |
 | 2 | **Maker-Checker workflow engine** (SCRUM-9 to SCRUM-16) | Required for any real approval flow |
 | 3 | **Wire LoanService → TransactionService** on disbursal (SCRUM-187) | Show double-entry ledger entry on loan disbursement |
+
+### Recently Completed (session 18 — 2026-04-06)
+- [x] **Test quality initiative — SCRUM-188 + testing** (commit `1a138e1`)
+  - `docs/TEST_CASES_LOAN_ORIGINATION.md`: 70+ BDD test cases across 12 categories for Jira
+  - `LoanService.Tests/EligibilityAndWorkflowTests.cs`: 40 NUnit tests (EMI, FOIR, LTV, eligibility, list, state machine); 0 build errors
+  - `frontend-react/cypress/e2e/loan-management.cy.ts`: 25+ Cypress tests across 5 suites
+  - `LoanDemoDataSeeder`: 3 new apps (DRAFT/APPROVED/INFO_REQUESTED) — 8 apps per tenant total
+  - Pushed to GitHub; Hetzner SSH unreachable — pending redeploy of loanservice container
 
 ### Recently Completed (session 17 cont. — 2026-04-06)
 - [x] **Repayment Schedule in LoanDetail** — amortization table added to loan detail page
@@ -227,6 +235,7 @@
 
 | Task | Commit | Date |
 |---|---|---|
+| Test quality initiative — TEST_CASES_LOAN_ORIGINATION.md, NUnit tests, Cypress E2E, seeder 8 apps (SCRUM-188+) | `1a138e1` | 2026-04-06 |
 | E2E Loan Origination — models, APIs, 6-step form, approval dashboard (SCRUM-164–185) | `a4def55` `a192e92` | 2026-04-06 |
 | Multi-tenancy deployed LIVE — 11 containers, 3 schemas each; EF Core 8 __EFMigrationsHistory fix | `6ead6b8` `767c5d4` | 2026-04-04 |
 | Deployed all 5 screens LIVE; 3 bug fixes (JSON cycle, schema rebuild, LoanService migrate) | `c70dbd7` `af2c648` | 2026-04-01 |

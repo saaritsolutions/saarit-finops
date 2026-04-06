@@ -135,10 +135,19 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - Uses sanctionedAmount if set, else requestedAmount; hidden when loan params missing
   - No backend changes needed — all data already in loan detail API response
 
+## Completed (continued)
+- Test quality initiative — SCRUM-188 + testing (session 18, 2026-04-06):
+  - `docs/TEST_CASES_LOAN_ORIGINATION.md`: 70+ BDD test cases across 12 categories (TC-01 to TC-12) for pasting into Jira
+  - `LoanService.Tests/EligibilityAndWorkflowTests.cs`: 40 NUnit tests — EMI, FOIR, LTV, CheckEligibility, list/filter, state machine, audit trail; 0 build errors
+  - `frontend-react/cypress/e2e/loan-management.cy.ts`: 25+ Cypress E2E tests — list page, detail page, approval actions, new form, API smoke tests
+  - `LoanDemoDataSeeder`: 3 new apps — DRAFT (Kavita Sharma ₹3L PL), APPROVED (Suresh Patel ₹7.5L BL with sanction), INFO_REQUESTED (Anita Desai ₹25L HL with co-applicant); total 8 apps per tenant covering all workflow states
+  - Commit: `1a138e1`; pushed to GitHub; Hetzner SSH unreachable at time of deploy (pending `docker compose up --build -d loanservice` on Hetzner)
+
 ## In Progress
 - (none)
 
 ## Pending Next
+- Deploy `1a138e1` to Hetzner: `cd /opt/saarit/saar-core-banking-services && git pull && docker compose up --build -d loanservice`
 - Deposit Account Management — SB/FD/RD lifecycle (SCRUM-93 to SCRUM-99)
 - Maker-Checker workflow engine (SCRUM-9 to SCRUM-16)
 
