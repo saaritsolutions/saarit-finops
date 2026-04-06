@@ -22,12 +22,14 @@ namespace LoanService.Data
                 if (await db.LoanApplications.AnyAsync(a => a.ApplicationNumber == app.ApplicationNumber))
                     continue;
 
+                // Insert the parent first so FK constraints on docs/actions are satisfied
                 db.LoanApplications.Add(app);
+                await db.SaveChangesAsync();
+
                 db.LoanDocuments.AddRange(docs);
                 db.LoanApprovalActions.AddRange(actions);
+                await db.SaveChangesAsync();
             }
-
-            await db.SaveChangesAsync();
         }
 
         // ── Deterministic GUID: unique per (tenant, appIndex) ──────────────────
