@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-06 (session 15 — E2E loan origination complete)
+**Last Updated:** 2026-04-06 (session 16 — demo data seeder)
 **Single source of truth for what to do next.**
 
 ---
@@ -12,8 +12,19 @@
 | # | Task | Why Now |
 |---|---|---|
 | 1 | **[RBI-02] Deposit Account Management** — SB/FD/RD lifecycle (SCRUM-93 to SCRUM-99) | Core banking function; show real deposit products |
-| 2 | **Demo data seeder** — 3 loan apps per tenant in different states (SCRUM-188) | Make approval flow demo-able immediately |
-| 3 | **Maker-Checker workflow engine** (SCRUM-9 to SCRUM-16) | Required for any real approval flow |
+| 2 | **Maker-Checker workflow engine** (SCRUM-9 to SCRUM-16) | Required for any real approval flow |
+| 3 | **Wire LoanService → TransactionService** on disbursal (SCRUM-187) | Show double-entry ledger entry on loan disbursement |
+
+### Recently Completed (session 16 — 2026-04-06)
+- [x] **Demo data seeder** (SCRUM-188) — 5 realistic loan applications per tenant in all workflow states
+  - App 1 — Priya Sharma: Personal Loan ₹5L → **SUBMITTED** (Infosys employee, CIBIL 745)
+  - App 2 — Rajesh Kumar: Home Loan ₹45L → **IN_REVIEW** (TCS lead, CIBIL 782, property docs pending)
+  - App 3 — Anjali Mehta: Business Loan ₹10L → **CREDIT_APPROVED** (textile exporter, awaiting MD sanction)
+  - App 4 — Vikram Nair: Gold Loan ₹2L → **DISBURSED** (full chain, UTR recorded)
+  - App 5 — Sunita Patel: Vehicle Loan ₹8L → **REJECTED** (CIBIL 618, FOIR 56%)
+  - Seeder is idempotent (checks by ApplicationNumber), runs per-tenant on startup
+  - `LoanDemoDataSeeder.cs` in `LoanService/Data/`; wired in `Program.cs` after LoanProductSeeder
+  - Commit: TBD
 
 ### Recently Completed (session 15 — 2026-04-06)
 - [x] **E2E Loan Origination** (SCRUM-164 to SCRUM-185):

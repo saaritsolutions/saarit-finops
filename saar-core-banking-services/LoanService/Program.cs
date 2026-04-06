@@ -134,6 +134,9 @@ if (!app.Environment.IsEnvironment("IntegrationTesting"))
             await using var seedDb = new LoanDbContext(tenantOpts, tenantSvc);
             await LoanProductSeeder.SeedAsync(seedDb);
             seedLogger.LogInformation("LoanProducts seeded for tenant {Tenant}", tenantId);
+
+            await LoanDemoDataSeeder.SeedAsync(seedDb, tenantId);
+            seedLogger.LogInformation("Demo loan applications seeded for tenant {Tenant}", tenantId);
         }
         catch (Exception ex)
         {
