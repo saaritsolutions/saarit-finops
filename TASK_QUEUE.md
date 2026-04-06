@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-06 (session 17 — seeder deployment + FK fix)
+**Last Updated:** 2026-04-06 (session 17 — seeder deployment + loan detail bug fix)
 **Single source of truth for what to do next.**
 
 ---
@@ -16,6 +16,11 @@
 | 3 | **Wire LoanService → TransactionService** on disbursal (SCRUM-187) | Show double-entry ledger entry on loan disbursement |
 
 ### Recently Completed (session 17 — 2026-04-06)
+- [x] **Loan detail page bug fixed** — "Failed to load application" error resolved (commit d6bb3e1)
+  - Root cause: `AddControllers()` had no JSON options → System.Text.Json hit circular reference mid-stream
+    → 200 OK with 14KB truncated JSON (53KB expected); axios threw → frontend showed error
+  - Fix: `.AddJsonOptions(o => o.JsonSerializerOptions.ReferenceHandler = IgnoreCycles)` in LoanService Program.cs
+  - Loan detail now returns complete 53KB JSON; all 5 loan apps clickable on demobank.saaritsolutions.com
 - [x] **Demo data seeder deployed to Hetzner** (SCRUM-188) — all 3 tenants fully seeded (5 apps × 3 = 15 total)
   - Bug 1: DateTimeKind.Utc missing on DateOfBirth fields → Npgsql rejected Unspecified timestamptz (commit 8c90ee1)
   - Bug 2: EF Core batched parent+children in one SaveChangesAsync → FK violation; split into two saves (commit 7dd80a7)
