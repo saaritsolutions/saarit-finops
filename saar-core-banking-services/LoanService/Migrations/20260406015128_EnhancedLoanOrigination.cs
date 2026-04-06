@@ -15,22 +15,11 @@ namespace LoanService.Migrations
                 name: "Amount",
                 table: "LoanApplications");
 
-            migrationBuilder.EnsureSchema(
-                name: "public");
 
-            migrationBuilder.RenameTable(
-                name: "LoanApplications",
-                newName: "LoanApplications",
-                newSchema: "public");
 
-            migrationBuilder.RenameTable(
-                name: "LoanAccounts",
-                newName: "LoanAccounts",
-                newSchema: "public");
 
             migrationBuilder.AlterColumn<string>(
                 name: "Status",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(30)",
                 maxLength: 30,
@@ -40,7 +29,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AlterColumn<string>(
                 name: "ProductType",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(50)",
                 maxLength: 50,
@@ -50,7 +38,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AlterColumn<decimal>(
                 name: "InterestRate",
-                schema: "public",
                 table: "LoanApplications",
                 type: "numeric(6,4)",
                 nullable: true,
@@ -60,7 +47,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AlterColumn<string>(
                 name: "CustomerId",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(100)",
                 maxLength: 100,
@@ -70,7 +56,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "AadhaarLast4",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(4)",
                 maxLength: 4,
@@ -78,7 +63,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "ApplicantName",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(150)",
                 maxLength: 150,
@@ -87,7 +71,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "ApplicationNumber",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(30)",
                 maxLength: 30,
@@ -96,7 +79,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "AssignedTo",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(150)",
                 maxLength: 150,
@@ -104,7 +86,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "CibilBand",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(20)",
                 maxLength: 20,
@@ -112,21 +93,18 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<int>(
                 name: "CibilScore",
-                schema: "public",
                 table: "LoanApplications",
                 type: "integer",
                 nullable: true);
 
             migrationBuilder.AddColumn<string>(
                 name: "CoApplicantJson",
-                schema: "public",
                 table: "LoanApplications",
                 type: "text",
                 nullable: true);
 
             migrationBuilder.AddColumn<string>(
                 name: "CollateralDescription",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(500)",
                 maxLength: 500,
@@ -134,7 +112,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "CollateralType",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(50)",
                 maxLength: 50,
@@ -142,14 +119,12 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<decimal>(
                 name: "CollateralValue",
-                schema: "public",
                 table: "LoanApplications",
                 type: "numeric(18,2)",
                 nullable: true);
 
             migrationBuilder.AddColumn<string>(
                 name: "CreatedBy",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(150)",
                 maxLength: 150,
@@ -157,7 +132,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "CreditOfficer",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(150)",
                 maxLength: 150,
@@ -165,7 +139,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "CurrentAddressLine1",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(200)",
                 maxLength: 200,
@@ -173,7 +146,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "CurrentAddressLine2",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(200)",
                 maxLength: 200,
@@ -181,7 +153,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "CurrentCity",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(100)",
                 maxLength: 100,
@@ -189,7 +160,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "CurrentPinCode",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(10)",
                 maxLength: 10,
@@ -197,7 +167,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "CurrentState",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(60)",
                 maxLength: 60,
@@ -205,14 +174,12 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<DateTime>(
                 name: "DateOfBirth",
-                schema: "public",
                 table: "LoanApplications",
                 type: "timestamp with time zone",
                 nullable: true);
 
             migrationBuilder.AddColumn<string>(
                 name: "Designation",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(100)",
                 maxLength: 100,
@@ -220,14 +187,12 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<DateTime>(
                 name: "DisbursedAt",
-                schema: "public",
                 table: "LoanApplications",
                 type: "timestamp with time zone",
                 nullable: true);
 
             migrationBuilder.AddColumn<string>(
                 name: "DisbursementAccountNumber",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(30)",
                 maxLength: 30,
@@ -235,7 +200,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "DisbursementIFSC",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(11)",
                 maxLength: 11,
@@ -243,7 +207,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "Email",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(150)",
                 maxLength: 150,
@@ -251,7 +214,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "EmployerName",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(200)",
                 maxLength: 200,
@@ -259,7 +221,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "EmploymentType",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(30)",
                 maxLength: 30,
@@ -267,7 +228,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<decimal>(
                 name: "ExistingMonthlyEMI",
-                schema: "public",
                 table: "LoanApplications",
                 type: "numeric(18,2)",
                 nullable: false,
@@ -275,14 +235,12 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<decimal>(
                 name: "FOIRPercent",
-                schema: "public",
                 table: "LoanApplications",
                 type: "numeric(6,4)",
                 nullable: true);
 
             migrationBuilder.AddColumn<string>(
                 name: "Gender",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(1)",
                 maxLength: 1,
@@ -290,7 +248,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<decimal>(
                 name: "GrossMonthlyIncome",
-                schema: "public",
                 table: "LoanApplications",
                 type: "numeric(18,2)",
                 nullable: false,
@@ -298,7 +255,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<bool>(
                 name: "HasCoApplicant",
-                schema: "public",
                 table: "LoanApplications",
                 type: "boolean",
                 nullable: false,
@@ -306,14 +262,12 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<decimal>(
                 name: "LTVPercent",
-                schema: "public",
                 table: "LoanApplications",
                 type: "numeric(6,4)",
                 nullable: true);
 
             migrationBuilder.AddColumn<string>(
                 name: "MaritalStatus",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(20)",
                 maxLength: 20,
@@ -321,7 +275,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "MobileNumber",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(15)",
                 maxLength: 15,
@@ -329,7 +282,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<decimal>(
                 name: "MonthlyObligations",
-                schema: "public",
                 table: "LoanApplications",
                 type: "numeric(18,2)",
                 nullable: false,
@@ -337,7 +289,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<decimal>(
                 name: "NetMonthlyIncome",
-                schema: "public",
                 table: "LoanApplications",
                 type: "numeric(18,2)",
                 nullable: false,
@@ -345,7 +296,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "OfficePhone",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(20)",
                 maxLength: 20,
@@ -353,7 +303,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<decimal>(
                 name: "OtherMonthlyIncome",
-                schema: "public",
                 table: "LoanApplications",
                 type: "numeric(18,2)",
                 nullable: false,
@@ -361,7 +310,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "PanNumber",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(10)",
                 maxLength: 10,
@@ -369,7 +317,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "PermanentAddressLine1",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(200)",
                 maxLength: 200,
@@ -377,7 +324,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "PermanentAddressLine2",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(200)",
                 maxLength: 200,
@@ -385,7 +331,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "PermanentCity",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(100)",
                 maxLength: 100,
@@ -393,7 +338,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "PermanentPinCode",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(10)",
                 maxLength: 10,
@@ -401,7 +345,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "PermanentState",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(60)",
                 maxLength: 60,
@@ -409,7 +352,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "PurposeOfLoan",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(200)",
                 maxLength: 200,
@@ -417,7 +359,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "RejectionReason",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(500)",
                 maxLength: 500,
@@ -425,7 +366,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<decimal>(
                 name: "RequestedAmount",
-                schema: "public",
                 table: "LoanApplications",
                 type: "numeric(18,2)",
                 nullable: false,
@@ -433,7 +373,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "ResidenceType",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(50)",
                 maxLength: 50,
@@ -441,7 +380,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "RiskGrade",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(20)",
                 maxLength: 20,
@@ -449,7 +387,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<bool>(
                 name: "SameAsCurrent",
-                schema: "public",
                 table: "LoanApplications",
                 type: "boolean",
                 nullable: false,
@@ -457,7 +394,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "SanctionRemarks",
-                schema: "public",
                 table: "LoanApplications",
                 type: "character varying(1000)",
                 maxLength: 1000,
@@ -465,28 +401,24 @@ namespace LoanService.Migrations
 
             migrationBuilder.AddColumn<decimal>(
                 name: "SanctionedAmount",
-                schema: "public",
                 table: "LoanApplications",
                 type: "numeric(18,2)",
                 nullable: true);
 
             migrationBuilder.AddColumn<int>(
                 name: "TotalWorkExperienceYears",
-                schema: "public",
                 table: "LoanApplications",
                 type: "integer",
                 nullable: true);
 
             migrationBuilder.AddColumn<int>(
                 name: "YearsAtCurrentJob",
-                schema: "public",
                 table: "LoanApplications",
                 type: "integer",
                 nullable: true);
 
             migrationBuilder.CreateTable(
                 name: "LoanApprovalActions",
-                schema: "public",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -515,7 +447,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.CreateTable(
                 name: "LoanDocuments",
-                schema: "public",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -552,7 +483,6 @@ namespace LoanService.Migrations
 
             migrationBuilder.CreateTable(
                 name: "LoanProducts",
-                schema: "public",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -587,44 +517,37 @@ namespace LoanService.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "IX_LoanApplications_ApplicationNumber",
-                schema: "public",
                 table: "LoanApplications",
                 column: "ApplicationNumber",
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_LoanApplications_CreatedAt",
-                schema: "public",
                 table: "LoanApplications",
                 column: "CreatedAt");
 
             migrationBuilder.CreateIndex(
                 name: "IX_LoanApplications_ProductType",
-                schema: "public",
                 table: "LoanApplications",
                 column: "ProductType");
 
             migrationBuilder.CreateIndex(
                 name: "IX_LoanApplications_Status",
-                schema: "public",
                 table: "LoanApplications",
                 column: "Status");
 
             migrationBuilder.CreateIndex(
                 name: "IX_LoanApprovalActions_LoanApplicationId",
-                schema: "public",
                 table: "LoanApprovalActions",
                 column: "LoanApplicationId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_LoanDocuments_LoanApplicationId",
-                schema: "public",
                 table: "LoanDocuments",
                 column: "LoanApplicationId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_LoanProducts_ProductCode",
-                schema: "public",
                 table: "LoanProducts",
                 column: "ProductCode",
                 unique: true);
@@ -647,298 +570,233 @@ namespace LoanService.Migrations
 
             migrationBuilder.DropIndex(
                 name: "IX_LoanApplications_ApplicationNumber",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropIndex(
                 name: "IX_LoanApplications_CreatedAt",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropIndex(
                 name: "IX_LoanApplications_ProductType",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropIndex(
                 name: "IX_LoanApplications_Status",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "AadhaarLast4",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "ApplicantName",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "ApplicationNumber",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "AssignedTo",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "CibilBand",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "CibilScore",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "CoApplicantJson",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "CollateralDescription",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "CollateralType",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "CollateralValue",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "CreatedBy",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "CreditOfficer",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "CurrentAddressLine1",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "CurrentAddressLine2",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "CurrentCity",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "CurrentPinCode",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "CurrentState",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "DateOfBirth",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "Designation",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "DisbursedAt",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "DisbursementAccountNumber",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "DisbursementIFSC",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "Email",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "EmployerName",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "EmploymentType",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "ExistingMonthlyEMI",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "FOIRPercent",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "Gender",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "GrossMonthlyIncome",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "HasCoApplicant",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "LTVPercent",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "MaritalStatus",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "MobileNumber",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "MonthlyObligations",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "NetMonthlyIncome",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "OfficePhone",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "OtherMonthlyIncome",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "PanNumber",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "PermanentAddressLine1",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "PermanentAddressLine2",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "PermanentCity",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "PermanentPinCode",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "PermanentState",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "PurposeOfLoan",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "RejectionReason",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "RequestedAmount",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "ResidenceType",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "RiskGrade",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "SameAsCurrent",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "SanctionRemarks",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "SanctionedAmount",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "TotalWorkExperienceYears",
-                schema: "public",
                 table: "LoanApplications");
 
             migrationBuilder.DropColumn(
                 name: "YearsAtCurrentJob",
-                schema: "public",
                 table: "LoanApplications");
 
-            migrationBuilder.RenameTable(
-                name: "LoanApplications",
-                schema: "public",
-                newName: "LoanApplications");
 
-            migrationBuilder.RenameTable(
-                name: "LoanAccounts",
-                schema: "public",
-                newName: "LoanAccounts");
 
             migrationBuilder.AlterColumn<string>(
                 name: "Status",
