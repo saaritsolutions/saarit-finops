@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-05 (session 14 — world-class UI redesign)
+**Last Updated:** 2026-04-06 (session 15 — E2E loan origination complete)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -34,7 +34,11 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 - **Account Management UI** — CRUD + Approve/Close wired to AccountService (live at /accounts; SCRUM-80)
 - **Ledger UI** — Ledger Balances + Journal Entries, Post Journal Entry with balance validation (SCRUM-81)
 - **User & Role Management UI** — Admin/Maker/Checker roles visible, seeded users (live at /admin; SCRUM-82)
-- **Loan Management UI** — loan application list with status chips + New Application link (SCRUM-83)
+- **Loan Management UI** — polished 2-tab list (All Apps + Pending Approval), filters, CSV export, CIBIL/FOIR columns (SCRUM-83, SCRUM-183)
+- **Loan Detail UI** — full application view with KPI bar, 3-column layout, document checklist, approval timeline (SCRUM-184)
+- **Loan Approval Dashboard** — maker-checker queue, action buttons (Credit Approve / Sanction / Reject / Disburse) (SCRUM-185)
+- **6-Step Real Banking Form** — Personal/KYC, Employment/Income, Loan Parameters, Co-Applicant, Documents, Review & Submit (SCRUM-177-182)
+- **5 Loan Products** — Personal, Home, Business, Gold, Vehicle seeded per tenant with FOIR/LTV/CIBIL limits
 - **Real JWT Auth** — UserAccessManagementService /api/auth/login endpoint, BCrypt seed users, JWT 8h (SCRUM-2,3,4)
 - **Double-entry Ledger Backend** — PostingEngine, idempotency, LedgerBalance, 16 unit tests (bab9b9c)
 - **Loan Wizard (M1 Complete)** — dynamic schema-driven form, EMI estimate, file upload, input masking
