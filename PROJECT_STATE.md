@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-06 (session 15 — E2E loan origination complete)
+**Last Updated:** 2026-04-06 (session 16 — demo data seeder)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -141,6 +141,15 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 16 — 2026-04-06 (demo data seeder — SCRUM-188)
+- **LoanDemoDataSeeder**: 5 realistic loan applications per tenant spanning all workflow states
+  - Priya Sharma (Personal ₹5L, SUBMITTED), Rajesh Kumar (Home ₹45L, IN_REVIEW), Anjali Mehta (Business ₹10L, CREDIT_APPROVED), Vikram Nair (Gold ₹2L, DISBURSED), Sunita Patel (Vehicle ₹8L, REJECTED)
+  - Full approval action history per application (CREATED → ... → final state)
+  - Documents per application with realistic PENDING/UPLOADED/VERIFIED statuses
+  - Idempotent: checks by ApplicationNumber; runs on startup per-tenant
+  - Files: `LoanService/Data/LoanDemoDataSeeder.cs`, `LoanService/Program.cs` (2 lines added)
+- Next: deploy to Hetzner (restart loanservice container)
 
 ### Session 9 — 2026-03-30 (RBI functional requirements Jira backlog)
 - **RBI requirements research**: reviewed KYC Master Directions (UCB) 2025, IRAC Master Circular 2024/2025, PSL Master Directions 2024 (60% ANBC), Interest Rate Directions 2025, Management of Advances 2025, Cyber Security Framework UCBs, ALM guidelines, IDRBT CBS requirements
