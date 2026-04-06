@@ -90,7 +90,7 @@ namespace LoanService.Data
             };
         }
 
-        // ── Build all 5 applications ───────────────────────────────────────────
+        // ── Build all 8 applications (covers all workflow statuses) ──────────────
         private static List<(LoanApplication, List<LoanDocument>, List<LoanApprovalAction>)>
             BuildApplications(string tenantId)
         {
@@ -108,6 +108,9 @@ namespace LoanService.Data
                 App3_BusinessLoan_CreditApproved(tenantId, pfx),
                 App4_GoldLoan_Disbursed(tenantId, pfx),
                 App5_VehicleLoan_Rejected(tenantId, pfx),
+                App6_PersonalLoan_Draft(tenantId, pfx),
+                App7_BusinessLoan_Approved(tenantId, pfx),
+                App8_HomeLoan_InfoRequested(tenantId, pfx),
             };
         }
 
@@ -571,6 +574,274 @@ namespace LoanService.Data
                 Act(id, "REJECT",        "Credit assessment failed — eligibility criteria not met",     "amit.sharma@bank.com",       "CREDIT_OFFICER","IN_REVIEW", "REJECTED",  t3,
                     "Primary: CIBIL score 618 (min required 650). Secondary: FOIR 56% exceeds limit of 50% — existing EMI obligations are high. " +
                     "Rejection letter issued. Customer advised to reduce existing liabilities and improve credit score before reapplication in 6 months."),
+            };
+
+            return (app, docs, actions);
+        }
+
+        // ════════════════════════════════════════════════════════════════════════
+        // 6. Personal Loan — DRAFT (1 day ago — applicant saved form, not yet submitted)
+        // ════════════════════════════════════════════════════════════════════════
+        private static (LoanApplication, List<LoanDocument>, List<LoanApprovalAction>)
+            App6_PersonalLoan_Draft(string tenantId, string pfx)
+        {
+            var id = G(tenantId, 6);
+            var t0 = Anchor.AddDays(-1).AddHours(-3);  // started filling form
+
+            var app = new LoanApplication
+            {
+                Id                    = id,
+                ApplicationNumber     = $"{pfx}-PL-2026-006",
+                ProductType           = "PERSONAL_LOAN",
+                RequestedAmount       = 3_00_000,
+                TenureMonths          = 24,
+                Status                = "DRAFT",
+                PurposeOfLoan         = "Home renovation and purchase of furniture",
+
+                ApplicantName         = "Kavita Sharma",
+                DateOfBirth           = new DateTime(1992, 8, 22, 0, 0, 0, DateTimeKind.Utc),
+                Gender                = "F",
+                MaritalStatus         = "MARRIED",
+                PanNumber             = "CRTKS7654H",
+                AadhaarLast4          = "4521",
+                MobileNumber          = "9876541230",
+                Email                 = "kavita.sharma@gmail.com",
+
+                CurrentAddressLine1   = "C-12, Saket Nagar",
+                CurrentCity           = "Indore",
+                CurrentState          = "Madhya Pradesh",
+                CurrentPinCode        = "452001",
+                ResidenceType         = "OWNED",
+                SameAsCurrent         = true,
+
+                EmploymentType        = "SALARIED",
+                EmployerName          = "Infosys BPM Ltd",
+                Designation           = "Senior Associate",
+                YearsAtCurrentJob     = 4,
+
+                GrossMonthlyIncome    = 55_000,
+                NetMonthlyIncome      = 46_000,
+                ExistingMonthlyEMI    = 5_000,
+                MonthlyObligations    = 5_000,
+
+                CibilScore            = 740,
+                CibilBand             = "GOOD",
+
+                CreatedBy             = "kavita.sharma@gmail.com",
+                CreatedAt             = t0,
+                UpdatedAt             = t0,
+            };
+
+            var docs = new List<LoanDocument>
+            {
+                Doc(id, "PAN_CARD", "PAN Card",   true, "PENDING"),
+                Doc(id, "AADHAAR",  "Aadhaar Card",true, "PENDING"),
+            };
+
+            // DRAFT — no approval actions yet
+            var actions = new List<LoanApprovalAction>
+            {
+                Act(id, "CREATED", "Draft application saved via online portal",
+                    "kavita.sharma@gmail.com", "APPLICANT", null, "DRAFT", t0),
+            };
+
+            return (app, docs, actions);
+        }
+
+        // ════════════════════════════════════════════════════════════════════════
+        // 7. Business Loan — APPROVED/Sanctioned (5 days ago — awaiting disbursal)
+        // ════════════════════════════════════════════════════════════════════════
+        private static (LoanApplication, List<LoanDocument>, List<LoanApprovalAction>)
+            App7_BusinessLoan_Approved(string tenantId, string pfx)
+        {
+            var id = G(tenantId, 7);
+            var t0 = Anchor.AddDays(-10);   // applied
+            var t1 = Anchor.AddDays(-9);    // submitted
+            var t2 = Anchor.AddDays(-8);    // in review
+            var t3 = Anchor.AddDays(-7);    // credit approved
+            var t4 = Anchor.AddDays(-5);    // sanctioned
+
+            var app = new LoanApplication
+            {
+                Id                    = id,
+                ApplicationNumber     = $"{pfx}-BL-2026-007",
+                ProductType           = "BUSINESS_LOAN",
+                RequestedAmount       = 7_50_000,
+                SanctionedAmount      = 7_00_000,
+                TenureMonths          = 48,
+                InterestRate          = 13.00m,
+                Status                = "APPROVED",
+                SanctionRemarks       = "Loan sanctioned at ₹7,00,000. Processing fee of 2% (₹14,000) to be deducted at disbursal. Collateral: business inventory pledge.",
+                PurposeOfLoan         = "Business expansion — new machinery for garment manufacturing unit",
+
+                ApplicantName         = "Suresh Patel",
+                DateOfBirth           = new DateTime(1978, 3, 5, 0, 0, 0, DateTimeKind.Utc),
+                Gender                = "M",
+                MaritalStatus         = "MARRIED",
+                PanNumber             = "AQWSP4567K",
+                AadhaarLast4          = "8834",
+                MobileNumber          = "9823456712",
+                Email                 = "suresh.patel@pateltextiles.in",
+
+                CurrentAddressLine1   = "Plot 7, GIDC Industrial Estate",
+                CurrentCity           = "Surat",
+                CurrentState          = "Gujarat",
+                CurrentPinCode        = "395010",
+                ResidenceType         = "OWNED",
+                SameAsCurrent         = true,
+
+                EmploymentType        = "SELF_EMPLOYED",
+                EmployerName          = "Patel Textiles Pvt Ltd",
+                Designation           = "Proprietor",
+                YearsAtCurrentJob     = 14,
+                TotalWorkExperienceYears = 18,
+
+                GrossMonthlyIncome    = 1_20_000,
+                NetMonthlyIncome      = 98_000,
+                OtherMonthlyIncome    = 15_000,
+                ExistingMonthlyEMI    = 8_000,
+                MonthlyObligations    = 8_000,
+
+                CibilScore            = 785,
+                CibilBand             = "EXCELLENT",
+                FOIRPercent           = 0.22m,
+                RiskGrade             = "A",
+
+                CreatedBy             = "suresh.patel@pateltextiles.in",
+                AssignedTo            = "credit.officer@bank.com",
+                CreditOfficer         = "Priya Menon",
+                CreatedAt             = t0,
+                UpdatedAt             = t4,
+            };
+
+            var docs = new List<LoanDocument>
+            {
+                Doc(id, "PAN_CARD",          "PAN Card",                    true,  "VERIFIED", t1, "suresh-pan.pdf",      "suresh.patel@pateltextiles.in"),
+                Doc(id, "AADHAAR",           "Aadhaar Card",                true,  "VERIFIED", t1, "suresh-aadhaar.pdf",  "suresh.patel@pateltextiles.in"),
+                Doc(id, "BUSINESS_PROOF",    "GST Certificate / Udyam Reg", true,  "VERIFIED", t1, "patel-gst.pdf",       "suresh.patel@pateltextiles.in"),
+                Doc(id, "ITR_3YRS",          "Income Tax Returns (3 Yrs)",  true,  "VERIFIED", t1, "suresh-itr.pdf",      "suresh.patel@pateltextiles.in"),
+                Doc(id, "BANK_STATEMENT_6M", "6 Months Bank Statement",     true,  "VERIFIED", t1, "suresh-bankstmt.pdf", "suresh.patel@pateltextiles.in"),
+                Doc(id, "SANCTION_LETTER",   "Sanction Letter",             false, "UPLOADED", t4, "sanction-BL007.pdf",  "credit.officer@bank.com"),
+            };
+
+            var actions = new List<LoanApprovalAction>
+            {
+                Act(id, "CREATED",        "Business loan application initiated",
+                    "suresh.patel@pateltextiles.in", "APPLICANT",     null,           "DRAFT",          t0),
+                Act(id, "SUBMITTED",      "All documents uploaded, application submitted",
+                    "suresh.patel@pateltextiles.in", "APPLICANT",     "DRAFT",        "SUBMITTED",      t1),
+                Act(id, "SEND_TO_REVIEW", "Assigned to Business Loan Credit Team",
+                    "credit.officer@bank.com",       "CHECKER",       "SUBMITTED",    "IN_REVIEW",      t2,
+                    "Business profile strong. GST returns verified. Proceed to credit assessment."),
+                Act(id, "CREDIT_APPROVE", "Credit assessment passed — all parameters within norms",
+                    "priya.menon@bank.com",          "CREDIT_OFFICER","IN_REVIEW",    "CREDIT_APPROVED", t3,
+                    "CIBIL 785 (EXCELLENT). FOIR 22% well within 50% limit. Business vintage 14 years. Recommend sanction at ₹7,00,000."),
+                Act(id, "SANCTION",       "Loan sanctioned — disbursal pending customer acceptance",
+                    "branch.manager@bank.com",       "MANAGER",       "CREDIT_APPROVED","APPROVED",     t4,
+                    "Sanctioned ₹7,00,000 against requested ₹7,50,000. Collateral pledge agreement to be executed before disbursal."),
+            };
+
+            return (app, docs, actions);
+        }
+
+        // ════════════════════════════════════════════════════════════════════════
+        // 8. Home Loan — INFO_REQUESTED (8 days ago — additional documents requested)
+        // ════════════════════════════════════════════════════════════════════════
+        private static (LoanApplication, List<LoanDocument>, List<LoanApprovalAction>)
+            App8_HomeLoan_InfoRequested(string tenantId, string pfx)
+        {
+            var id = G(tenantId, 8);
+            var t0 = Anchor.AddDays(-12);  // applied
+            var t1 = Anchor.AddDays(-11);  // submitted
+            var t2 = Anchor.AddDays(-10);  // in review
+            var t3 = Anchor.AddDays(-8);   // info requested
+
+            var app = new LoanApplication
+            {
+                Id                    = id,
+                ApplicationNumber     = $"{pfx}-HL-2026-008",
+                ProductType           = "HOME_LOAN",
+                RequestedAmount       = 25_00_000,
+                TenureMonths          = 180,
+                InterestRate          = 9.00m,
+                Status                = "INFO_REQUESTED",
+                PurposeOfLoan         = "Purchase of ready-to-move 2BHK apartment in new residential project",
+
+                ApplicantName         = "Anita Desai",
+                DateOfBirth           = new DateTime(1985, 11, 30, 0, 0, 0, DateTimeKind.Utc),
+                Gender                = "F",
+                MaritalStatus         = "MARRIED",
+                PanNumber             = "BNTAD8901G",
+                AadhaarLast4          = "2267",
+                MobileNumber          = "9765432109",
+                Email                 = "anita.desai@outlook.com",
+
+                CurrentAddressLine1   = "201, Sai Residency",
+                CurrentAddressLine2   = "Viman Nagar",
+                CurrentCity           = "Pune",
+                CurrentState          = "Maharashtra",
+                CurrentPinCode        = "411014",
+                ResidenceType         = "RENTED",
+                SameAsCurrent         = false,
+
+                EmploymentType        = "SALARIED",
+                EmployerName          = "Wipro Technologies",
+                Designation           = "Technical Lead",
+                YearsAtCurrentJob     = 6,
+                TotalWorkExperienceYears = 11,
+
+                GrossMonthlyIncome    = 1_05_000,
+                NetMonthlyIncome      = 86_000,
+                OtherMonthlyIncome    = 8_000,
+                ExistingMonthlyEMI    = 12_000,
+                MonthlyObligations    = 12_000,
+
+                CibilScore            = 710,
+                CibilBand             = "FAIR",
+                FOIRPercent           = 0.35m,
+                LTVPercent            = 0.74m,
+
+                CollateralType        = "PROPERTY",
+                CollateralValue       = 33_75_000,
+                CollateralDescription = "Flat No. 302, Horizon Heights, Kharadi, Pune — registered value ₹33,75,000",
+
+                HasCoApplicant        = true,
+                CoApplicantJson       = "{\"name\":\"Rahul Desai\",\"relation\":\"Spouse\",\"monthlyIncome\":75000}",
+
+                CreatedBy             = "anita.desai@outlook.com",
+                AssignedTo            = "home.loans@bank.com",
+                CreditOfficer         = "Sanjay Kulkarni",
+                CreatedAt             = t0,
+                UpdatedAt             = t3,
+            };
+
+            var docs = new List<LoanDocument>
+            {
+                Doc(id, "PAN_CARD",          "PAN Card",                    true,  "VERIFIED", t1, "anita-pan.pdf",       "anita.desai@outlook.com"),
+                Doc(id, "AADHAAR",           "Aadhaar Card",                true,  "VERIFIED", t1, "anita-aadhaar.pdf",   "anita.desai@outlook.com"),
+                Doc(id, "SALARY_SLIP_3M",    "Last 3 Months Salary Slip",   true,  "UPLOADED", t1, "anita-salslip.pdf",   "anita.desai@outlook.com"),
+                Doc(id, "BANK_STATEMENT_6M", "6 Months Bank Statement",     true,  "UPLOADED", t1, "anita-bankstmt.pdf",  "anita.desai@outlook.com"),
+                Doc(id, "PROPERTY_DOCS",     "Sale Agreement / ATS",        true,  "PENDING"),
+                Doc(id, "NOC_BUILDER",       "Builder NOC / Completion Certificate", true, "PENDING"),
+                Doc(id, "CO_APP_PAN",        "Co-Applicant PAN Card",       true,  "PENDING"),
+                Doc(id, "CO_APP_SALARY",     "Co-Applicant Salary Slips",   true,  "PENDING"),
+            };
+
+            var actions = new List<LoanApprovalAction>
+            {
+                Act(id, "CREATED",        "Home loan application submitted online",
+                    "anita.desai@outlook.com", "APPLICANT",     null,        "DRAFT",          t0),
+                Act(id, "SUBMITTED",      "Application submitted with basic documents",
+                    "anita.desai@outlook.com", "APPLICANT",     "DRAFT",     "SUBMITTED",      t1),
+                Act(id, "SEND_TO_REVIEW", "Assigned to Home Loan Processing Team",
+                    "home.loans@bank.com",     "CHECKER",       "SUBMITTED", "IN_REVIEW",      t2,
+                    "CIBIL 710 — acceptable. Property in Kharadi, Pune — good locality. Assigned to Sanjay Kulkarni for legal & technical check."),
+                Act(id, "REQUEST_INFO",   "Additional property documents required",
+                    "sanjay.kulkarni@bank.com","CREDIT_OFFICER","IN_REVIEW", "INFO_REQUESTED", t3,
+                    "Please provide: (1) Original sale agreement / Agreement to Sell signed by builder. " +
+                    "(2) Builder NOC and completion certificate from local authority. " +
+                    "(3) Co-applicant PAN card and last 3 months salary slips. " +
+                    "All documents must be self-attested. Deadline: 7 working days."),
             };
 
             return (app, docs, actions);
