@@ -119,6 +119,27 @@ if (!app.Environment.IsEnvironment("IntegrationTesting"))
 {
     using var scope = app.Services.CreateScope();
     await TenantSchemaProvisioner.ProvisionAllSchemasAsync(scope.ServiceProvider);
+
+    // Seed loan products per tenant
+    var connStr = builder.Configuration.GetConnectionString("DefaultConnection")!;
+    var seedLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    foreach (var tenantId in new[] { "public", "ucb_demo", "nbfc_demo" })
+    {
+        try
+        {
+            var tenantSvc = new LoanService.Services.FixedTenantService(tenantId);
+            var tenantOpts = new DbContextOptionsBuilder<LoanDbContext>()
+                .UseNpgsql(connStr + $";SearchPath={tenantId}")
+                .Options;
+            await using var seedDb = new LoanDbContext(tenantOpts, tenantSvc);
+            await LoanProductSeeder.SeedAsync(seedDb);
+            seedLogger.LogInformation("LoanProducts seeded for tenant {Tenant}", tenantId);
+        }
+        catch (Exception ex)
+        {
+            seedLogger.LogWarning(ex, "LoanProduct seed skipped for tenant {Tenant}", tenantId);
+        }
+    }
 }
 
 // Enable Swagger in all environments for demos/testing
