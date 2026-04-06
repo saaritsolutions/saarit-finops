@@ -114,13 +114,20 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
     LoanDetail (full detail + MUI Lab Timeline + action buttons)
   - Commits: a4def55 (models/APIs/6-step form), a192e92 (list/detail/approval dashboard)
 
+## Completed (continued)
+- Demo data seeder deployed (session 17, 2026-04-06): 5 realistic loan apps per tenant × 3 tenants = 15 apps LIVE.
+  - Fixed DateTimeKind.Utc on all DateOfBirth fields (Npgsql rejects Unspecified for timestamptz)
+  - Fixed EF Core insert ordering: save LoanApplication first, then docs/actions (FK satisfaction)
+  - Fixed cross-schema FK bug in Postgres: ucb_demo/nbfc_demo LoanApprovalActions + LoanDocuments FKs
+    were referencing public.LoanApplications instead of their own schema — corrected via ALTER TABLE
+  - Commits: 8c90ee1 (DateTimeKind fix), 7dd80a7 (FK ordering fix)
+
 ## In Progress
 - (none)
 
 ## Pending Next
 - Deposit Account Management — SB/FD/RD lifecycle (SCRUM-93 to SCRUM-99)
 - Maker-Checker workflow engine (SCRUM-9 to SCRUM-16)
-- Seed realistic demo data (3 loan applications per tenant in different states — SCRUM-188)
 
 ## Notes
 - Eligibility expression ID currently in use: EXPR_1755237353842.
