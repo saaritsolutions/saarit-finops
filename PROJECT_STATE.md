@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-06 (session 16 — demo data seeder)
+**Last Updated:** 2026-04-06 (session 18 — test quality initiative)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -141,6 +141,13 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 18 — 2026-04-06 (test quality initiative — SCRUM-188 + testing)
+- **Jira test cases**: `docs/TEST_CASES_LOAN_ORIGINATION.md` — 70+ BDD tests across 12 categories (TC-01 to TC-12), covering EMI/FOIR/LTV calculators, eligibility API, products API, state machine, frontend list/detail/form, and demo data
+- **NUnit unit tests**: `LoanService.Tests/EligibilityAndWorkflowTests.cs` — 40 tests in 6 fixture classes (EmiCalculator, FoirCalculator, LtvCalculator, CheckEligibility, LoanApplicationsList, LoanStateMachine); builds with 0 errors
+- **Cypress E2E**: `frontend-react/cypress/e2e/loan-management.cy.ts` — 25+ tests across 5 suites using `cy.session()` login cache; direct API smoke tests on LoanService port 5130
+- **Demo seeder extended**: 3 new apps bringing total to 8 per tenant (DRAFT, APPROVED/sanctioned, INFO_REQUESTED); all workflow states now covered
+- Commit: `1a138e1` (pushed to GitHub); Hetzner SSH unreachable — pending `docker compose up --build -d loanservice`
 
 ### Session 16 — 2026-04-06 (demo data seeder — SCRUM-188)
 - **LoanDemoDataSeeder**: 5 realistic loan applications per tenant spanning all workflow states
