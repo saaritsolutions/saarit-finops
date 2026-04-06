@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert, Box, Button, Card, CardContent, Chip, CircularProgress,
   Dialog, DialogActions, DialogContent, DialogTitle, Divider,
-  Grid, Stack, TextField, Tooltip, Typography,
+  Grid, Stack, Table, TableBody, TableCell, TableContainer,
+  TableHead, TableRow, TextField, Tooltip, Typography,
 } from '@mui/material';
 import {
   Timeline, TimelineConnector, TimelineContent, TimelineDot,
@@ -21,6 +22,7 @@ import PersonIcon        from '@mui/icons-material/Person';
 import WorkIcon          from '@mui/icons-material/Work';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import DescriptionIcon   from '@mui/icons-material/Description';
+import CalculateIcon     from '@mui/icons-material/Calculate';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   getApplicationDetail, takeApplicationAction,
@@ -50,6 +52,26 @@ const fmtDateOnly = (iso?: string | null) => {
 };
 
 const n2s = (v: any) => (v !== null && v !== undefined && v !== '') ? String(v) : '—';
+
+// ── Amortization ───────────────────────────────────────────────────────────────
+type AmortRow = { month: number; opening: number; emi: number; principal: number; interest: number; closing: number };
+
+function computeAmortization(principal: number, annualRate: number, months: number): { emi: number; rows: AmortRow[] } {
+  const r = annualRate / 12 / 100;
+  const emi = r === 0
+    ? principal / months
+    : (principal * r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
+  const rows: AmortRow[] = [];
+  let balance = principal;
+  for (let i = 1; i <= months; i++) {
+    const interest = balance * r;
+    const principalPart = emi - interest;
+    const closing = Math.max(0, balance - principalPart);
+    rows.push({ month: i, opening: balance, emi, principal: principalPart, interest, closing });
+    balance = closing;
+  }
+  return { emi, rows };
+}
 
 // ── Status config ──────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; color: 'default' | 'warning' | 'info' | 'success' | 'error' | 'primary' }> = {
@@ -188,6 +210,7 @@ const LoanDetail: React.FC = () => {
   const [actionDef, setActionDef] = useState<ActionDef | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [showSchedule, setShowSchedule] = useState(false);
 
   const app = detail?.application ?? null;
 
@@ -517,6 +540,82 @@ const LoanDetail: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
+
+      {/* Repayment Schedule */}
+      {(() => {
+        const principal = Number(f('sanctionedAmount') || f('requestedAmount'));
+        const rate      = Number(f('interestRate'));
+        const months    = Number(f('tenureMonths'));
+        if (!principal || !rate || !months) return null;
+        const { emi, rows } = computeAmortization(principal, rate, months);
+        const totalInterest = rows.reduce((sum, r) => sum + r.interest, 0);
+        return (
+          <Box mt={2}>
+            <Card sx={{ border: `1px solid ${SLATE_200}`, boxShadow: 'none', borderRadius: 2 }}>
+              <CardContent sx={{ p: 2.5 }}>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1.5}>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Box sx={{ color: BLUE_600, display: 'flex' }}><CalculateIcon /></Box>
+                    <Typography variant="subtitle2" fontWeight={700} color={SLATE_900}>Repayment Schedule</Typography>
+                  </Stack>
+                  <Button
+                    size="small" variant="outlined"
+                    sx={{ borderColor: SLATE_200 }}
+                    onClick={() => setShowSchedule(s => !s)}
+                  >
+                    {showSchedule ? 'Hide Table' : 'Show Month-by-Month'}
+                  </Button>
+                </Stack>
+                <Divider sx={{ mb: 1.5 }} />
+
+                {/* Summary KPIs */}
+                <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', mb: showSchedule ? 2 : 0 }}>
+                  {[
+                    { label: 'Monthly EMI',    value: INR(Math.round(emi)),                      color: BLUE_600   },
+                    { label: 'Total Interest', value: INR(Math.round(totalInterest)),             color: '#F59E0B'  },
+                    { label: 'Total Payable',  value: INR(Math.round(principal + totalInterest)), color: SLATE_900  },
+                    { label: 'Tenure',         value: `${months} months`,                         color: SLATE_500  },
+                  ].map(({ label, value, color }) => (
+                    <Box key={label} sx={{ flex: '1 1 140px', minWidth: 120 }}>
+                      <Typography variant="caption" color={SLATE_500}>{label}</Typography>
+                      <Typography variant="subtitle1" fontWeight={700} sx={{ color }}>{value}</Typography>
+                    </Box>
+                  ))}
+                </Box>
+
+                {/* Amortization Table */}
+                {showSchedule && (
+                  <TableContainer sx={{ maxHeight: 420, borderRadius: 1, border: `1px solid ${SLATE_200}` }}>
+                    <Table size="small" stickyHeader>
+                      <TableHead>
+                        <TableRow>
+                          {['#', 'Opening Balance', 'EMI', 'Principal', 'Interest', 'Closing Balance'].map(h => (
+                            <TableCell key={h} sx={{ fontWeight: 700, bgcolor: SLATE_50, fontSize: '0.72rem', whiteSpace: 'nowrap', py: 1 }}>
+                              {h}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {rows.map(row => (
+                          <TableRow key={row.month} hover sx={{ '&:last-child td': { borderBottom: 0 } }}>
+                            <TableCell sx={{ fontSize: '0.78rem', color: SLATE_500 }}>{row.month}</TableCell>
+                            <TableCell sx={{ fontSize: '0.78rem' }}>{INR(Math.round(row.opening))}</TableCell>
+                            <TableCell sx={{ fontSize: '0.78rem', fontWeight: 600, color: BLUE_600 }}>{INR(Math.round(row.emi))}</TableCell>
+                            <TableCell sx={{ fontSize: '0.78rem', color: '#10B981' }}>{INR(Math.round(row.principal))}</TableCell>
+                            <TableCell sx={{ fontSize: '0.78rem', color: '#F59E0B' }}>{INR(Math.round(row.interest))}</TableCell>
+                            <TableCell sx={{ fontSize: '0.78rem' }}>{INR(Math.round(row.closing))}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )}
+              </CardContent>
+            </Card>
+          </Box>
+        );
+      })()}
 
       {/* Action Dialog */}
       <ActionDialog

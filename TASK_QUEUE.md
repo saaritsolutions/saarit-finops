@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-06 (session 17 — seeder deployment + loan detail bug fix)
+**Last Updated:** 2026-04-06 (session 17 cont. — repayment schedule amortization table)
 **Single source of truth for what to do next.**
 
 ---
@@ -14,6 +14,13 @@
 | 1 | **[RBI-02] Deposit Account Management** — SB/FD/RD lifecycle (SCRUM-93 to SCRUM-99) | Core banking function; show real deposit products |
 | 2 | **Maker-Checker workflow engine** (SCRUM-9 to SCRUM-16) | Required for any real approval flow |
 | 3 | **Wire LoanService → TransactionService** on disbursal (SCRUM-187) | Show double-entry ledger entry on loan disbursement |
+
+### Recently Completed (session 17 cont. — 2026-04-06)
+- [x] **Repayment Schedule in LoanDetail** — amortization table added to loan detail page
+  - `computeAmortization()` helper: EMI formula P×r×(1+r)^n/((1+r)^n−1), month-by-month breakdown
+  - Summary KPIs always shown: Monthly EMI, Total Interest, Total Payable, Tenure
+  - "Show Month-by-Month" toggle reveals sticky-header scrollable MUI Table
+  - Pure frontend — no backend API changes; uses existing loan detail response fields
 
 ### Recently Completed (session 17 — 2026-04-06)
 - [x] **Loan detail page bug fixed** — "Failed to load application" error resolved (commit d6bb3e1)

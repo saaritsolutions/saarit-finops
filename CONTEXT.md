@@ -126,6 +126,15 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
     were referencing public.LoanApplications instead of their own schema — corrected via ALTER TABLE
   - Commits: 8c90ee1 (DateTimeKind fix), 7dd80a7 (FK ordering fix)
 
+## Completed (continued)
+- Repayment Schedule in LoanDetail (session 17 cont., 2026-04-06):
+  - Pure frontend amortization table added to LoanDetail.tsx
+  - EMI formula: P × r × (1+r)^n / ((1+r)^n − 1); monthly breakdown: opening balance, EMI, principal, interest, closing balance
+  - Summary KPIs: Monthly EMI, Total Interest, Total Payable, Tenure — always visible
+  - "Show Month-by-Month" toggle reveals sticky-header scrollable table (maxHeight 420px)
+  - Uses sanctionedAmount if set, else requestedAmount; hidden when loan params missing
+  - No backend changes needed — all data already in loan detail API response
+
 ## In Progress
 - (none)
 
