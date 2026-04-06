@@ -13,6 +13,7 @@ const TransactionManagement = lazy(() => import('../features/transaction/Transac
 const LoanManagement = lazy(() => import('../features/loan/LoanManagement'));
 const Reports = lazy(() => import('../features/reports/Reports'));
 const LoanOrigination = lazy(() => import('../pages/LoanOrigination'));
+const LoanDetail      = lazy(() => import('../pages/LoanDetail'));
 const AdminConfig = lazy(() => import('../pages/AdminConfig'));
 const UserManagement = lazy(() => import('../features/admin/UserManagement'));
 const Settings = lazy(() => import('../features/settings/Settings'));
@@ -156,6 +157,14 @@ export const AppRouter: React.FC = () => {
             element={
               <ProtectedRoute requiredPermission={BANKING_PERMISSIONS.LOAN_CREATE}>
                 <LoanOrigination />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="loans/:id"
+            element={
+              <ProtectedRoute requiredPermission={BANKING_PERMISSIONS.LOAN_VIEW}>
+                <LoanDetail />
               </ProtectedRoute>
             }
           />
