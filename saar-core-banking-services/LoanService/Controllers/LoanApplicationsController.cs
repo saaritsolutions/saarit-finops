@@ -1,5 +1,6 @@
 using LoanService.Data;
 using LoanService.Models;
+using LoanService.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,11 +15,13 @@ namespace LoanService.Controllers
     public class LoanApplicationsController : ControllerBase
     {
         private readonly LoanDbContext _db;
+        private readonly IWorkflowClient _workflowClient;
         private readonly ILogger<LoanApplicationsController> _logger;
 
-        public LoanApplicationsController(LoanDbContext db, ILogger<LoanApplicationsController> logger)
+        public LoanApplicationsController(LoanDbContext db, IWorkflowClient workflowClient, ILogger<LoanApplicationsController> logger)
         {
             _db = db;
+            _workflowClient = workflowClient;
             _logger = logger;
         }
 
@@ -197,6 +200,28 @@ namespace LoanService.Controllers
                         return BadRequest(new { error = "Application must be APPROVED to disburse" });
                     toStatus = "DISBURSED";
                     app.DisbursedAt = DateTime.UtcNow;
+
+                    // Notify workflow engine — fire-and-forget, never block the loan state machine
+                    if (app.WorkflowInstanceId.HasValue)
+                    {
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                var wfCtx = new Dictionary<string, object>
+                                {
+                                    ["application.id"] = id.ToString(),
+                                    ["application.status"] = "DISBURSED"
+                                };
+                                await _workflowClient.ProcessStepAsync(app.WorkflowInstanceId.Value, "DISBURSE", wfCtx);
+                                _logger.LogInformation("Workflow step DISBURSE processed for instance {WfId}", app.WorkflowInstanceId.Value);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogWarning(ex, "Workflow ProcessStep DISBURSE failed for loan {AppId} — continuing", id);
+                            }
+                        });
+                    }
                     break;
 
                 default:

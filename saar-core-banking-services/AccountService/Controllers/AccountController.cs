@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using AccountService.Models;
 using AccountService.Data;
+using AccountService.Services;
 using System.Linq;
 
 namespace AccountService.Controllers
@@ -11,9 +12,23 @@ namespace AccountService.Controllers
     public class AccountController : ControllerBase
     {
         private readonly AccountDbContext _context;
-        public AccountController(AccountDbContext context)
+        private readonly IExpressionEvaluationService _expressions;
+        private readonly IWorkflowClient _workflow;
+        private readonly IDynamicFormsClient _forms;
+        private readonly ILogger<AccountController> _logger;
+
+        public AccountController(
+            AccountDbContext context,
+            IExpressionEvaluationService expressions,
+            IWorkflowClient workflow,
+            IDynamicFormsClient forms,
+            ILogger<AccountController> logger)
         {
-            _context = context;
+            _context    = context;
+            _expressions = expressions;
+            _workflow   = workflow;
+            _forms      = forms;
+            _logger     = logger;
         }
 
         [HttpGet]
@@ -41,18 +56,83 @@ namespace AccountService.Controllers
         [HttpPost]
         public async Task<ActionResult<Account>> CreateAccount(Account account)
         {
-            // TODO: Integrate with CustomerService for customer validation
-            // For now, skip customer checks and focus on product type and business rules
             var productType = await _context.AccountProductTypes.FirstOrDefaultAsync(pt => pt.AccountProductTypeId == account.ProductTypeId);
             if (productType == null || !productType.IsActive)
                 return BadRequest("Invalid or inactive product type.");
             if (productType.MinimumOpeningAmount.HasValue && account.Balance < productType.MinimumOpeningAmount.Value)
                 return BadRequest($"Minimum opening amount for this product is {productType.MinimumOpeningAmount.Value}");
-            account.CreatedBy = User?.Identity?.Name ?? "system";
+
+            // ── FD/RD deposit validation ──────────────────────────────────────
+            var isDeposit = productType.Name == "FD" || productType.Name == "RD";
+            if (isDeposit)
+            {
+                if (!account.TermMonths.HasValue || account.TermMonths.Value <= 0)
+                    return BadRequest("TermMonths is required for FD/RD accounts.");
+                account.MaturityDate = account.DateOpened.AddMonths(account.TermMonths.Value);
+            }
+
+            account.CreatedBy    = User?.Identity?.Name ?? "system";
             account.ApprovalStatus = "Pending";
-            account.CreatedAt = DateTime.UtcNow;
+            account.CreatedAt    = DateTime.UtcNow;
             _context.Accounts.Add(account);
             await _context.SaveChangesAsync();
+
+            // ── Fetch deposit interest rate from expression engine (fire-and-forget) ──
+            if (isDeposit && account.TermMonths.HasValue)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        var rate = await _expressions.CalculateDepositInterestRateAsync(
+                            productType.Name, account.Balance, account.TermMonths.Value);
+                        if (rate.HasValue)
+                        {
+                            using var scope = HttpContext.RequestServices.CreateScope();
+                            var db = scope.ServiceProvider.GetRequiredService<AccountDbContext>();
+                            var a = await db.Accounts.FindAsync(account.AccountId);
+                            if (a != null)
+                            {
+                                a.InterestRate = rate.Value;
+                                await db.SaveChangesAsync();
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Interest rate fetch failed for account {Id} — skipping", account.AccountId);
+                    }
+                });
+            }
+
+            // ── Start account-opening workflow (fire-and-forget) ──────────────
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var wfCtx = new Dictionary<string, object>
+                    {
+                        ["account.id"]          = account.AccountId.ToString(),
+                        ["account.productType"] = productType.Name,
+                        ["account.balance"]     = (object)account.Balance
+                    };
+                    var wf = await _workflow.StartAccountOpeningAsync(Guid.NewGuid(), wfCtx);
+                    using var scope = HttpContext.RequestServices.CreateScope();
+                    var db = scope.ServiceProvider.GetRequiredService<AccountDbContext>();
+                    var a = await db.Accounts.FindAsync(account.AccountId);
+                    if (a != null)
+                    {
+                        a.WorkflowInstanceId = wf.Id;
+                        await db.SaveChangesAsync();
+                    }
+                    _logger.LogInformation("Workflow {WfId} started for account {AccId}", wf.Id, account.AccountId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Workflow start failed for account {Id} — continuing", account.AccountId);
+                }
+            });
+
             return CreatedAtAction(nameof(GetAccount), new { id = account.AccountId }, account);
         }
 
@@ -63,10 +143,64 @@ namespace AccountService.Controllers
             if (account == null) return NotFound();
             if (account.ApprovalStatus == "Approved") return BadRequest("Already approved.");
             account.ApprovalStatus = "Approved";
-            account.ApprovedBy = User?.Identity?.Name ?? "supervisor";
-            account.ApprovedAt = DateTime.UtcNow;
+            account.ApprovedBy     = User?.Identity?.Name ?? "supervisor";
+            account.ApprovedAt     = DateTime.UtcNow;
             await _context.SaveChangesAsync();
+
+            // ── Notify workflow engine of approval step (fire-and-forget) ─────
+            if (account.WorkflowInstanceId.HasValue)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        var ctx = new Dictionary<string, object>
+                        {
+                            ["account.id"]     = id.ToString(),
+                            ["account.status"] = "APPROVED"
+                        };
+                        await _workflow.ProcessStepAsync(account.WorkflowInstanceId.Value, "APPROVE", ctx);
+                        _logger.LogInformation("Workflow APPROVE step processed for account {Id}", id);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Workflow APPROVE step failed for account {Id} — continuing", id);
+                    }
+                });
+            }
+
             return Ok(account);
+        }
+
+        /// <summary>Get the interest rate applicable to this account from the expression engine.</summary>
+        [HttpGet("{id}/eligible-rate")]
+        public async Task<ActionResult<object>> GetEligibleRate(int id)
+        {
+            var account = await _context.Accounts
+                .Include(a => a.ProductType)
+                .FirstOrDefaultAsync(a => a.AccountId == id);
+            if (account == null) return NotFound();
+
+            decimal? rate = null;
+            try
+            {
+                if (account.TermMonths.HasValue && account.ProductType != null)
+                {
+                    rate = await _expressions.CalculateDepositInterestRateAsync(
+                        account.ProductType.Name, account.Balance, account.TermMonths.Value);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Expression engine unavailable for account {Id}", id);
+            }
+
+            return Ok(new
+            {
+                accountId   = id,
+                accountType = account.ProductType?.Name,
+                interestRate = rate
+            });
         }
 
         [HttpDelete("{id}")]
@@ -135,19 +269,19 @@ namespace AccountService.Controllers
             if (existing == null) return NotFound();
             if (existing.IsDeceased) return BadRequest("Cannot update a deceased/flagged account.");
             if (existing.DateClosed != null) return BadRequest("Account already closed.");
-            account.CreatedBy = existing.CreatedBy;
-            account.CreatedAt = existing.CreatedAt;
+            account.CreatedBy      = existing.CreatedBy;
+            account.CreatedAt      = existing.CreatedAt;
             account.ApprovalStatus = "Pending";
-            account.ApprovedBy = null;
-            account.ApprovedAt = null;
+            account.ApprovedBy     = null;
+            account.ApprovedAt     = null;
             if (existing.ModeOfOperation != account.ModeOfOperation)
             {
                 var history = new AccountHistory
                 {
-                    AccountId = account.AccountId,
+                    AccountId  = account.AccountId,
                     ChangeType = "ModeOfOperation",
-                    OldValue = existing.ModeOfOperation ?? string.Empty,
-                    NewValue = account.ModeOfOperation ?? string.Empty,
+                    OldValue   = existing.ModeOfOperation ?? string.Empty,
+                    NewValue   = account.ModeOfOperation  ?? string.Empty,
                     ChangeDate = DateTime.UtcNow
                 };
                 _context.AccountHistories.Add(history);
@@ -265,10 +399,10 @@ namespace AccountService.Controllers
             if (nomineeId != nominee.NomineeId || nominee.AccountId != id) return BadRequest();
             var existing = await _context.Nominees.FirstOrDefaultAsync(n => n.NomineeId == nomineeId && n.AccountId == id);
             if (existing == null) return NotFound();
-            existing.Name = nominee.Name;
-            existing.Relationship = nominee.Relationship;
-            existing.DateOfBirth = nominee.DateOfBirth;
-            existing.Address = nominee.Address;
+            existing.Name            = nominee.Name;
+            existing.Relationship    = nominee.Relationship;
+            existing.DateOfBirth     = nominee.DateOfBirth;
+            existing.Address         = nominee.Address;
             existing.PercentageShare = nominee.PercentageShare;
             await _context.SaveChangesAsync();
             return Ok(existing);
@@ -308,11 +442,11 @@ namespace AccountService.Controllers
             if (account == null) return NotFound();
             var passbook = new Passbook
             {
-                AccountId = id,
+                AccountId      = id,
                 PassbookNumber = $"PBK-{id}-{DateTime.UtcNow:yyyyMMddHHmmss}",
-                IssuedDate = DateTime.UtcNow,
-                IssuedBy = User?.Identity?.Name ?? "system",
-                Remarks = remarks
+                IssuedDate     = DateTime.UtcNow,
+                IssuedBy       = User?.Identity?.Name ?? "system",
+                Remarks        = remarks
             };
             _context.Passbooks.Add(passbook);
             await _context.SaveChangesAsync();

@@ -201,6 +201,65 @@ public class ExpressionSeedService
             expressionText: "days >= 365 ? 8.0m : days >= 180 ? 7.5m : days >= 90 ? 7.0m : 6.0m",
             tags: new[] { "fd", "interest-rate", "deposit" }
         ),
+
+        // ── 11. LOAN ORIGINATION WORKFLOW ROUTING ──
+        Def(
+            expressionId: "EXPR_ROUTING_LOAN_ORIGINATION",
+            name: "Loan Origination Workflow Step Routing",
+            description: "Returns the next workflow step for loan origination. " +
+                         "START → CREDIT_REVIEW → LEGAL_REVIEW → SANCTION_APPROVAL → COMPLETED. " +
+                         "Variable: workflow_currentStep.",
+            category: "WorkflowRouting",
+            usageType: "WorkflowRouting",
+            returnType: "string",
+            contextType: "WorkflowInstance",
+            expressionText: "workflow_currentStep == \"START\" ? \"CREDIT_REVIEW\" : " +
+                            "workflow_currentStep == \"CREDIT_REVIEW\" ? \"LEGAL_REVIEW\" : " +
+                            "workflow_currentStep == \"LEGAL_REVIEW\" ? \"SANCTION_APPROVAL\" : \"COMPLETED\"",
+            tags: new[] { "workflow", "routing", "loan-origination" }
+        ),
+
+        // ── 12. LOAN ORIGINATION APPROVAL ROLE ──
+        Def(
+            expressionId: "EXPR_APPROVAL_LOAN_ORIGINATION",
+            name: "Loan Origination Approval Role",
+            description: "Returns the approval role required for loan origination workflow.",
+            category: "WorkflowRouting",
+            usageType: "WorkflowRouting",
+            returnType: "string",
+            contextType: "WorkflowInstance",
+            expressionText: "\"MANAGER\"",
+            tags: new[] { "workflow", "approval", "loan-origination" }
+        ),
+
+        // ── 13. ACCOUNT OPENING WORKFLOW ROUTING ──
+        Def(
+            expressionId: "EXPR_ROUTING_ACCOUNT_OPENING",
+            name: "Account Opening Workflow Step Routing",
+            description: "Returns the next workflow step for account opening. " +
+                         "START → MAKER_REVIEW → CHECKER_APPROVAL → COMPLETED. " +
+                         "Variable: workflow_currentStep.",
+            category: "WorkflowRouting",
+            usageType: "WorkflowRouting",
+            returnType: "string",
+            contextType: "WorkflowInstance",
+            expressionText: "workflow_currentStep == \"START\" ? \"MAKER_REVIEW\" : " +
+                            "workflow_currentStep == \"MAKER_REVIEW\" ? \"CHECKER_APPROVAL\" : \"COMPLETED\"",
+            tags: new[] { "workflow", "routing", "account-opening" }
+        ),
+
+        // ── 14. ACCOUNT OPENING APPROVAL ROLE ──
+        Def(
+            expressionId: "EXPR_APPROVAL_ACCOUNT_OPENING",
+            name: "Account Opening Approval Role",
+            description: "Returns the approval role required for account opening workflow.",
+            category: "WorkflowRouting",
+            usageType: "WorkflowRouting",
+            returnType: "string",
+            contextType: "WorkflowInstance",
+            expressionText: "\"CHECKER\"",
+            tags: new[] { "workflow", "approval", "account-opening" }
+        ),
     };
 
     // ──────────────────────────────────────────────────────────

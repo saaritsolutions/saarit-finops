@@ -41,6 +41,18 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITenantService, HttpContextTenantService>();
 
+// ── External service HTTP clients ────────────────────────────────────────────
+var exprBase     = builder.Configuration["Services:ExpressionBaseUrl"]   ?? "http://localhost:5004";
+var wfBase       = builder.Configuration["Services:WorkflowBaseUrl"]     ?? "http://localhost:5012";
+var dynFormsBase = builder.Configuration["Services:DynamicFormsBaseUrl"] ?? "http://localhost:5013";
+
+builder.Services.AddHttpClient<IExpressionEvaluationService, ExpressionEvaluationService>(c =>
+    c.BaseAddress = new Uri(exprBase));
+builder.Services.AddHttpClient<IWorkflowClient, WorkflowClient>(c =>
+    c.BaseAddress = new Uri(wfBase));
+builder.Services.AddHttpClient<IDynamicFormsClient, DynamicFormsClient>(c =>
+    c.BaseAddress = new Uri(dynFormsBase));
+
 // Add PostgreSQL DbContext
 builder.Services.AddDbContext<AccountDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
