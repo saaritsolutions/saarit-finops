@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-06 (session 18 — test quality initiative)
+**Last Updated:** 2026-04-07 (session 19 — workflow engine persistence + AccountService wiring)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,16 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **[RBI-02] Deposit Account Management** — SB/FD/RD lifecycle (SCRUM-93 to SCRUM-99) | Core banking function; show real deposit products |
-| 2 | **Maker-Checker workflow engine** (SCRUM-9 to SCRUM-16) | Required for any real approval flow |
+| 1 | **Deploy to Hetzner** — rebuild workfloworchestration, loanservice, expressionbuilder, accountservice | Sessions 18+19 changes not yet on prod |
+| 2 | **FD/RD deposit lifecycle endpoints** — POST /mature, POST /premature-close, GET /upcoming-maturities (SCRUM-223–225) | Foundation deployed, lifecycle operations next |
 | 3 | **Wire LoanService → TransactionService** on disbursal (SCRUM-187) | Show double-entry ledger entry on loan disbursement |
+
+### Recently Completed (session 19 — 2026-04-07)
+- [x] **WorkflowOrchestrationService real persistence** — EF Core 9 + PostgreSQL. WorkflowInstanceEntity, multi-tenancy, Load/Save wired, EF migration InitialCreate (audited). Program.cs: JWT + DbContext + tenant provisioner.
+- [x] **ExpressionBuilderService routing seeds** — 4 new expressions: EXPR_ROUTING_LOAN_ORIGINATION, EXPR_APPROVAL_LOAN_ORIGINATION, EXPR_ROUTING_ACCOUNT_OPENING, EXPR_APPROVAL_ACCOUNT_OPENING. Total 14 seeded.
+- [x] **LoanService wired to real workflow** — UseLocalWorkflowOrchestrator→false; DISBURSE fires ProcessStepAsync.
+- [x] **AccountService full wiring** — EF8→9.0.6, Npgsql8→9.0.4; TenantSchemaProvisioner simplified; 3 service clients; 7 deposit fields; EF migration AddDepositFields; CreateAccount FD/RD + workflow; ApproveAccount workflow; eligible-rate endpoint.
+- [x] **Jira tickets** — jira-create-workflow-tickets.js created + run: 5 epics + 31 stories (SCRUM-190–225). All 4 services build 0 errors.
 
 ### Recently Completed (session 18 — 2026-04-06)
 - [x] **Test quality initiative — SCRUM-188 + testing** (commit `1a138e1`)

@@ -45,6 +45,14 @@ namespace AccountService.Models
         public decimal AccruedInterest { get; set; } // Interest accrued but not yet applied
         public decimal AccruedTDS { get; set; } // TDS accrued but not yet deducted
         public bool IsTDSExempt { get; set; } // TDS exemption flag
+        // ── Deposit fields (FD / RD) ─────────────────────────────────────────
+        public int?      TermMonths               { get; set; } // FD/RD term in months
+        public DateTime? MaturityDate             { get; set; } // Computed on account open
+        public decimal?  InterestRate             { get; set; } // Annual rate from expression engine
+        public bool      AutoRenewal              { get; set; } // Renew automatically on maturity
+        public decimal?  InstallmentAmount        { get; set; } // Monthly installment for RD
+        public decimal?  PrematureClosurePenalty  { get; set; } // Penalty % for premature closure
+        public Guid?     WorkflowInstanceId       { get; set; } // Linked workflow for maker-checker
         // Branch association
         public int BranchId { get; set; }
         // TODO: JointCustomers migration

@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-06 (session 18 — test quality initiative)
+**Last Updated:** 2026-04-07 (session 19 — workflow engine persistence + AccountService wiring + deposits foundation)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -48,7 +48,7 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 - **AccountService** (~30%) — full CRUD with nominees/passbooks/restrictions/lifecycle; statements missing
 - **CustomerService** (~25%) — CRUD, KYC stub, PAN/Aadhaar validation; full KYC workflow missing
 - **UserAccessManagementService** (~40%) — JWT login, seed users, role CRUD; password reset, MFA missing
-- **WorkflowOrchestrationService** (~3%) — placeholder only
+- **WorkflowOrchestrationService** (~45%) — EF9 persistence, multi-tenancy, real Load/Save, expression routing
 
 ### Not Started (Confirmed Empty / Stub)
 - EOD/BOD batch processing, InterestFeeService, ReportingMIS, full GL Chart of Accounts management
@@ -141,6 +141,14 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 19 — 2026-04-07 (workflow engine persistence + AccountService wiring + deposits)
+- **WorkflowOrchestrationService real persistence**: EF Core 9 + Npgsql 9. WorkflowInstanceEntity (ContextJson/ApprovalRequirementsJson as text). Full schema-per-tenant multi-tenancy (4 files copied from LoanService). Models extracted to WorkflowModels.cs. LoadWorkflowInstanceAsync / SaveWorkflowInstanceAsync wired to DB. EF migration InitialCreate (schema qualifiers stripped). Program.cs updated: JWT, DbContext, tenant provisioner.
+- **ExpressionBuilderService seeds**: 4 new routing expressions (total 14). EXPR_ROUTING_LOAN_ORIGINATION, EXPR_APPROVAL_LOAN_ORIGINATION, EXPR_ROUTING_ACCOUNT_OPENING, EXPR_APPROVAL_ACCOUNT_OPENING.
+- **LoanService wired to real workflow**: UseLocalWorkflowOrchestrator→false. DISBURSE action fire-and-forgets ProcessStepAsync.
+- **AccountService full wiring**: EF8→9.0.6, Npgsql8→9.0.4. TenantSchemaProvisioner simplified (EF9 handles __EFMigrationsHistory). 3 new service clients. 7 deposit fields on Account (TermMonths, MaturityDate, InterestRate, AutoRenewal, InstallmentAmount, PrematureClosurePenalty, WorkflowInstanceId). EF migration AddDepositFields (schema qualifiers stripped). CreateAccount wired for FD/RD validation + expression rate + workflow start. ApproveAccount fires workflow APPROVE step. New GET /api/account/{id}/eligible-rate endpoint.
+- **Jira tickets**: jira-create-workflow-tickets.js created + run. 5 epics (SCRUM-190–204, 210, 220) + 31 stories (SCRUM-191–225).
+- All 4 modified services build with 0 errors.
 
 ### Session 18 — 2026-04-06 (test quality initiative — SCRUM-188 + testing)
 - **Jira test cases**: `docs/TEST_CASES_LOAN_ORIGINATION.md` — 70+ BDD tests across 12 categories (TC-01 to TC-12), covering EMI/FOIR/LTV calculators, eligibility API, products API, state machine, frontend list/detail/form, and demo data

@@ -143,13 +143,21 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - `LoanDemoDataSeeder`: 3 new apps — DRAFT (Kavita Sharma ₹3L PL), APPROVED (Suresh Patel ₹7.5L BL with sanction), INFO_REQUESTED (Anita Desai ₹25L HL with co-applicant); total 8 apps per tenant covering all workflow states
   - Commit: `1a138e1`; pushed to GitHub; Hetzner SSH unreachable at time of deploy (pending `docker compose up --build -d loanservice` on Hetzner)
 
+## Completed (continued)
+- Workflow engine real persistence + AccountService wiring (session 19, 2026-04-07):
+  - **WorkflowOrchestrationService**: replaced in-memory stub with EF Core 9 + PostgreSQL. Full multi-tenancy (TenantResolutionMiddleware, TenantModelCacheKeyFactory, HasDefaultSchema, TenantSchemaProvisioner). WorkflowInstanceEntity with ContextJson/ApprovalRequirementsJson. EF migration InitialCreate (audited — no schema: "public" qualifiers). String-result fallback in EvaluateRoutingRulesAsync (Roslyn returns plain strings, not objects).
+  - **ExpressionBuilderService**: 4 new seeds — EXPR_ROUTING_LOAN_ORIGINATION, EXPR_APPROVAL_LOAN_ORIGINATION, EXPR_ROUTING_ACCOUNT_OPENING, EXPR_APPROVAL_ACCOUNT_OPENING. Total: 14 seeded expressions.
+  - **LoanService**: flipped UseLocalWorkflowOrchestrator→false; wired fire-and-forget ProcessStep(DISBURSE) in LoanApplicationsController. WorkflowInstanceId was already on LoanApplication — no new migration.
+  - **AccountService**: upgraded EF8→9.0.6, Npgsql8→9.0.4. Simplified TenantSchemaProvisioner (removed manual __EFMigrationsHistory block — EF9 handles it). Created 3 new service clients: IExpressionEvaluationService (CalculateDepositInterestRateAsync via EXPR_FD_RATE_001), IWorkflowClient (StartAccountOpeningAsync + ProcessStepAsync), IDynamicFormsClient (GetAccountFormSchemaAsync). Registered in Program.cs. Extended Account model with 7 deposit fields (TermMonths, MaturityDate, InterestRate, AutoRenewal, InstallmentAmount, PrematureClosurePenalty, WorkflowInstanceId). EF migration AddDepositFields (audited). Wired CreateAccount (FD/RD validation + expression rate + workflow start) and ApproveAccount (workflow APPROVE step). Added GET /api/account/{id}/eligible-rate endpoint.
+  - **Jira**: 5 new epics + 31 stories (SCRUM-190–SCRUM-225): WorkflowEngine-1 (DB persistence), WorkflowEngine-2 (LoanService wiring), WorkflowEngine-3 (expression seeds), AccountWiring-1 (AccountService), Deposits-1 (FD/RD lifecycle).
+
 ## In Progress
 - (none)
 
 ## Pending Next
-- Deploy `1a138e1` to Hetzner: `cd /opt/saarit/saar-core-banking-services && git pull && docker compose up --build -d loanservice`
-- Deposit Account Management — SB/FD/RD lifecycle (SCRUM-93 to SCRUM-99)
-- Maker-Checker workflow engine (SCRUM-9 to SCRUM-16)
+- Deposit FD/RD lifecycle endpoints: POST /mature, POST /premature-close, GET /upcoming-maturities (SCRUM-223–225)
+- Deploy to Hetzner (rebuild workfloworchestration, loanservice, expressionbuilder, accountservice containers)
+- Wire LoanService → TransactionService on disbursal (SCRUM-187)
 
 ## Notes
 - Eligibility expression ID currently in use: EXPR_1755237353842.

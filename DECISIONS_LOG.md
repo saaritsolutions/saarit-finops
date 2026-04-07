@@ -1,6 +1,6 @@
 # DECISIONS_LOG.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-03-26
+**Last Updated:** 2026-04-07
 **Purpose:** Record WHY the system is built the way it is. Prevents inconsistent future decisions.
 
 ---
@@ -77,6 +77,35 @@ Integrate OpenAI GPT-4/4o via three dedicated controllers in ExpressionBuilderSe
 - Requires `OpenAI:ApiKey` in service configuration (never commit to git)
 - `ILlmSelectorService` abstraction allows future provider swap without controller changes
 - AI-generated expressions must still pass the security validator before execution
+
+**Status:** Active
+
+---
+
+### Decision Title: WorkflowOrchestrationService — EF Core 9 + Schema-Per-Tenant Persistence (Session 19)
+
+**Date:** 2026-04-07
+
+**Context:**
+- WorkflowOrchestrationService was entirely in-memory (Load/Save stubs returned hardcoded values)
+- LoanService and AccountService could not persist workflow state between requests
+- AccountService was on EF Core 8 / Npgsql 8 while LoanService had already migrated to EF9
+
+**Decision:**
+- Migrated WorkflowOrchestrationService to EF Core 9 + Npgsql 9 + PostgreSQL with full schema-per-tenant multi-tenancy (identical pattern to LoanService: TenantResolutionMiddleware + TenantModelCacheKeyFactory + HasDefaultSchema + TenantSchemaProvisioner)
+- WorkflowInstanceEntity stores Context as ContextJson (text column) — JSON serialization at the service layer — rather than using EF JSON columns, to avoid EF9 owned-entity schema gotchas
+- Upgraded AccountService EF8→9 simultaneously; removed manual `__EFMigrationsHistory` pre-creation (EF9 handles this automatically unlike EF8)
+- Chose fire-and-forget (Task.Run + catch+log) for all cross-service calls from AccountController so workflow/expression failures never block core banking operations
+
+**Alternatives Considered:**
+- Redis for workflow state — more operationally complex; PostgreSQL is already deployed
+- EF JSON columns — simpler but hit EF9 owned-entity migration gotchas in practice; text column with explicit JsonSerializer is deterministic
+- Await+throw for cross-service calls — would break account creation if workflow service down; banking-grade systems must degrade gracefully
+
+**Impact:**
+- WorkflowInstances now persisted to Postgres; loan submit creates a row, disburse updates it
+- AccountService CreateAccount creates WorkflowInstance row + fetches FD interest rate from expression engine — both non-blocking
+- EF migrations must continue to be audited to strip schema: "public" qualifiers (EF generates them even in EF9 when HasDefaultSchema is active)
 
 **Status:** Active
 
