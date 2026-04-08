@@ -15,6 +15,12 @@
 | 2 | **FD/RD deposit lifecycle endpoints** — POST /mature, POST /premature-close, GET /upcoming-maturities (SCRUM-223–225) | Foundation deployed, lifecycle operations next |
 | 3 | **Wire LoanService → TransactionService** on disbursal (SCRUM-187) | Show double-entry ledger entry on loan disbursement |
 
+### Recently Completed (session 20 — 2026-04-08)
+- [x] **Cypress config fix** — deleted stale `cypress.config.js` (baseUrl=localhost:3001, supportFile=false) that was overriding `cypress.config.ts`; all Cypress tests now connect to the correct port 3002 with `cy.loginAsDemo()` available. Commit 8a6fa65.
+- [x] **Workflow configuration via UI** — explained and confirmed that `EXPR_ROUTING_LOAN_ORIGINATION` controls loan workflow steps via SimpleExpressionBuilder at `/expressions/simple`.
+- [x] **UI-driven Cypress tests created** — `smoke-check.cy.ts` (3 connectivity checks) + `loan-workflow-ui.cy.ts` (2 tests: reduce to 2-step, restore 3-step) using `cy.on('window:alert')` pattern.
+- [x] **Node.js fallback tests** — `scripts/test-workflow-config.mjs` runs 12/12 API-level assertions (no browser needed).
+
 ### Recently Completed (session 19 — 2026-04-07)
 - [x] **WorkflowOrchestrationService real persistence** — EF Core 9 + PostgreSQL. WorkflowInstanceEntity, multi-tenancy, Load/Save wired, EF migration InitialCreate (audited). Program.cs: JWT + DbContext + tenant provisioner.
 - [x] **ExpressionBuilderService routing seeds** — 4 new expressions: EXPR_ROUTING_LOAN_ORIGINATION, EXPR_APPROVAL_LOAN_ORIGINATION, EXPR_ROUTING_ACCOUNT_OPENING, EXPR_APPROVAL_ACCOUNT_OPENING. Total 14 seeded.
