@@ -22,7 +22,8 @@ timeout /t 12 /nobreak > nul
 
 echo.
 echo [2/3] Starting React frontend (port 3002)...
-start "React Frontend" cmd /k "cd /d %FRONTEND_DIR% && set PORT=3002 && npm start"
+REM Call craco directly with Windows env-var syntax (npm start uses Unix syntax which breaks on cmd.exe)
+start "React Frontend" cmd /k "cd /d %FRONTEND_DIR% && set PORT=3002 && set BROWSER=none && set REACT_APP_VERSION=dev && node_modules\.bin\craco start"
 
 echo Waiting 15 seconds for React to compile...
 timeout /t 15 /nobreak > nul
