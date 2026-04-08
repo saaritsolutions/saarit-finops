@@ -6,22 +6,16 @@ export {};
  *
  * Route: /expressions/simple
  *
- * These tests drive the actual browser UI:
- *   1. Load the expression list
- *   2. Click Edit on EXPR_ROUTING_LOAN_ORIGINATION
- *   3. Replace the expression text in the form
- *   4. Click "Update Expression"
- *   5. Verify the list re-shows the updated expression
- *
  * Test 1: Reduce to 2 steps  — removes LEGAL_REVIEW
  * Test 2: Restore 3 steps    — re-adds LEGAL_REVIEW
  *
  * Prerequisites:
- *   - React frontend running on http://localhost:3002
- *   - ExpressionBuilderService running on http://localhost:5004
+ *   - React frontend on http://localhost:3002
+ *   - ExpressionBuilderService on http://localhost:5004
  */
 
 const EXPRESSION_NAME = 'Loan Origination Workflow Step Routing';
+const API = 'http://localhost:5004';
 
 const TWO_STEP =
   'workflow_currentStep == "START" ? "CREDIT_REVIEW" : ' +
@@ -36,97 +30,86 @@ const THREE_STEP =
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-/** Open the Simple Expression Builder page and wait for the list to load. */
-const openExpressionList = () => {
+const visitExpressionList = () => {
   cy.visit('/expressions/simple');
-  // Wait for either a table row OR an "No expressions" message
-  cy.get('table, [role="alert"]', { timeout: 15000 }).should('exist');
+  cy.get('body', { timeout: 15000 }).should('be.visible');
+  cy.contains('Expression', { timeout: 10000 }).should('be.visible');
 };
 
-/**
- * Find the row for our expression and click its Edit button.
- * Switches the component to Tab 1 (Create/Edit) with the form populated.
- */
-const clickEditOnRow = () => {
-  cy.contains('td', EXPRESSION_NAME, { timeout: 10000 })
+const clickEditOnTargetRow = () => {
+  cy.contains(EXPRESSION_NAME, { timeout: 10000 })
     .closest('tr')
-    .find('button')
-    .contains('Edit')
-    .click({ force: true });
-
-  // Form should now be visible (Tab 1 activated)
+    .within(() => {
+      cy.contains('button', 'Edit').click({ force: true });
+    });
   cy.contains('Create/Edit Expression', { timeout: 8000 }).should('be.visible');
 };
 
-/**
- * Clear the Expression Logic textarea and type new text.
- * Targets the only monospace textarea on the form (the one with the code placeholder).
- */
-const setExpressionText = (text: string) => {
-  cy.get('textarea[placeholder*="IF(customer.creditScore"]')
+const setExpressionLogic = (newText: string) => {
+  cy.get('textarea').filter((_i, el) => {
+    return (el as HTMLTextAreaElement).placeholder.includes('IF(customer.creditScore');
+  }).as('exprField');
+
+  cy.get('@exprField')
     .scrollIntoView()
-    .click({ force: true })
     .clear({ force: true })
-    .type(text, { force: true, delay: 0 });
+    .type(newText, { force: true, delay: 0 });
 };
 
-/** Stub window.alert, click Update Expression, and verify the alert text. */
-const saveAndVerify = (expectedAlertFragment: string) => {
-  cy.window().then((win) => {
-    cy.stub(win, 'alert').as('alertStub');
+const clickUpdateAndExpectSuccess = () => {
+  cy.on('window:alert', (msg: string) => {
+    expect(msg).to.match(/updated successfully/i);
   });
+  cy.contains('button', 'Update Expression').scrollIntoView().click({ force: true });
+  cy.wait(1500);
+};
 
-  cy.contains('button', 'Update Expression').click({ force: true });
-
-  cy.get('@alertStub', { timeout: 15000 }).should(
-    'have.been.calledWithMatch',
-    new RegExp(expectedAlertFragment, 'i')
-  );
+const verifyApiHasText = (mustInclude: string[], mustExclude: string[] = []) => {
+  cy.request(`${API}/api/expressions/by-expression-id/EXPR_ROUTING_LOAN_ORIGINATION`)
+    .its('body.expressionText')
+    .then((text: string) => {
+      mustInclude.forEach((fragment) => expect(text).to.include(fragment));
+      mustExclude.forEach((fragment) => expect(text).not.to.include(fragment));
+    });
 };
 
 // ── tests ────────────────────────────────────────────────────────────────────
 
 describe('Loan Workflow Configuration — UI (SimpleExpressionBuilder)', () => {
+  before(() => {
+    cy.request({ url: `${API}/api/expressions?page=1&pageSize=1`, failOnStatusCode: false })
+      .then((res) => {
+        if (res.status >= 400) {
+          throw new Error('ExpressionBuilderService not reachable — start it on :5004');
+        }
+      });
+  });
+
   beforeEach(() => {
     cy.loginAsDemo();
   });
 
-  // -------------------------------------------------------------------------
-  it('reduces loan workflow to 2 steps via the UI (removes LEGAL_REVIEW)', () => {
-    openExpressionList();
-    clickEditOnRow();
-    setExpressionText(TWO_STEP);
-    saveAndVerify('updated successfully');
-
-    // Go back to the list and confirm the API has the new text
-    cy.request({
-      method: 'GET',
-      url: 'http://localhost:5004/api/expressions/by-expression-id/EXPR_ROUTING_LOAN_ORIGINATION',
-    }).then((res) => {
-      const text: string = res.body?.expressionText ?? '';
-      expect(text).to.include('"CREDIT_REVIEW" ? "SANCTION_APPROVAL"');
-      expect(text).not.to.include('LEGAL_REVIEW');
-    });
-
-    cy.log('✅ 2-step workflow live: START → CREDIT_REVIEW → SANCTION_APPROVAL → COMPLETED');
+  it('reduces loan workflow to 2 steps via UI (removes LEGAL_REVIEW)', () => {
+    visitExpressionList();
+    clickEditOnTargetRow();
+    setExpressionLogic(TWO_STEP);
+    clickUpdateAndExpectSuccess();
+    verifyApiHasText(
+      ['"CREDIT_REVIEW" ? "SANCTION_APPROVAL"'],
+      ['LEGAL_REVIEW']
+    );
+    cy.log('✅ 2-step: START → CREDIT_REVIEW → SANCTION_APPROVAL → COMPLETED');
   });
 
-  // -------------------------------------------------------------------------
-  it('restores loan workflow to original 3 steps via the UI (re-adds LEGAL_REVIEW)', () => {
-    openExpressionList();
-    clickEditOnRow();
-    setExpressionText(THREE_STEP);
-    saveAndVerify('updated successfully');
-
-    cy.request({
-      method: 'GET',
-      url: 'http://localhost:5004/api/expressions/by-expression-id/EXPR_ROUTING_LOAN_ORIGINATION',
-    }).then((res) => {
-      const text: string = res.body?.expressionText ?? '';
-      expect(text).to.include('"CREDIT_REVIEW" ? "LEGAL_REVIEW"');
-      expect(text).to.include('"LEGAL_REVIEW" ? "SANCTION_APPROVAL"');
-    });
-
-    cy.log('✅ 3-step workflow restored: START → CREDIT_REVIEW → LEGAL_REVIEW → SANCTION_APPROVAL → COMPLETED');
+  it('restores loan workflow to original 3 steps via UI (re-adds LEGAL_REVIEW)', () => {
+    visitExpressionList();
+    clickEditOnTargetRow();
+    setExpressionLogic(THREE_STEP);
+    clickUpdateAndExpectSuccess();
+    verifyApiHasText([
+      '"CREDIT_REVIEW" ? "LEGAL_REVIEW"',
+      '"LEGAL_REVIEW" ? "SANCTION_APPROVAL"',
+    ]);
+    cy.log('✅ 3-step restored: START → CREDIT_REVIEW → LEGAL_REVIEW → SANCTION_APPROVAL → COMPLETED');
   });
 });
