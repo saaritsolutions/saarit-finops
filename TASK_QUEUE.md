@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-07 (session 19 — workflow engine persistence + AccountService wiring)
+**Last Updated:** 2026-04-10 (session 22 — SCRUM-187 LoanService→TransactionService disbursal wiring)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,17 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Deploy to Hetzner** — rebuild workfloworchestration, loanservice, expressionbuilder, accountservice | Sessions 18+19 changes not yet on prod |
+| 1 | **Deploy to Hetzner** — rebuild loanservice, expressionbuilder, transactionservice containers | Sessions 19–22 changes not yet on prod |
 | 2 | **FD/RD deposit lifecycle endpoints** — POST /mature, POST /premature-close, GET /upcoming-maturities (SCRUM-223–225) | Foundation deployed, lifecycle operations next |
-| 3 | **Wire LoanService → TransactionService** on disbursal (SCRUM-187) | Show double-entry ledger entry on loan disbursement |
+| 3 | **Ledger UI: show disbursal journal entry** — link from LoanDetail to TransactionService ledger view | Close the loop for the investor demo |
+
+### Recently Completed (session 22 — 2026-04-10)
+- [x] **SCRUM-187: LoanService → TransactionService disbursal wiring**
+  - `EXPR_GL_MAPPING_LOAN_DISBURSAL` seeded (15th expression — GL codes per product type, tenant-configurable)
+  - `ITransactionServiceClient` / `TransactionServiceClient` created in LoanService/Services/
+  - `LoanApplicationsController` DISBURSE: evaluates expression → posts DR 1020 / CR 1010 journal → fires WF step
+  - `TransactionService` added to start-all.sh on port 5005; `TransactionServiceDb` created; appsettings updated
+  - Zero C# compilation errors across all modified services
 
 ### Recently Completed (session 20 — 2026-04-08)
 - [x] **Cypress config fix** — deleted stale `cypress.config.js` (baseUrl=localhost:3001, supportFile=false) that was overriding `cypress.config.ts`; all Cypress tests now connect to the correct port 3002 with `cy.loginAsDemo()` available. Commit 8a6fa65.

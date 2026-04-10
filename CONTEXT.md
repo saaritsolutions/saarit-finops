@@ -10,6 +10,7 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
 
 ## Services and Ports
 - ExpressionBuilderService: 5004
+- TransactionService: 5005
 - WorkflowOrchestrationService: 5012
 - DynamicFieldsSchemaService: 5013
 - LoanService: 5130
@@ -151,13 +152,21 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - **AccountService**: upgraded EF8→9.0.6, Npgsql8→9.0.4. Simplified TenantSchemaProvisioner (removed manual __EFMigrationsHistory block — EF9 handles it). Created 3 new service clients: IExpressionEvaluationService (CalculateDepositInterestRateAsync via EXPR_FD_RATE_001), IWorkflowClient (StartAccountOpeningAsync + ProcessStepAsync), IDynamicFormsClient (GetAccountFormSchemaAsync). Registered in Program.cs. Extended Account model with 7 deposit fields (TermMonths, MaturityDate, InterestRate, AutoRenewal, InstallmentAmount, PrematureClosurePenalty, WorkflowInstanceId). EF migration AddDepositFields (audited). Wired CreateAccount (FD/RD validation + expression rate + workflow start) and ApproveAccount (workflow APPROVE step). Added GET /api/account/{id}/eligible-rate endpoint.
   - **Jira**: 5 new epics + 31 stories (SCRUM-190–SCRUM-225): WorkflowEngine-1 (DB persistence), WorkflowEngine-2 (LoanService wiring), WorkflowEngine-3 (expression seeds), AccountWiring-1 (AccountService), Deposits-1 (FD/RD lifecycle).
 
+## Completed (continued)
+- SCRUM-187: LoanService → TransactionService disbursal wiring (session 22, 2026-04-10):
+  - **EXPR_GL_MAPPING_LOAN_DISBURSAL** seeded in ExpressionBuilderService — returns "debitCode|creditCode" (1020|1010) per product type; tenant can reconfigure from Expression Builder UI.
+  - **ITransactionServiceClient / TransactionServiceClient** added to LoanService — HTTP POST to `/api/journal` with idempotency key `DISBURSAL-{applicationNumber}`, DR 1020 (Loans and Advances) / CR 1010 (Cash and Bank).
+  - **LoanApplicationsController DISBURSE** — now: (1) evaluates GL mapping expression, (2) posts double-entry journal to TransactionService, (3) then fire-and-forgets WorkflowService step. Non-fatal: if TransactionService is unreachable, disbursal succeeds with warning log.
+  - **TransactionService** added to start-all.sh on port 5005; TransactionServiceDb created locally; appsettings.Development.json updated with explicit connection string.
+  - **LoanService appsettings.Development.json** now has TransactionBaseUrl: http://localhost:5005.
+  - Services: 5 → 6 (all ports: 5004, 5005, 5012, 5013, 5130, 3002).
+
 ## In Progress
 - (none)
 
 ## Pending Next
 - Deposit FD/RD lifecycle endpoints: POST /mature, POST /premature-close, GET /upcoming-maturities (SCRUM-223–225)
-- Deploy to Hetzner (rebuild workfloworchestration, loanservice, expressionbuilder, accountservice containers)
-- Wire LoanService → TransactionService on disbursal (SCRUM-187)
+- Deploy to Hetzner (rebuild loanservice, expressionbuilder, transactionservice containers)
 
 ## Notes
 - Eligibility expression ID currently in use: EXPR_1755237353842.

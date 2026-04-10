@@ -260,6 +260,26 @@ public class ExpressionSeedService
             expressionText: "\"CHECKER\"",
             tags: new[] { "workflow", "approval", "account-opening" }
         ),
+
+        // ── 15. LOAN DISBURSAL GL ACCOUNT MAPPING ──
+        Def(
+            expressionId: "EXPR_GL_MAPPING_LOAN_DISBURSAL",
+            name: "Loan Disbursal GL Account Mapping",
+            description: "Returns the pipe-separated GL account codes \"debitCode|creditCode\" for a loan disbursal " +
+                         "journal entry, based on product type. " +
+                         "All loan types: DR 1020 (Loans and Advances) / CR 1010 (Cash and Bank). " +
+                         "Variable: productType (PERSONAL_LOAN | HOME_LOAN | BUSINESS_LOAN | GOLD_LOAN | VEHICLE_LOAN).",
+            category: "LoanManagement",
+            usageType: "Calculation",
+            returnType: "string",
+            contextType: "LoanApplication",
+            expressionText: "productType == \"HOME_LOAN\" ? \"1020|1010\" : " +
+                            "productType == \"BUSINESS_LOAN\" ? \"1020|1010\" : " +
+                            "productType == \"GOLD_LOAN\" ? \"1020|1010\" : " +
+                            "productType == \"VEHICLE_LOAN\" ? \"1020|1010\" : " +
+                            "\"1020|1010\"",
+            tags: new[] { "gl-mapping", "loan", "disbursal", "double-entry" }
+        ),
     };
 
     // ──────────────────────────────────────────────────────────

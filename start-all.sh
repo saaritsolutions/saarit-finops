@@ -36,6 +36,15 @@ else
   echo "DynamicFieldsSchemaService not found — skipping"
 fi
 
+# Start TransactionService if present
+if [ -f "$ROOT/saar-core-banking-services/TransactionService/TransactionService.csproj" ]; then
+  echo "Starting TransactionService..."
+  (cd "$ROOT/saar-core-banking-services/TransactionService" && ASPNETCORE_URLS="http://localhost:5005" dotnet run --project TransactionService.csproj) >"$LOGDIR/transactionservice.log" 2>&1 &
+  echo "$!" > "$LOGDIR/transactionservice.pid"
+else
+  echo "TransactionService not found — skipping"
+fi
+
 # Start LoanService
 if [ -f "$ROOT/saar-core-banking-services/LoanService/LoanService.csproj" ]; then
   echo "Starting LoanService..."
@@ -52,6 +61,7 @@ echo "All services started (PIDs):"
 [ -f "$LOGDIR/expression.pid" ] && echo "Expression: $(cat $LOGDIR/expression.pid)"
 [ -f "$LOGDIR/workflow.pid" ] && echo "Workflow: $(cat $LOGDIR/workflow.pid)"
 [ -f "$LOGDIR/forms.pid" ] && echo "Forms: $(cat $LOGDIR/forms.pid)"
+[ -f "$LOGDIR/transactionservice.pid" ] && echo "TransactionService: $(cat $LOGDIR/transactionservice.pid)"
 [ -f "$LOGDIR/loanservice.pid" ] && echo "LoanService: $(cat $LOGDIR/loanservice.pid)"
 
 echo "Tailing last 50 lines of loanservice log"

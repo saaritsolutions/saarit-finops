@@ -102,6 +102,15 @@ builder.Services.AddHttpClient<IDynamicFormsClient, DynamicFormsClient>(client =
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
 
+// Register HttpClient for Transaction Service (double-entry ledger)
+// In docker-compose: Services__TransactionBaseUrl=http://transactionservice:5005
+var txnBaseUrl = builder.Configuration.GetSection("Services").GetValue<string>("TransactionBaseUrl") ?? "http://localhost:5005";
+builder.Services.AddHttpClient<ITransactionServiceClient, TransactionServiceClient>(client =>
+{
+    client.BaseAddress = new Uri(txnBaseUrl.EndsWith('/') ? txnBaseUrl : txnBaseUrl + "/");
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
+
 // Add DbContext (use InMemory for integration tests)
 if (builder.Environment.IsEnvironment("IntegrationTesting"))
 {
