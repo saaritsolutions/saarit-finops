@@ -309,24 +309,18 @@ const ExpressionBuilder: React.FC = () => {
 
         <TabPanel value={activeTab} index={2}>
           <ExpressionTester
-            expression={selectedExpression}
-            bankingFunctions={bankingFunctions || []}
-            onExpressionChange={setSelectedExpression}
+            expression={selectedExpression ?? undefined}
           />
         </TabPanel>
 
         <TabPanel value={activeTab} index={3}>
           <ExpressionTemplates
-            templates={templates || []}
-            loading={templatesLoading}
             onUseTemplate={handleUseTemplate}
           />
         </TabPanel>
 
         <TabPanel value={activeTab} index={4}>
           <BankingFunctions
-            functions={bankingFunctions || []}
-            loading={functionsLoading}
           />
         </TabPanel>
       </Paper>
