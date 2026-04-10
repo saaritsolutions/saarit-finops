@@ -5,10 +5,12 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 LOGDIR="$ROOT/logs"
 mkdir -p "$LOGDIR"
 
+export ASPNETCORE_ENVIRONMENT=Development
+
 # Start ExpressionBuilderService (if project exists), otherwise start the local stub
 if [ -f "$ROOT/saar-core-banking-services/ExpressionBuilderService/ExpressionBuilderService.csproj" ]; then
   echo "Starting ExpressionBuilderService..."
-  (cd "$ROOT/saar-core-banking-services/ExpressionBuilderService" && dotnet run --project ExpressionBuilderService.csproj) >"$LOGDIR/expression.log" 2>&1 &
+  (cd "$ROOT/saar-core-banking-services/ExpressionBuilderService" && ASPNETCORE_URLS="http://localhost:5004" dotnet run --project ExpressionBuilderService.csproj) >"$LOGDIR/expression.log" 2>&1 &
   echo "$!" > "$LOGDIR/expression.pid"
 else
   echo "ExpressionBuilderService project not found, starting stub on port 5004"
@@ -19,7 +21,7 @@ fi
 # Start WorkflowOrchestrationService if present
 if [ -f "$ROOT/saar-core-banking-services/WorkflowOrchestrationService/WorkflowOrchestrationService.csproj" ]; then
   echo "Starting WorkflowOrchestrationService..."
-  (cd "$ROOT/saar-core-banking-services/WorkflowOrchestrationService" && dotnet run --project WorkflowOrchestrationService.csproj) >"$LOGDIR/workflow.log" 2>&1 &
+  (cd "$ROOT/saar-core-banking-services/WorkflowOrchestrationService" && ASPNETCORE_URLS="http://localhost:5012" dotnet run --project WorkflowOrchestrationService.csproj) >"$LOGDIR/workflow.log" 2>&1 &
   echo "$!" > "$LOGDIR/workflow.pid"
 else
   echo "WorkflowOrchestrationService not found — skipping"
@@ -28,7 +30,7 @@ fi
 # Start DynamicFieldsSchemaService if present
 if [ -f "$ROOT/saar-core-banking-services/DynamicFieldsSchemaService/DynamicFieldsSchemaService.csproj" ]; then
   echo "Starting DynamicFieldsSchemaService..."
-  (cd "$ROOT/saar-core-banking-services/DynamicFieldsSchemaService" && dotnet run --project DynamicFieldsSchemaService.csproj) >"$LOGDIR/forms.log" 2>&1 &
+  (cd "$ROOT/saar-core-banking-services/DynamicFieldsSchemaService" && ASPNETCORE_URLS="http://localhost:5013" dotnet run --project DynamicFieldsSchemaService.csproj) >"$LOGDIR/forms.log" 2>&1 &
   echo "$!" > "$LOGDIR/forms.pid"
 else
   echo "DynamicFieldsSchemaService not found — skipping"
@@ -37,7 +39,7 @@ fi
 # Start LoanService
 if [ -f "$ROOT/saar-core-banking-services/LoanService/LoanService.csproj" ]; then
   echo "Starting LoanService..."
-  (cd "$ROOT/saar-core-banking-services/LoanService" && dotnet run --project LoanService.csproj) >"$LOGDIR/loanservice.log" 2>&1 &
+  (cd "$ROOT/saar-core-banking-services/LoanService" && ASPNETCORE_URLS="http://localhost:5130" dotnet run --project LoanService.csproj) >"$LOGDIR/loanservice.log" 2>&1 &
   echo "$!" > "$LOGDIR/loanservice.pid"
 else
   echo "LoanService project not found — aborting"
