@@ -16,13 +16,22 @@ namespace LoanService.Controllers
     {
         private readonly LoanDbContext _db;
         private readonly IWorkflowClient _workflowClient;
+        private readonly IExpressionEvaluationService _expressions;
+        private readonly ITransactionServiceClient _transactionService;
         private readonly ILogger<LoanApplicationsController> _logger;
 
-        public LoanApplicationsController(LoanDbContext db, IWorkflowClient workflowClient, ILogger<LoanApplicationsController> logger)
+        public LoanApplicationsController(
+            LoanDbContext db,
+            IWorkflowClient workflowClient,
+            IExpressionEvaluationService expressions,
+            ITransactionServiceClient transactionService,
+            ILogger<LoanApplicationsController> logger)
         {
-            _db = db;
-            _workflowClient = workflowClient;
-            _logger = logger;
+            _db                 = db;
+            _workflowClient     = workflowClient;
+            _expressions        = expressions;
+            _transactionService = transactionService;
+            _logger             = logger;
         }
 
         // ── GET /api/loans/applications ─────────────────────────────────────────
@@ -200,6 +209,62 @@ namespace LoanService.Controllers
                         return BadRequest(new { error = "Application must be APPROVED to disburse" });
                     toStatus = "DISBURSED";
                     app.DisbursedAt = DateTime.UtcNow;
+
+                    // ── Double-entry ledger posting ────────────────────────────────────────────
+                    // Use the expression service to resolve GL account codes (tenant-configurable).
+                    // DR 1020 (Loans and Advances) / CR 1010 (Cash and Bank) by default.
+                    // Non-fatal: if TransactionService is unreachable the disbursal still completes.
+                    {
+                        var disbursalAmount = app.SanctionedAmount ?? app.RequestedAmount;
+                        var debitCode  = "1020";
+                        var creditCode = "1010";
+
+                        try
+                        {
+                            var glMapping = await _expressions.EvaluateExpressionAsync<string>(
+                                "EXPR_GL_MAPPING_LOAN_DISBURSAL",
+                                new Dictionary<string, object>
+                                {
+                                    ["productType"] = app.ProductType ?? "PERSONAL_LOAN"
+                                });
+
+                            if (!string.IsNullOrWhiteSpace(glMapping))
+                            {
+                                var parts = glMapping.Split('|');
+                                if (parts.Length == 2)
+                                {
+                                    debitCode  = parts[0].Trim();
+                                    creditCode = parts[1].Trim();
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex,
+                                "GL mapping expression EXPR_GL_MAPPING_LOAN_DISBURSAL failed for {AppId} — using default 1020/1010",
+                                id);
+                        }
+
+                        var journalResult = await _transactionService.PostDisbursalJournalAsync(
+                            app.ApplicationNumber ?? id.ToString(),
+                            app.ProductType ?? "PERSONAL_LOAN",
+                            disbursalAmount,
+                            debitCode,
+                            creditCode);
+
+                        if (!journalResult.Success)
+                        {
+                            _logger.LogWarning(
+                                "Disbursal journal posting failed for loan {AppId} — {Error}. Disbursal continues.",
+                                id, journalResult.Error);
+                        }
+                        else
+                        {
+                            _logger.LogInformation(
+                                "Disbursal journal {JNo} posted for loan {AppId} ({AppNo}) — amount ₹{Amount:N2}",
+                                journalResult.JournalNumber, id, app.ApplicationNumber, disbursalAmount);
+                        }
+                    }
 
                     // Notify workflow engine — fire-and-forget, never block the loan state machine
                     if (app.WorkflowInstanceId.HasValue)

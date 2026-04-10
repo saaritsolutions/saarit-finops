@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-07 (session 19 — workflow engine persistence + AccountService wiring + deposits foundation)
+**Last Updated:** 2026-04-10 (session 22 — SCRUM-187 LoanService→TransactionService disbursal wiring)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -101,6 +101,7 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 | Service | Port |
 |---|---|
 | ExpressionBuilderService | 5004 |
+| TransactionService | 5005 |
 | WorkflowOrchestrationService | 5012 |
 | DynamicFieldsSchemaService | 5013 |
 | LoanService | 5130 |
@@ -141,6 +142,14 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 22 — 2026-04-10 (SCRUM-187 — LoanService → TransactionService disbursal wiring)
+- **EXPR_GL_MAPPING_LOAN_DISBURSAL** seeded — returns "debitCode|creditCode" (e.g., "1020|1010") based on product type; tenant-configurable from Expression Builder UI.
+- **ITransactionServiceClient / TransactionServiceClient** created in LoanService/Services/ — HTTP POST to `/api/journal` with idempotency key `DISBURSAL-{applicationNumber}`.
+- **LoanApplicationsController** DISBURSE case extended: evaluates GL mapping expression → posts DR 1020 (Loans and Advances) / CR 1010 (Cash and Bank) journal to TransactionService → fire-and-forgets workflow step. Non-fatal if TransactionService is unreachable.
+- **TransactionService** added to start-all.sh on port 5005; appsettings.Development.json updated; TransactionServiceDb created.
+- **LoanService appsettings.Development.json** updated with TransactionBaseUrl.
+- **Services ports**: 5004 (Expression), 5005 (Transaction), 5012 (Workflow), 5013 (DynamicForms), 5130 (Loan), 3002 (React).
 
 ### Session 19 — 2026-04-07 (workflow engine persistence + AccountService wiring + deposits)
 - **WorkflowOrchestrationService real persistence**: EF Core 9 + Npgsql 9. WorkflowInstanceEntity (ContextJson/ApprovalRequirementsJson as text). Full schema-per-tenant multi-tenancy (4 files copied from LoanService). Models extracted to WorkflowModels.cs. LoadWorkflowInstanceAsync / SaveWorkflowInstanceAsync wired to DB. EF migration InitialCreate (schema qualifiers stripped). Program.cs updated: JWT, DbContext, tenant provisioner.
