@@ -261,7 +261,38 @@ public class ExpressionSeedService
             tags: new[] { "workflow", "approval", "account-opening" }
         ),
 
-        // ── 15. LOAN DISBURSAL GL ACCOUNT MAPPING ──
+        // ── 15. DEPOSIT MATURITY INTEREST CALCULATION ──
+        Def(
+            expressionId: "EXPR_MATURITY_INTEREST_CALC",
+            name: "Deposit Maturity Interest Calculation",
+            description: "Calculates the simple interest earned on an FD/RD at maturity. " +
+                         "Formula: principal × annualRate / 100 × termMonths / 12. " +
+                         "Variables: principal (decimal), annualRate (decimal), termMonths (decimal).",
+            category: "Interest",
+            usageType: "Calculation",
+            returnType: "decimal",
+            contextType: "Account",
+            expressionText: "Math.Round(principal * annualRate / 100m * termMonths / 12m, 2)",
+            tags: new[] { "fd", "rd", "interest", "maturity", "calculation" }
+        ),
+
+        // ── 16. PREMATURE CLOSURE INTEREST CALCULATION ──
+        Def(
+            expressionId: "EXPR_PREMATURE_CLOSURE_PENALTY_CALC",
+            name: "Premature Closure Interest (After Penalty)",
+            description: "Calculates interest earned on an FD/RD closed before maturity, after applying " +
+                         "the premature closure penalty to the rate. " +
+                         "Formula: principal × max(0, annualRate − penaltyPercent) / 100 × actualMonths / 12. " +
+                         "Variables: principal (decimal), annualRate (decimal), penaltyPercent (decimal), actualMonths (decimal).",
+            category: "Interest",
+            usageType: "Calculation",
+            returnType: "decimal",
+            contextType: "Account",
+            expressionText: "Math.Round(principal * Math.Max(0m, annualRate - penaltyPercent) / 100m * actualMonths / 12m, 2)",
+            tags: new[] { "fd", "rd", "premature-closure", "penalty", "calculation" }
+        ),
+
+        // ── 17. LOAN DISBURSAL GL ACCOUNT MAPPING ──
         Def(
             expressionId: "EXPR_GL_MAPPING_LOAN_DISBURSAL",
             name: "Loan Disbursal GL Account Mapping",

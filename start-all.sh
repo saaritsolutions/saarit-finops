@@ -45,6 +45,15 @@ else
   echo "TransactionService not found — skipping"
 fi
 
+# Start AccountService if present
+if [ -f "$ROOT/saar-core-banking-services/AccountService/AccountService.csproj" ]; then
+  echo "Starting AccountService..."
+  (cd "$ROOT/saar-core-banking-services/AccountService" && ASPNETCORE_URLS="http://localhost:5217" dotnet run --project AccountService.csproj) >"$LOGDIR/accountservice.log" 2>&1 &
+  echo "$!" > "$LOGDIR/accountservice.pid"
+else
+  echo "AccountService not found — skipping"
+fi
+
 # Start LoanService
 if [ -f "$ROOT/saar-core-banking-services/LoanService/LoanService.csproj" ]; then
   echo "Starting LoanService..."
@@ -62,6 +71,7 @@ echo "All services started (PIDs):"
 [ -f "$LOGDIR/workflow.pid" ] && echo "Workflow: $(cat $LOGDIR/workflow.pid)"
 [ -f "$LOGDIR/forms.pid" ] && echo "Forms: $(cat $LOGDIR/forms.pid)"
 [ -f "$LOGDIR/transactionservice.pid" ] && echo "TransactionService: $(cat $LOGDIR/transactionservice.pid)"
+[ -f "$LOGDIR/accountservice.pid" ] && echo "AccountService: $(cat $LOGDIR/accountservice.pid)"
 [ -f "$LOGDIR/loanservice.pid" ] && echo "LoanService: $(cat $LOGDIR/loanservice.pid)"
 
 echo "Tailing last 50 lines of loanservice log"

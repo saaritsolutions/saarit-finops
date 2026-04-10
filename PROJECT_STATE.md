@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-10 (session 22 — SCRUM-187 LoanService→TransactionService disbursal wiring)
+**Last Updated:** 2026-04-10 (session 22 — SCRUM-187 + SCRUM-223/224/225 FD/RD lifecycle endpoints)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -142,6 +142,16 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 22 — 2026-04-10 (SCRUM-187 + SCRUM-223/224/225 — disbursal wiring + FD/RD lifecycle)
+- **EXPR_MATURITY_INTEREST_CALC** (seed #15) + **EXPR_PREMATURE_CLOSURE_PENALTY_CALC** (seed #16) added. Total: 17 seeded expressions.
+- **ITransactionServiceClient / TransactionServiceClient** added to AccountService.
+- **AccountController** extended with 3 new endpoints:
+  - `GET /api/account/upcoming-maturities?days=N` — FD/RD maturing in next N days with projected interest
+  - `POST /api/account/{id}/mature` — expression-driven interest, DR 2010+5010 / CR 1010 journal, AutoRenewal support
+  - `POST /api/account/{id}/premature-close` — penalty expression, balanced journal, closes account
+- **AccountService** added to start-all.sh on port 5217; appsettings updated with TransactionBaseUrl.
+- 0 build errors across all modified services.
 
 ### Session 22 — 2026-04-10 (SCRUM-187 — LoanService → TransactionService disbursal wiring)
 - **EXPR_GL_MAPPING_LOAN_DISBURSAL** seeded — returns "debitCode|creditCode" (e.g., "1020|1010") based on product type; tenant-configurable from Expression Builder UI.

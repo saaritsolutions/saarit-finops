@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-10 (session 22 — SCRUM-187 LoanService→TransactionService disbursal wiring)
+**Last Updated:** 2026-04-10 (session 22 — SCRUM-187 + SCRUM-223/224/225 complete)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,11 +11,17 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Deploy to Hetzner** — rebuild loanservice, expressionbuilder, transactionservice containers | Sessions 19–22 changes not yet on prod |
-| 2 | **FD/RD deposit lifecycle endpoints** — POST /mature, POST /premature-close, GET /upcoming-maturities (SCRUM-223–225) | Foundation deployed, lifecycle operations next |
-| 3 | **Ledger UI: show disbursal journal entry** — link from LoanDetail to TransactionService ledger view | Close the loop for the investor demo |
+| 1 | **Deploy to Hetzner** — rebuild loanservice, expressionbuilder, accountservice, transactionservice | Sessions 19–22 changes not yet on prod |
+| 2 | **Ledger UI — disbursal/maturity link** — show journal entry number in LoanDetail and AccountDetail | Close the loop for investor demo |
+| 3 | **FD/RD maturity UI** — button on Account detail to trigger /mature and /premature-close | Demonstrate full FD lifecycle in UI |
 
 ### Recently Completed (session 22 — 2026-04-10)
+- [x] **SCRUM-223/224/225: FD/RD deposit lifecycle endpoints**
+  - `GET /api/account/upcoming-maturities?days=30` — deposits maturing in window, projected interest
+  - `POST /api/account/{id}/mature` — EXPR_MATURITY_INTEREST_CALC + DR 2010+5010 / CR 1010 + AutoRenewal
+  - `POST /api/account/{id}/premature-close` — EXPR_PREMATURE_CLOSURE_PENALTY_CALC + journal + close
+  - 2 expression seeds: EXPR_MATURITY_INTEREST_CALC (#15), EXPR_PREMATURE_CLOSURE_PENALTY_CALC (#16)
+  - AccountService added to start-all.sh on port 5217; TransactionBaseUrl wired
 - [x] **SCRUM-187: LoanService → TransactionService disbursal wiring**
   - `EXPR_GL_MAPPING_LOAN_DISBURSAL` seeded (15th expression — GL codes per product type, tenant-configurable)
   - `ITransactionServiceClient` / `TransactionServiceClient` created in LoanService/Services/
