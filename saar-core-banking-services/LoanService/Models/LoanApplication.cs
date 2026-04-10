@@ -198,6 +198,10 @@ namespace LoanService.Models
 
         public DateTime? DisbursedAt { get; set; }
 
+        /// <summary>Journal number returned by TransactionService on successful disbursal posting.</summary>
+        [MaxLength(50)]
+        public string? DisbursalJournalNumber { get; set; }
+
         // ── Legacy / Compatibility ──────────────────────────────────────────────
         [MaxLength(100)]
         public string? CustomerId { get; set; }

@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-10 (session 23 — FD/RD lifecycle UI: AccountManagement + Dashboard)
+**Last Updated:** 2026-04-10 (session 24 — GL journal numbers + account freeze/unfreeze: SCRUM-228/229/230)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -142,6 +142,14 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 24 — 2026-04-10 (GL journal numbers + freeze/unfreeze — SCRUM-228/229/230)
+- **LoanApplication.DisbursalJournalNumber** (string?, MaxLength 50) + EF migration `AddDisbursalJournalNumber`. DISBURSE saves journal number. `LoanDetail.tsx` shows green monospace GL Journal # chip (PaymentsIcon) in Loan Parameters section.
+- **Account.MaturityJournalNumber** (string?, MaxLength 50) + EF migration `AddMaturityJournalNumber`. Both `/mature` (auto-renewal + non-renewal paths) and `/premature-close` save journal number on success.
+- **AccountController freeze/unfreeze**: `POST /api/account/{id}/freeze` (Status→"Frozen") + `POST /api/account/{id}/unfreeze` (Status→"Active").
+- **accountService.ts**: `freeze(id)` + `unfreeze(id)` methods; `maturityJournalNumber?` added to `AccountRecord`.
+- **AccountManagement.tsx**: AcUnitIcon (freeze, blue) + LockOpenIcon (unfreeze, green) buttons; PaymentsIcon tooltip on Mature rows; Close Account hidden for Frozen accounts.
+- 0 TypeScript errors; AccountService builds with 0 C# errors.
 
 ### Session 23 — 2026-04-10 (FD/RD lifecycle UI — accountService + AccountManagement + Dashboard)
 - **accountService.ts**: added `MaturityRecord`, `MatureResult`, `PrematureCloseResult` interfaces; `mature(id)`, `prematureClose(id)`, `upcomingMaturities(days)` methods. Added `maturityDate`, `termMonths`, `annualRate`, `autoRenewal` to `AccountRecord`.

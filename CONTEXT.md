@@ -178,6 +178,21 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - **AccountManagement.tsx**: "Process Maturity" (SavingsIcon, blue) and "Premature Closure" (MoneyOffIcon, amber) action buttons on FD/RD Active rows. `Mature` and `Dormant` status chips added. `Mature` tab in status filter. Success alert with journal number + payout details.
   - **Dashboard.tsx**: "Upcoming Maturities" widget — live `GET /api/account/upcoming-maturities?days=30` call on mount, table with Account #, Customer, Type, Principal, Rate, Maturity Date (days-left urgency chip in red/amber/green), Projected Payout. Skeleton loader shown while loading.
 
+## Completed (continued)
+- GL journal numbers + account freeze/unfreeze (session 24, 2026-04-10) — SCRUM-228/229/230:
+  - **SCRUM-228 (Disbursal journal number)**:
+    - `LoanApplication.DisbursalJournalNumber` (string?, MaxLength 50) + EF migration `AddDisbursalJournalNumber`.
+    - DISBURSE action saves `app.DisbursalJournalNumber = journalResult.JournalNumber` on success.
+    - `LoanDetail.tsx`: green monospace chip with PaymentsIcon showing `GL Journal #` in Loan Parameters section.
+  - **SCRUM-230 (Maturity journal number)**:
+    - `Account.MaturityJournalNumber` (string?, MaxLength 50) + EF migration `AddMaturityJournalNumber`.
+    - Both `/mature` (auto-renewal + non-renewal paths) and `/premature-close` save journal number on success.
+  - **SCRUM-229 (Account freeze/unfreeze)**:
+    - `POST /api/account/{id}/freeze` → Status="Frozen"; `POST /api/account/{id}/unfreeze` → Status="Active".
+    - `accountService.ts`: `freeze(id)` + `unfreeze(id)` methods; `maturityJournalNumber?` field on `AccountRecord`.
+    - `AccountManagement.tsx`: AcUnitIcon (freeze, blue) + LockOpenIcon (unfreeze, green) action buttons; PaymentsIcon tooltip on Mature rows showing journal number; Close Account button hidden when Frozen.
+  - 0 TypeScript errors; AccountService builds with 0 C# errors.
+
 ## In Progress
 - (none)
 

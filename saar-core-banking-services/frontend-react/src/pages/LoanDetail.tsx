@@ -419,6 +419,32 @@ const LoanDetail: React.FC = () => {
                 <InfoRow label="Collateral Value" value={INR(f('collateralValue'))} />
               </>
             )}
+            {f('disbursalJournalNumber') && (
+              <>
+                <Divider sx={{ my: 1 }} />
+                <InfoRow
+                  label="GL Journal #"
+                  value={
+                    <Chip
+                      icon={<PaymentsIcon sx={{ fontSize: '0.85rem !important' }} />}
+                      label={f('disbursalJournalNumber')}
+                      size="small"
+                      sx={{
+                        fontFamily: 'ui-monospace,monospace',
+                        fontWeight: 700,
+                        fontSize: '0.75rem',
+                        backgroundColor: '#ECFDF5',
+                        color: '#059669',
+                        border: '1px solid #10B98130',
+                        height: 22,
+                        '& .MuiChip-icon': { color: '#059669' },
+                      }}
+                    />
+                  }
+                />
+                <InfoRow label="Disbursed On" value={fmtDate(f('disbursedAt'))} />
+              </>
+            )}
           </SectionCard>
         </Grid>
       </Grid>

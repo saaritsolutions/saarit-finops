@@ -36,10 +36,13 @@ import EditIcon         from '@mui/icons-material/Edit';
 import DeleteIcon       from '@mui/icons-material/Delete';
 import CheckCircleIcon  from '@mui/icons-material/CheckCircle';
 import LockIcon         from '@mui/icons-material/Lock';
+import LockOpenIcon     from '@mui/icons-material/LockOpen';
+import AcUnitIcon       from '@mui/icons-material/AcUnit';
 import SearchIcon       from '@mui/icons-material/Search';
 import AccountBoxIcon   from '@mui/icons-material/AccountBox';
 import SavingsIcon      from '@mui/icons-material/Savings';
 import MoneyOffIcon     from '@mui/icons-material/MoneyOff';
+import PaymentsIcon     from '@mui/icons-material/Payments';
 import { accountService, AccountRecord, CreateAccountDto, MatureResult, PrematureCloseResult } from '../../services/accountService';
 import PageHeader from '../../components/common/PageHeader';
 import EmptyState from '../../components/common/EmptyState';
@@ -238,6 +241,18 @@ const AccountManagement: React.FC = () => {
     }
   };
 
+  const handleFreeze = async (acc: AccountRecord) => {
+    if (!window.confirm(`Freeze account ${acc.accountNumber ?? acc.accountId}? No transactions will be permitted while frozen.`)) return;
+    try { await accountService.freeze(acc.accountId); setSuccessMsg(`Account ${acc.accountNumber ?? acc.accountId} frozen.`); await load(); }
+    catch (e: any) { setError(e?.response?.data ?? e?.message ?? 'Freeze failed.'); }
+  };
+
+  const handleUnfreeze = async (acc: AccountRecord) => {
+    if (!window.confirm(`Unfreeze account ${acc.accountNumber ?? acc.accountId}? It will be restored to Active status.`)) return;
+    try { await accountService.unfreeze(acc.accountId); setSuccessMsg(`Account ${acc.accountNumber ?? acc.accountId} unfrozen.`); await load(); }
+    catch (e: any) { setError(e?.response?.data ?? e?.message ?? 'Unfreeze failed.'); }
+  };
+
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <Box>
@@ -376,7 +391,14 @@ const AccountManagement: React.FC = () => {
                       {acc.modeOfOperation ?? '—'}
                     </TableCell>
                     <TableCell>
-                      <StatusChip label={acc.status ?? 'Active'} />
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                        <StatusChip label={acc.status ?? 'Active'} />
+                        {acc.maturityJournalNumber && (
+                          <Tooltip title={`GL Journal: ${acc.maturityJournalNumber}`} arrow>
+                            <PaymentsIcon sx={{ fontSize: '0.95rem', color: '#0369A1', cursor: 'default' }} />
+                          </Tooltip>
+                        )}
+                      </Box>
                     </TableCell>
                     <TableCell>
                       <StatusChip label={acc.approvalStatus ?? 'Pending'} />
@@ -409,7 +431,21 @@ const AccountManagement: React.FC = () => {
                           </IconButton>
                         </Tooltip>
                       )}
-                      {acc.status !== 'Closed' && acc.status !== 'Mature' && (
+                      {acc.status === 'Active' && (
+                        <Tooltip title="Freeze Account">
+                          <IconButton size="small" onClick={() => handleFreeze(acc)} sx={{ color: '#0369A1', '&:hover': { color: '#075985', backgroundColor: '#E0F2FE' } }}>
+                            <AcUnitIcon sx={{ fontSize: '1rem' }} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {acc.status === 'Frozen' && (
+                        <Tooltip title="Unfreeze Account">
+                          <IconButton size="small" onClick={() => handleUnfreeze(acc)} sx={{ color: '#059669', '&:hover': { color: '#047857', backgroundColor: '#ECFDF5' } }}>
+                            <LockOpenIcon sx={{ fontSize: '1rem' }} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {acc.status !== 'Closed' && acc.status !== 'Mature' && acc.status !== 'Frozen' && (
                         <Tooltip title="Close Account">
                           <IconButton size="small" onClick={() => handleClose(acc)} sx={{ color: isDark ? SLATE_500 : SLATE_400, '&:hover': { color: '#DC2626', backgroundColor: '#FEF2F2' } }}>
                             <LockIcon sx={{ fontSize: '1rem' }} />

@@ -577,6 +577,9 @@ namespace AccountService.Controllers
                     _logger.LogWarning(ex, "Rate refresh for auto-renewal of account {Id} failed — keeping existing rate", id);
                 }
 
+                if (journalResult.Success)
+                    account.MaturityJournalNumber = journalResult.JournalNumber;
+
                 await _context.SaveChangesAsync();
 
                 return Ok(new
@@ -594,6 +597,8 @@ namespace AccountService.Controllers
             // ── No auto-renewal: mark Mature and close ────────────────────────────
             account.Status     = "Mature";
             account.DateClosed = DateTime.UtcNow;
+            if (journalResult.Success)
+                account.MaturityJournalNumber = journalResult.JournalNumber;
             await _context.SaveChangesAsync();
 
             return Ok(new
@@ -672,6 +677,8 @@ namespace AccountService.Controllers
             // ── Mark closed ───────────────────────────────────────────────────────
             account.Status     = "Closed";
             account.DateClosed = DateTime.UtcNow;
+            if (journalResult.Success)
+                account.MaturityJournalNumber = journalResult.JournalNumber;
             await _context.SaveChangesAsync();
 
             return Ok(new
@@ -688,6 +695,39 @@ namespace AccountService.Controllers
                 totalPayout     = principal + reducedInterest,
                 journalNumber   = journalResult.JournalNumber
             });
+        }
+
+        // ── SCRUM-229: POST /api/account/{id}/freeze ──────────────────────────────
+        /// <summary>Freezes an active account — no debits/credits allowed.</summary>
+        [HttpPost("{id}/freeze")]
+        public async Task<ActionResult<object>> FreezeAccount(int id)
+        {
+            var account = await _context.Accounts.FindAsync(id);
+            if (account == null) return NotFound();
+            if (account.DateClosed != null) return BadRequest("Account is already closed.");
+            if (account.Status == "Frozen") return BadRequest("Account is already frozen.");
+
+            account.Status = "Frozen";
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Account {Id} ({No}) frozen.", id, account.AccountNumber);
+            return Ok(new { accountId = account.AccountId, accountNumber = account.AccountNumber, status = account.Status });
+        }
+
+        // ── SCRUM-229: POST /api/account/{id}/unfreeze ────────────────────────────
+        /// <summary>Unfreezes a frozen account, restoring it to Active.</summary>
+        [HttpPost("{id}/unfreeze")]
+        public async Task<ActionResult<object>> UnfreezeAccount(int id)
+        {
+            var account = await _context.Accounts.FindAsync(id);
+            if (account == null) return NotFound();
+            if (account.Status != "Frozen") return BadRequest("Account is not frozen.");
+
+            account.Status = "Active";
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Account {Id} ({No}) unfrozen.", id, account.AccountNumber);
+            return Ok(new { accountId = account.AccountId, accountNumber = account.AccountNumber, status = account.Status });
         }
     }
 }

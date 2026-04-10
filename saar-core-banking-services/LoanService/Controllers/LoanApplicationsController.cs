@@ -260,6 +260,7 @@ namespace LoanService.Controllers
                         }
                         else
                         {
+                            app.DisbursalJournalNumber = journalResult.JournalNumber;
                             _logger.LogInformation(
                                 "Disbursal journal {JNo} posted for loan {AppId} ({AppNo}) — amount ₹{Amount:N2}",
                                 journalResult.JournalNumber, id, app.ApplicationNumber, disbursalAmount);
