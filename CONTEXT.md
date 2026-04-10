@@ -172,6 +172,12 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - **ITransactionServiceClient / TransactionServiceClient** added to AccountService (mirrors LoanService pattern).
   - AccountService added to start-all.sh on port 5217; appsettings.Development.json updated with TransactionBaseUrl.
 
+## Completed (continued)
+- FD/RD deposit lifecycle UI (session 23, 2026-04-10):
+  - **accountService.ts**: `mature(id)`, `prematureClose(id)`, `upcomingMaturities(days)` + `MaturityRecord`, `MatureResult`, `PrematureCloseResult` interfaces.
+  - **AccountManagement.tsx**: "Process Maturity" (SavingsIcon, blue) and "Premature Closure" (MoneyOffIcon, amber) action buttons on FD/RD Active rows. `Mature` and `Dormant` status chips added. `Mature` tab in status filter. Success alert with journal number + payout details.
+  - **Dashboard.tsx**: "Upcoming Maturities" widget — live `GET /api/account/upcoming-maturities?days=30` call on mount, table with Account #, Customer, Type, Principal, Rate, Maturity Date (days-left urgency chip in red/amber/green), Projected Payout. Skeleton loader shown while loading.
+
 ## In Progress
 - (none)
 

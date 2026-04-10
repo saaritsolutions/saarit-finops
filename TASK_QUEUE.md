@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-10 (session 22 — SCRUM-187 + SCRUM-223/224/225 complete)
+**Last Updated:** 2026-04-10 (session 23 — FD/RD lifecycle UI complete)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,15 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Deploy to Hetzner** — rebuild loanservice, expressionbuilder, accountservice, transactionservice | Sessions 19–22 changes not yet on prod |
+| 1 | **Deploy to Hetzner** — rebuild loanservice, expressionbuilder, accountservice, transactionservice | Sessions 19–23 changes not yet on prod |
 | 2 | **Ledger UI — disbursal/maturity link** — show journal entry number in LoanDetail and AccountDetail | Close the loop for investor demo |
-| 3 | **FD/RD maturity UI** — button on Account detail to trigger /mature and /premature-close | Demonstrate full FD lifecycle in UI |
+
+### Recently Completed (session 23 — 2026-04-10)
+- [x] **FD/RD lifecycle UI** — accountService.ts, AccountManagement.tsx, Dashboard.tsx
+  - `accountService.ts`: `mature(id)`, `prematureClose(id)`, `upcomingMaturities(days)` + 3 new interfaces
+  - `AccountManagement.tsx`: "Process Maturity" + "Premature Closure" buttons on Active FD/RD rows; `Mature` status chip + filter tab; success alert with journal/payout details
+  - `Dashboard.tsx`: "Upcoming Maturities" full-width widget — live API, skeleton loader, days-left urgency chips
+  - 0 TypeScript errors
 
 ### Recently Completed (session 22 — 2026-04-10)
 - [x] **SCRUM-223/224/225: FD/RD deposit lifecycle endpoints**

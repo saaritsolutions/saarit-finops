@@ -38,7 +38,9 @@ import CheckCircleIcon  from '@mui/icons-material/CheckCircle';
 import LockIcon         from '@mui/icons-material/Lock';
 import SearchIcon       from '@mui/icons-material/Search';
 import AccountBoxIcon   from '@mui/icons-material/AccountBox';
-import { accountService, AccountRecord, CreateAccountDto } from '../../services/accountService';
+import SavingsIcon      from '@mui/icons-material/Savings';
+import MoneyOffIcon     from '@mui/icons-material/MoneyOff';
+import { accountService, AccountRecord, CreateAccountDto, MatureResult, PrematureCloseResult } from '../../services/accountService';
 import PageHeader from '../../components/common/PageHeader';
 import EmptyState from '../../components/common/EmptyState';
 
@@ -55,6 +57,8 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string }
   Frozen:   { bg: '#FEF2F2', text: '#DC2626', border: '#EF444420' },
   Closed:   { bg: '#F8FAFC', text: '#64748B', border: '#94A3B820' },
   Rejected: { bg: '#FEF2F2', text: '#DC2626', border: '#EF444420' },
+  Mature:   { bg: '#F0F9FF', text: '#0369A1', border: '#0EA5E920' },
+  Dormant:  { bg: '#F8FAFC', text: '#475569', border: '#94A3B820' },
 };
 
 const StatusChip: React.FC<{ label?: string }> = ({ label = 'Unknown' }) => {
@@ -96,8 +100,8 @@ const BLANK: CreateAccountDto = {
   branchId:          undefined,
 };
 
-type StatusFilter = 'All' | 'Active' | 'Pending' | 'Closed' | 'Frozen';
-const STATUS_FILTERS: StatusFilter[] = ['All', 'Active', 'Pending', 'Closed', 'Frozen'];
+type StatusFilter = 'All' | 'Active' | 'Pending' | 'Closed' | 'Frozen' | 'Mature';
+const STATUS_FILTERS: StatusFilter[] = ['All', 'Active', 'Pending', 'Closed', 'Frozen', 'Mature'];
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
@@ -113,6 +117,7 @@ const AccountManagement: React.FC = () => {
   const [form,          setForm]          = useState<CreateAccountDto>(BLANK);
   const [saving,        setSaving]        = useState(false);
   const [actionError,   setActionError]   = useState<string | null>(null);
+  const [successMsg,    setSuccessMsg]    = useState<string | null>(null);
   const [searchQuery,   setSearchQuery]   = useState('');
   const [statusFilter,  setStatusFilter]  = useState<StatusFilter>('All');
 
@@ -205,6 +210,34 @@ const AccountManagement: React.FC = () => {
     catch (e: any) { setError(e?.response?.data ?? e?.message ?? 'Close failed.'); }
   };
 
+  const handleMature = async (acc: AccountRecord) => {
+    const label = acc.accountNumber ?? `Account ${acc.accountId}`;
+    if (!window.confirm(`Process maturity for ${label}?\nThis will pay out principal + interest and post a ledger journal.`)) return;
+    try {
+      const res: MatureResult = await accountService.mature(acc.accountId);
+      const detail = res.renewedMaturityDate
+        ? `Auto-renewed — next maturity: ${new Date(res.renewedMaturityDate).toLocaleDateString('en-IN')}`
+        : `Matured successfully${res.journalNumber ? ` — journal ${res.journalNumber}` : ''}`;
+      setSuccessMsg(detail);
+      await load();
+    } catch (e: any) {
+      setError(e?.response?.data ?? e?.message ?? 'Maturity processing failed.');
+    }
+  };
+
+  const handlePrematureClose = async (acc: AccountRecord) => {
+    const label = acc.accountNumber ?? `Account ${acc.accountId}`;
+    if (!window.confirm(`Premature closure for ${label}?\nA penalty will be applied. Payout will be less than full maturity amount.`)) return;
+    try {
+      const res: PrematureCloseResult = await accountService.prematureClose(acc.accountId);
+      const detail = `Closed — payout ₹${res.netPayout?.toLocaleString('en-IN', { minimumFractionDigits: 2 }) ?? '—'}${res.penaltyAmount ? `, penalty ₹${res.penaltyAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : ''}${res.journalNumber ? ` — journal ${res.journalNumber}` : ''}`;
+      setSuccessMsg(detail);
+      await load();
+    } catch (e: any) {
+      setError(e?.response?.data ?? e?.message ?? 'Premature closure failed.');
+    }
+  };
+
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <Box>
@@ -221,6 +254,9 @@ const AccountManagement: React.FC = () => {
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>
+      )}
+      {successMsg && (
+        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccessMsg(null)}>{successMsg}</Alert>
       )}
 
       {/* Filter bar */}
@@ -358,9 +394,24 @@ const AccountManagement: React.FC = () => {
                           </IconButton>
                         </Tooltip>
                       )}
-                      {acc.status !== 'Closed' && (
+                      {/* FD/RD lifecycle actions */}
+                      {(acc.productType?.name === 'FD' || acc.productType?.name === 'RD') && acc.status === 'Active' && (
+                        <Tooltip title="Process Maturity">
+                          <IconButton size="small" onClick={() => handleMature(acc)} sx={{ color: '#0369A1', '&:hover': { color: '#075985', backgroundColor: '#F0F9FF' } }}>
+                            <SavingsIcon sx={{ fontSize: '1rem' }} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {(acc.productType?.name === 'FD' || acc.productType?.name === 'RD') && acc.status === 'Active' && (
+                        <Tooltip title="Premature Closure">
+                          <IconButton size="small" onClick={() => handlePrematureClose(acc)} sx={{ color: '#D97706', '&:hover': { color: '#B45309', backgroundColor: '#FFFBEB' } }}>
+                            <MoneyOffIcon sx={{ fontSize: '1rem' }} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {acc.status !== 'Closed' && acc.status !== 'Mature' && (
                         <Tooltip title="Close Account">
-                          <IconButton size="small" onClick={() => handleClose(acc)} sx={{ color: '#D97706', '&:hover': { color: '#B45309', backgroundColor: '#FFFBEB' } }}>
+                          <IconButton size="small" onClick={() => handleClose(acc)} sx={{ color: isDark ? SLATE_500 : SLATE_400, '&:hover': { color: '#DC2626', backgroundColor: '#FEF2F2' } }}>
                             <LockIcon sx={{ fontSize: '1rem' }} />
                           </IconButton>
                         </Tooltip>
