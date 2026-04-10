@@ -53,6 +53,9 @@ namespace AccountService.Models
         public decimal?  InstallmentAmount        { get; set; } // Monthly installment for RD
         public decimal?  PrematureClosurePenalty  { get; set; } // Penalty % for premature closure
         public Guid?     WorkflowInstanceId       { get; set; } // Linked workflow for maker-checker
+        /// <summary>Journal number from the most recent maturity or premature-closure payout posting.</summary>
+        [System.ComponentModel.DataAnnotations.MaxLength(50)]
+        public string?   MaturityJournalNumber    { get; set; }
         // Branch association
         public int BranchId { get; set; }
         // TODO: JointCustomers migration

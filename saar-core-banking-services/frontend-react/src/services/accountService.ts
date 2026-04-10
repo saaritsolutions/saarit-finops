@@ -27,6 +27,7 @@ export interface AccountRecord {
   termMonths?: number;
   annualRate?: number;
   autoRenewal?: boolean;
+  maturityJournalNumber?: string;
 }
 
 export interface MaturityRecord {
@@ -92,4 +93,8 @@ export const accountService = {
 
   upcomingMaturities: (days = 30) =>
     apiService.get<MaturityRecord[]>(`${BASE}/upcoming-maturities?days=${days}`),
+
+  freeze: (id: number) => apiService.post<{ accountId: number; accountNumber?: string; status: string }>(`${BASE}/${id}/freeze`, {}),
+
+  unfreeze: (id: number) => apiService.post<{ accountId: number; accountNumber?: string; status: string }>(`${BASE}/${id}/unfreeze`, {}),
 };

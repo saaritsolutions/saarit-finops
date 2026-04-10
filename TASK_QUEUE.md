@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-10 (session 23 — FD/RD lifecycle UI complete)
+**Last Updated:** 2026-04-10 (session 24 — GL journal numbers + freeze/unfreeze: SCRUM-228/229/230)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,8 +11,14 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Deploy to Hetzner** — rebuild loanservice, expressionbuilder, accountservice, transactionservice | Sessions 19–23 changes not yet on prod |
+| 1 | **Deploy to Hetzner** — rebuild loanservice, expressionbuilder, accountservice, transactionservice | Sessions 19–24 changes not yet on prod |
 | 2 | **Ledger UI — disbursal/maturity link** — show journal entry number in LoanDetail and AccountDetail | Close the loop for investor demo |
+
+### Recently Completed (session 24 — 2026-04-10)
+- [x] **SCRUM-228: Disbursal journal number** — `LoanApplication.DisbursalJournalNumber` field + EF migration; saved in DISBURSE action; green GL Journal # chip in LoanDetail.tsx
+- [x] **SCRUM-230: Maturity journal number** — `Account.MaturityJournalNumber` field + EF migration; saved in `/mature` (both paths) + `/premature-close`; PaymentsIcon tooltip in AccountManagement
+- [x] **SCRUM-229: Account freeze/unfreeze** — `POST /api/account/{id}/freeze` + `/unfreeze` endpoints; AcUnitIcon + LockOpenIcon buttons in AccountManagement.tsx; Close Account hidden for Frozen
+- 0 TypeScript errors; AccountService 0 C# errors
 
 ### Recently Completed (session 23 — 2026-04-10)
 - [x] **FD/RD lifecycle UI** — accountService.ts, AccountManagement.tsx, Dashboard.tsx
