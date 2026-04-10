@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Card,
@@ -7,6 +7,13 @@ import {
   Chip,
   Button,
   Divider,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Skeleton,
   useTheme,
 } from '@mui/material';
 import {
@@ -20,7 +27,9 @@ import {
   BarChart as ReportsIcon,
   ArrowForward as ArrowRightIcon,
   Circle as DotIcon,
+  EventAvailable as EventAvailableIcon,
 } from '@mui/icons-material';
+import { accountService, MaturityRecord } from '../services/accountService';
 import {
   AreaChart,
   Area,
@@ -164,6 +173,17 @@ const Dashboard: React.FC = () => {
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const today   = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
+  // ── Upcoming Maturities ───────────────────────────────────────────────────
+  const [maturities,        setMaturities]        = useState<MaturityRecord[]>([]);
+  const [maturitiesLoading, setMaturitiesLoading] = useState(true);
+
+  useEffect(() => {
+    accountService.upcomingMaturities(30)
+      .then(data => setMaturities(data))
+      .catch(() => setMaturities([]))
+      .finally(() => setMaturitiesLoading(false));
+  }, []);
+
   return (
     <Box>
       <PageHeader title="Dashboard" subtitle={`${greeting} — ${today}`} />
@@ -225,6 +245,96 @@ const Dashboard: React.FC = () => {
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </Box>
+
+      {/* Upcoming Maturities */}
+      <Box sx={{ mb: 3 }}>
+        <Card>
+          <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ width: 32, height: 32, borderRadius: 2, backgroundColor: isDark ? '#0369A120' : '#F0F9FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0369A1' }}>
+                  <EventAvailableIcon sx={{ fontSize: '1.1rem' }} />
+                </Box>
+                <Box>
+                  <Typography sx={{ fontSize: '0.9375rem', fontWeight: 600, color: isDark ? SLATE_100 : SLATE_900 }}>Upcoming Maturities</Typography>
+                  <Typography sx={{ fontSize: '0.8125rem', color: SLATE_500 }}>FD/RD accounts maturing in the next 30 days</Typography>
+                </Box>
+              </Box>
+              {!maturitiesLoading && (
+                <Chip size="small" label={`${maturities.length} account${maturities.length !== 1 ? 's' : ''}`}
+                  sx={{ backgroundColor: isDark ? '#0369A120' : '#F0F9FF', color: '#0369A1', fontWeight: 600, fontSize: '0.75rem' }} />
+              )}
+            </Box>
+
+            {maturitiesLoading ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {[...Array(3)].map((_, i) => <Skeleton key={i} variant="rectangular" height={36} sx={{ borderRadius: 1 }} />)}
+              </Box>
+            ) : maturities.length === 0 ? (
+              <Typography sx={{ fontSize: '0.875rem', color: isDark ? SLATE_500 : SLATE_400, textAlign: 'center', py: 3 }}>
+                No FD/RD accounts maturing in the next 30 days.
+              </Typography>
+            ) : (
+              <TableContainer sx={{ border: `1px solid ${isDark ? '#1F2937' : SLATE_200}`, borderRadius: 1.5, overflow: 'hidden' }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      {['Account #', 'Customer', 'Type', 'Principal (₹)', 'Rate', 'Maturity Date', 'Projected Payout (₹)'].map(h => (
+                        <TableCell key={h} align={['Principal (₹)', 'Projected Payout (₹)'].includes(h) ? 'right' : 'left'}
+                          sx={{ fontSize: '0.75rem', fontWeight: 600, color: isDark ? SLATE_400 : SLATE_500, py: 1, whiteSpace: 'nowrap' }}>
+                          {h}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {maturities.map(m => {
+                      const daysLeft = m.maturityDate
+                        ? Math.ceil((new Date(m.maturityDate).getTime() - Date.now()) / 86400000)
+                        : null;
+                      const urgentColor = daysLeft !== null && daysLeft <= 7 ? '#DC2626' : daysLeft !== null && daysLeft <= 14 ? '#D97706' : '#059669';
+                      return (
+                        <TableRow key={m.accountId} sx={{ '&:hover': { backgroundColor: isDark ? '#FFFFFF05' : '#F8FAFC' } }}>
+                          <TableCell sx={{ fontFamily: 'ui-monospace,monospace', fontSize: '0.8125rem', fontWeight: 600, color: isDark ? '#93C5FD' : '#2563EB' }}>
+                            {m.accountNumber ?? `ACC-${m.accountId}`}
+                          </TableCell>
+                          <TableCell sx={{ fontSize: '0.8125rem', color: isDark ? SLATE_300 : SLATE_700 }}>{m.customerId}</TableCell>
+                          <TableCell>
+                            <Chip size="small" label={m.productType ?? '—'}
+                              sx={{ height: 20, fontSize: '0.7rem', fontWeight: 600, backgroundColor: isDark ? '#0369A120' : '#F0F9FF', color: '#0369A1' }} />
+                          </TableCell>
+                          <TableCell align="right" sx={{ fontFamily: 'ui-monospace,monospace', fontSize: '0.8125rem' }}>
+                            {m.balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </TableCell>
+                          <TableCell sx={{ fontSize: '0.8125rem', color: isDark ? SLATE_400 : SLATE_500 }}>
+                            {m.annualRate != null ? `${m.annualRate}%` : '—'}
+                          </TableCell>
+                          <TableCell sx={{ fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                              <Typography sx={{ fontSize: '0.8125rem', color: isDark ? SLATE_300 : SLATE_700 }}>
+                                {m.maturityDate ? new Date(m.maturityDate).toLocaleDateString('en-IN') : '—'}
+                              </Typography>
+                              {daysLeft !== null && (
+                                <Chip size="small" label={daysLeft <= 0 ? 'Due!' : `${daysLeft}d`}
+                                  sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700, backgroundColor: `${urgentColor}15`, color: urgentColor, minWidth: 28 }} />
+                              )}
+                            </Box>
+                          </TableCell>
+                          <TableCell align="right" sx={{ fontFamily: 'ui-monospace,monospace', fontSize: '0.8125rem', fontWeight: 600, color: '#059669' }}>
+                            {m.projectedMaturityAmount != null
+                              ? m.projectedMaturityAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })
+                              : '—'}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
           </CardContent>
         </Card>
       </Box>

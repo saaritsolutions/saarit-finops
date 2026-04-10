@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-10 (session 22 — SCRUM-187 + SCRUM-223/224/225 FD/RD lifecycle endpoints)
+**Last Updated:** 2026-04-10 (session 23 — FD/RD lifecycle UI: AccountManagement + Dashboard)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -142,6 +142,11 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 23 — 2026-04-10 (FD/RD lifecycle UI — accountService + AccountManagement + Dashboard)
+- **accountService.ts**: added `MaturityRecord`, `MatureResult`, `PrematureCloseResult` interfaces; `mature(id)`, `prematureClose(id)`, `upcomingMaturities(days)` methods. Added `maturityDate`, `termMonths`, `annualRate`, `autoRenewal` to `AccountRecord`.
+- **AccountManagement.tsx**: "Process Maturity" button (SavingsIcon, blue) + "Premature Closure" button (MoneyOffIcon, amber) for Active FD/RD rows. `Mature` and `Dormant` STATUS_CONFIG entries. `Mature` in STATUS_FILTERS. `successMsg` state shows journal number + payout on success. Close Account button hidden for already-Mature accounts.
+- **Dashboard.tsx**: "Upcoming Maturities" full-width card widget above Recent Activity. Live API call to `/api/account/upcoming-maturities?days=30` on mount. Table: Account #, Customer, Type, Principal, Rate, Maturity Date (with days-left urgency chip — red ≤7d, amber ≤14d, green >14d), Projected Payout. Skeleton loader while loading. Zero TypeScript errors.
 
 ### Session 22 — 2026-04-10 (SCRUM-187 + SCRUM-223/224/225 — disbursal wiring + FD/RD lifecycle)
 - **EXPR_MATURITY_INTEREST_CALC** (seed #15) + **EXPR_PREMATURE_CLOSURE_PENALTY_CALC** (seed #16) added. Total: 17 seeded expressions.

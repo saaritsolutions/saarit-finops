@@ -9,7 +9,7 @@ export interface AccountRecord {
   productTypeId?: number;
   productType?: { accountProductTypeId: number; name: string };
   balance: number;
-  status?: string;          // Active | Frozen | Closed | Dormant
+  status?: string;          // Active | Frozen | Closed | Dormant | Mature
   dateOpened?: string;
   dateClosed?: string;
   modeOfOperation?: string; // SingleOperator | JointOperator | JointOperatorEither | Guardian
@@ -22,6 +22,40 @@ export interface AccountRecord {
   isBSBD?: boolean;
   isSimplifiedKYC?: boolean;
   branchId?: number;
+  // FD/RD-specific fields
+  maturityDate?: string;
+  termMonths?: number;
+  annualRate?: number;
+  autoRenewal?: boolean;
+}
+
+export interface MaturityRecord {
+  accountId: number;
+  accountNumber?: string;
+  customerId: number;
+  productType?: string;
+  balance: number;
+  maturityDate?: string;
+  termMonths?: number;
+  annualRate?: number;
+  autoRenewal?: boolean;
+  projectedInterest?: number;
+  projectedMaturityAmount?: number;
+}
+
+export interface MatureResult {
+  success: boolean;
+  journalNumber?: string;
+  renewedMaturityDate?: string;
+  message?: string;
+}
+
+export interface PrematureCloseResult {
+  success: boolean;
+  journalNumber?: string;
+  penaltyAmount?: number;
+  netPayout?: number;
+  message?: string;
 }
 
 export interface CreateAccountDto {
@@ -50,4 +84,12 @@ export const accountService = {
   approve: (id: number) => apiService.post<void>(`${BASE}/${id}/approve`, {}),
 
   close: (id: number) => apiService.post<void>(`${BASE}/${id}/close`, {}),
+
+  // FD/RD lifecycle
+  mature: (id: number) => apiService.post<MatureResult>(`${BASE}/${id}/mature`, {}),
+
+  prematureClose: (id: number) => apiService.post<PrematureCloseResult>(`${BASE}/${id}/premature-close`, {}),
+
+  upcomingMaturities: (days = 30) =>
+    apiService.get<MaturityRecord[]>(`${BASE}/upcoming-maturities?days=${days}`),
 };
