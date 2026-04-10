@@ -319,7 +319,7 @@ const TransactionManagement: React.FC = () => {
           {/* Entry lines */}
           {entries.map((entry, i) => (
             <Grid container spacing={1} key={i} sx={{ mb: 1, alignItems: 'center' }}>
-              <Grid item xs={3}>
+              <Grid size={3}>
                 <TextField
                   label="Account Code" size="small" fullWidth
                   value={entry.accountCode}
@@ -327,28 +327,28 @@ const TransactionManagement: React.FC = () => {
                   placeholder="e.g. 1010"
                 />
               </Grid>
-              <Grid item xs={2.5}>
+              <Grid size={2.5}>
                 <TextField
                   label="Debit (₹)" size="small" fullWidth type="number"
                   value={entry.debitAmount || ''}
                   onChange={e => setEntry(i, { debitAmount: +e.target.value })}
                 />
               </Grid>
-              <Grid item xs={2.5}>
+              <Grid size={2.5}>
                 <TextField
                   label="Credit (₹)" size="small" fullWidth type="number"
                   value={entry.creditAmount || ''}
                   onChange={e => setEntry(i, { creditAmount: +e.target.value })}
                 />
               </Grid>
-              <Grid item xs={3}>
+              <Grid size={3}>
                 <TextField
                   label="Narration" size="small" fullWidth
                   value={entry.narration ?? ''}
                   onChange={e => setEntry(i, { narration: e.target.value })}
                 />
               </Grid>
-              <Grid item xs={1}>
+              <Grid size={1}>
                 <Tooltip title="Remove line">
                   <span>
                     <IconButton

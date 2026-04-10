@@ -240,7 +240,7 @@ const CustomerManagement: React.FC = () => {
 
           <Grid container spacing={2} sx={{ mt: 0 }}>
             {/* Row 1 — name */}
-            <Grid item xs={12} sm={2}>
+            <Grid size={{ xs: 12, sm: 2 }}>
               <FormControl fullWidth size="small">
                 <InputLabel>Salutation</InputLabel>
                 <Select label="Salutation" value={form.salutation || ''}
@@ -251,30 +251,30 @@ const CustomerManagement: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={3}>
+            <Grid size={{ xs: 12, sm: 3 }}>
               <TextField fullWidth size="small" label="First Name *" {...field('firstName')} />
             </Grid>
-            <Grid item xs={12} sm={3}>
+            <Grid size={{ xs: 12, sm: 3 }}>
               <TextField fullWidth size="small" label="Middle Name" {...field('middleName')} />
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <TextField fullWidth size="small" label="Last Name *" {...field('lastName')} />
             </Grid>
 
             {/* Row 2 — contact */}
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField fullWidth size="small" label="Mobile" inputProps={{ maxLength: 15 }} {...field('mobile')} />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField fullWidth size="small" label="Email" type="email" {...field('email')} />
             </Grid>
 
             {/* Row 3 — DOB + gender */}
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField fullWidth size="small" label="Date of Birth *" type="date"
                 InputLabelProps={{ shrink: true }} {...field('dateOfBirth')} />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth size="small">
                 <InputLabel>Gender</InputLabel>
                 <Select label="Gender" value={form.gender || ''}
@@ -287,7 +287,7 @@ const CustomerManagement: React.FC = () => {
             </Grid>
 
             {/* Row 4 — PAN + Aadhaar */}
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
                 <TextField
                   fullWidth size="small" label="PAN"
@@ -308,14 +308,14 @@ const CustomerManagement: React.FC = () => {
                 </Tooltip>
               </Box>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField fullWidth size="small" label="Aadhaar (UID)"
                 inputProps={{ maxLength: 12 }} {...field('uid')}
                 helperText="12-digit Aadhaar number" />
             </Grid>
 
             {/* Row 5 — customer type + father/husband name */}
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth size="small">
                 <InputLabel>Customer Type</InputLabel>
                 <Select label="Customer Type" value={form.customerType || 'Individual'}
@@ -326,12 +326,12 @@ const CustomerManagement: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField fullWidth size="small" label="Father / Husband Name" {...field('fatherOrHusbandName')} />
             </Grid>
 
             {/* Row 6 — address */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField fullWidth size="small" label="Postal Address" multiline rows={2} {...field('postalAddress')} />
             </Grid>
           </Grid>
