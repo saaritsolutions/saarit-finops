@@ -11,6 +11,7 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
 ## Services and Ports
 - ExpressionBuilderService: 5004
 - TransactionService: 5005
+- AccountService: 5217
 - WorkflowOrchestrationService: 5012
 - DynamicFieldsSchemaService: 5013
 - LoanService: 5130
@@ -161,12 +162,22 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - **LoanService appsettings.Development.json** now has TransactionBaseUrl: http://localhost:5005.
   - Services: 5 → 6 (all ports: 5004, 5005, 5012, 5013, 5130, 3002).
 
+## Completed (continued)
+- SCRUM-223/224/225: FD/RD deposit lifecycle endpoints (session 22 cont., 2026-04-10):
+  - **EXPR_MATURITY_INTEREST_CALC** (seed #15) — principal × annualRate/100 × termMonths/12; tenant-configurable.
+  - **EXPR_PREMATURE_CLOSURE_PENALTY_CALC** (seed #16) — same with penalty subtracted from rate.
+  - **GET /api/account/upcoming-maturities?days=30** — lists FD/RD maturing in the next N days with projected interest.
+  - **POST /api/account/{id}/mature** — evaluates expression, posts DR 2010+DR 5010 / CR 1010 journal, handles AutoRenewal.
+  - **POST /api/account/{id}/premature-close** — evaluates penalty expression, posts journal, closes account.
+  - **ITransactionServiceClient / TransactionServiceClient** added to AccountService (mirrors LoanService pattern).
+  - AccountService added to start-all.sh on port 5217; appsettings.Development.json updated with TransactionBaseUrl.
+
 ## In Progress
 - (none)
 
 ## Pending Next
-- Deposit FD/RD lifecycle endpoints: POST /mature, POST /premature-close, GET /upcoming-maturities (SCRUM-223–225)
-- Deploy to Hetzner (rebuild loanservice, expressionbuilder, transactionservice containers)
+- Deploy to Hetzner (rebuild loanservice, expressionbuilder, accountservice, transactionservice containers)
+- Wire Ledger UI view to show disbursal and maturity journal entries from loan/account detail pages
 
 ## Notes
 - Eligibility expression ID currently in use: EXPR_1755237353842.

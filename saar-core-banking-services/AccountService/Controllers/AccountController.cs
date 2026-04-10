@@ -15,6 +15,7 @@ namespace AccountService.Controllers
         private readonly IExpressionEvaluationService _expressions;
         private readonly IWorkflowClient _workflow;
         private readonly IDynamicFormsClient _forms;
+        private readonly ITransactionServiceClient _transactions;
         private readonly ILogger<AccountController> _logger;
 
         public AccountController(
@@ -22,13 +23,15 @@ namespace AccountService.Controllers
             IExpressionEvaluationService expressions,
             IWorkflowClient workflow,
             IDynamicFormsClient forms,
+            ITransactionServiceClient transactions,
             ILogger<AccountController> logger)
         {
-            _context    = context;
-            _expressions = expressions;
-            _workflow   = workflow;
-            _forms      = forms;
-            _logger     = logger;
+            _context      = context;
+            _expressions  = expressions;
+            _workflow     = workflow;
+            _forms        = forms;
+            _transactions = transactions;
+            _logger       = logger;
         }
 
         [HttpGet]
@@ -451,6 +454,240 @@ namespace AccountService.Controllers
             _context.Passbooks.Add(passbook);
             await _context.SaveChangesAsync();
             return Ok(passbook);
+        }
+
+        // ── SCRUM-225: GET /api/account/upcoming-maturities ──────────────────────
+        /// <summary>
+        /// Returns FD/RD accounts whose MaturityDate falls within the next <paramref name="days"/> days.
+        /// Default window: 30 days. Also projects the maturity interest for each account.
+        /// </summary>
+        [HttpGet("upcoming-maturities")]
+        public async Task<ActionResult<IEnumerable<object>>> GetUpcomingMaturities([FromQuery] int days = 30)
+        {
+            var from = DateTime.UtcNow;
+            var to   = from.AddDays(days);
+
+            var accounts = await _context.Accounts
+                .Include(a => a.ProductType)
+                .Where(a =>
+                    a.MaturityDate.HasValue &&
+                    a.MaturityDate.Value >= from &&
+                    a.MaturityDate.Value <= to &&
+                    a.DateClosed == null)
+                .OrderBy(a => a.MaturityDate)
+                .ToListAsync();
+
+            var results = accounts.Select(a =>
+            {
+                var principal    = a.Balance;
+                var annualRate   = a.InterestRate ?? 0m;
+                var termMonths   = (decimal)(a.TermMonths ?? 0);
+                var interest     = Math.Round(principal * annualRate / 100m * termMonths / 12m, 2);
+                var daysToExpiry = (a.MaturityDate!.Value - from).Days;
+
+                return (object)new
+                {
+                    accountId      = a.AccountId,
+                    accountNumber  = a.AccountNumber,
+                    customerId     = a.CustomerId,
+                    productType    = a.ProductType?.Name,
+                    principal,
+                    annualRate,
+                    termMonths     = a.TermMonths,
+                    maturityDate   = a.MaturityDate,
+                    daysToMaturity = daysToExpiry,
+                    projectedInterest = interest,
+                    projectedPayout   = principal + interest,
+                    autoRenewal    = a.AutoRenewal
+                };
+            });
+
+            return Ok(results);
+        }
+
+        // ── SCRUM-223: POST /api/account/{id}/mature ──────────────────────────────
+        /// <summary>
+        /// Matures a Fixed Deposit or Recurring Deposit account.
+        /// - Computes maturity interest via EXPR_MATURITY_INTEREST_CALC
+        /// - Posts DR 2010 / DR 5010 / CR 1010 journal to TransactionService
+        /// - If AutoRenewal = true: resets term and maturity date; status stays Active
+        /// - Else: status → "Mature", DateClosed = UtcNow
+        /// </summary>
+        [HttpPost("{id}/mature")]
+        public async Task<ActionResult<object>> MatureAccount(int id)
+        {
+            var account = await _context.Accounts
+                .Include(a => a.ProductType)
+                .FirstOrDefaultAsync(a => a.AccountId == id);
+
+            if (account == null) return NotFound();
+            if (account.DateClosed != null) return BadRequest("Account is already closed.");
+            if (!account.TermMonths.HasValue) return BadRequest("Account is not a term deposit (no TermMonths set).");
+            if (account.Status == "Mature") return BadRequest("Account has already been matured.");
+
+            // ── Calculate maturity interest via expression engine ─────────────────
+            decimal interest = 0m;
+            var principal    = account.Balance;
+            var annualRate   = account.InterestRate ?? 0m;
+            var termMonths   = (decimal)account.TermMonths.Value;
+
+            try
+            {
+                interest = await _expressions.EvaluateExpressionAsync<decimal>(
+                    "EXPR_MATURITY_INTEREST_CALC",
+                    new Dictionary<string, object>
+                    {
+                        ["principal"]  = principal,
+                        ["annualRate"] = annualRate,
+                        ["termMonths"] = termMonths
+                    });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "EXPR_MATURITY_INTEREST_CALC failed for account {Id} — computing locally", id);
+                interest = Math.Round(principal * annualRate / 100m * termMonths / 12m, 2);
+            }
+
+            // ── Post double-entry journal to TransactionService ───────────────────
+            var accountNo  = account.AccountNumber ?? id.ToString();
+            var productName = account.ProductType?.Name ?? "FD";
+
+            var journalResult = await _transactions.PostMaturityPayoutAsync(
+                accountNo, productName, principal, interest);
+
+            if (!journalResult.Success)
+                _logger.LogWarning("Maturity journal failed for account {Id} — {Error}. Proceeding.", id, journalResult.Error);
+            else
+                _logger.LogInformation("Maturity journal {JNo} posted for account {Id}", journalResult.JournalNumber, id);
+
+            // ── AutoRenewal: reset term and maturity date ─────────────────────────
+            if (account.AutoRenewal && account.TermMonths.HasValue)
+            {
+                account.MaturityDate = DateTime.UtcNow.AddMonths(account.TermMonths.Value);
+                // Re-fetch applicable rate for the new term
+                try
+                {
+                    var newRate = await _expressions.CalculateDepositInterestRateAsync(
+                        productName, principal, account.TermMonths.Value);
+                    if (newRate.HasValue)
+                        account.InterestRate = newRate.Value;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Rate refresh for auto-renewal of account {Id} failed — keeping existing rate", id);
+                }
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    accountId     = account.AccountId,
+                    accountNumber = accountNo,
+                    status        = account.Status,
+                    autoRenewed   = true,
+                    newMaturityDate = account.MaturityDate,
+                    maturityInterest = interest,
+                    journalNumber  = journalResult.JournalNumber
+                });
+            }
+
+            // ── No auto-renewal: mark Mature and close ────────────────────────────
+            account.Status     = "Mature";
+            account.DateClosed = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                accountId     = account.AccountId,
+                accountNumber = accountNo,
+                status        = account.Status,
+                autoRenewed   = false,
+                maturityDate  = account.MaturityDate,
+                maturityInterest = interest,
+                totalPayout   = principal + interest,
+                journalNumber  = journalResult.JournalNumber
+            });
+        }
+
+        // ── SCRUM-224: POST /api/account/{id}/premature-close ─────────────────────
+        /// <summary>
+        /// Closes an FD/RD before its maturity date, applying the premature closure penalty.
+        /// - Computes reduced interest via EXPR_PREMATURE_CLOSURE_PENALTY_CALC
+        /// - Posts DR 2010 / DR 5010 / CR 1010 journal to TransactionService
+        /// - Sets status → "Closed", DateClosed = UtcNow
+        /// </summary>
+        [HttpPost("{id}/premature-close")]
+        public async Task<ActionResult<object>> PrematureClose(int id)
+        {
+            var account = await _context.Accounts
+                .Include(a => a.ProductType)
+                .FirstOrDefaultAsync(a => a.AccountId == id);
+
+            if (account == null) return NotFound();
+            if (account.DateClosed != null) return BadRequest("Account is already closed.");
+            if (!account.TermMonths.HasValue) return BadRequest("Account is not a term deposit (no TermMonths set).");
+            if (account.Status == "Mature") return BadRequest("Account has already matured. Use /mature instead.");
+
+            var principal      = account.Balance;
+            var annualRate     = account.InterestRate ?? 0m;
+            var penaltyPercent = account.PrematureClosurePenalty ?? 1.0m;
+
+            // Actual months held since account was opened
+            var actualMonths = (decimal)(DateTime.UtcNow - account.DateOpened).TotalDays / 30.44m;
+            actualMonths     = Math.Max(0m, Math.Min(actualMonths, (decimal)(account.TermMonths ?? 0)));
+
+            // ── Calculate reduced interest after penalty ───────────────────────────
+            decimal reducedInterest = 0m;
+            try
+            {
+                reducedInterest = await _expressions.EvaluateExpressionAsync<decimal>(
+                    "EXPR_PREMATURE_CLOSURE_PENALTY_CALC",
+                    new Dictionary<string, object>
+                    {
+                        ["principal"]      = principal,
+                        ["annualRate"]     = annualRate,
+                        ["penaltyPercent"] = penaltyPercent,
+                        ["actualMonths"]   = actualMonths
+                    });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "EXPR_PREMATURE_CLOSURE_PENALTY_CALC failed for account {Id} — computing locally", id);
+                reducedInterest = Math.Round(
+                    principal * Math.Max(0m, annualRate - penaltyPercent) / 100m * actualMonths / 12m, 2);
+            }
+
+            // ── Post double-entry journal ─────────────────────────────────────────
+            var accountNo   = account.AccountNumber ?? id.ToString();
+            var productName = account.ProductType?.Name ?? "FD";
+
+            var journalResult = await _transactions.PostPrematureClosureAsync(
+                accountNo, productName, principal, reducedInterest);
+
+            if (!journalResult.Success)
+                _logger.LogWarning("Premature closure journal failed for account {Id} — {Error}. Proceeding.", id, journalResult.Error);
+            else
+                _logger.LogInformation("Premature closure journal {JNo} posted for account {Id}", journalResult.JournalNumber, id);
+
+            // ── Mark closed ───────────────────────────────────────────────────────
+            account.Status     = "Closed";
+            account.DateClosed = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                accountId       = account.AccountId,
+                accountNumber   = accountNo,
+                status          = account.Status,
+                closedAt        = account.DateClosed,
+                principal,
+                annualRate,
+                penaltyPercent,
+                actualMonthsHeld = Math.Round(actualMonths, 1),
+                reducedInterest,
+                totalPayout     = principal + reducedInterest,
+                journalNumber   = journalResult.JournalNumber
+            });
         }
     }
 }
