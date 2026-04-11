@@ -9,6 +9,7 @@ namespace TransactionService.Services
         Task<Journal> PostAsync(PostJournalRequest request, CancellationToken ct = default);
         Task<Journal?> GetByIdempotencyKeyAsync(string key, CancellationToken ct = default);
         Task<Journal?> GetByIdAsync(long journalId, CancellationToken ct = default);
+        Task<Journal?> GetByJournalNumberAsync(string journalNumber, CancellationToken ct = default);
         Task<IReadOnlyList<Journal>> GetRecentAsync(int page, int pageSize, CancellationToken ct = default);
     }
 
@@ -170,6 +171,11 @@ namespace TransactionService.Services
             _db.Journals
                .Include(j => j.Entries)
                .FirstOrDefaultAsync(j => j.JournalId == journalId, ct);
+
+        public Task<Journal?> GetByJournalNumberAsync(string journalNumber, CancellationToken ct = default) =>
+            _db.Journals
+               .Include(j => j.Entries)
+               .FirstOrDefaultAsync(j => j.JournalNumber == journalNumber, ct);
 
         public async Task<IReadOnlyList<Journal>> GetRecentAsync(int page, int pageSize, CancellationToken ct = default) =>
             await _db.Journals

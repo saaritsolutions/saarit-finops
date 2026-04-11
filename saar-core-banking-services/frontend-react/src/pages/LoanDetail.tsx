@@ -28,6 +28,7 @@ import {
   getApplicationDetail, takeApplicationAction,
   type ApplicationDetail, type ApprovalAction,
 } from '../services/loanOriginationService';
+import JournalDetailDialog from '../components/dialogs/JournalDetailDialog';
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const BLUE_600  = '#2563EB';
@@ -211,6 +212,7 @@ const LoanDetail: React.FC = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [showSchedule, setShowSchedule] = useState(false);
+  const [journalDialogOpen, setJournalDialogOpen] = useState(false);
 
   const app = detail?.application ?? null;
 
@@ -425,21 +427,26 @@ const LoanDetail: React.FC = () => {
                 <InfoRow
                   label="GL Journal #"
                   value={
-                    <Chip
-                      icon={<PaymentsIcon sx={{ fontSize: '0.85rem !important' }} />}
-                      label={f('disbursalJournalNumber')}
-                      size="small"
-                      sx={{
-                        fontFamily: 'ui-monospace,monospace',
-                        fontWeight: 700,
-                        fontSize: '0.75rem',
-                        backgroundColor: '#ECFDF5',
-                        color: '#059669',
-                        border: '1px solid #10B98130',
-                        height: 22,
-                        '& .MuiChip-icon': { color: '#059669' },
-                      }}
-                    />
+                    <Tooltip title="Click to view GL journal entries">
+                      <Chip
+                        icon={<PaymentsIcon sx={{ fontSize: '0.85rem !important' }} />}
+                        label={f('disbursalJournalNumber')}
+                        size="small"
+                        onClick={() => setJournalDialogOpen(true)}
+                        sx={{
+                          fontFamily: 'ui-monospace,monospace',
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                          backgroundColor: '#ECFDF5',
+                          color: '#059669',
+                          border: '1px solid #10B98130',
+                          height: 22,
+                          cursor: 'pointer',
+                          '& .MuiChip-icon': { color: '#059669' },
+                          '&:hover': { backgroundColor: '#D1FAE5' },
+                        }}
+                      />
+                    </Tooltip>
                   }
                 />
                 <InfoRow label="Disbursed On" value={fmtDate(f('disbursedAt'))} />
@@ -651,6 +658,15 @@ const LoanDetail: React.FC = () => {
         onConfirm={handleAction}
         loading={actionLoading}
       />
+
+      {/* GL Journal Detail Dialog */}
+      {f('disbursalJournalNumber') && (
+        <JournalDetailDialog
+          journalNumber={f('disbursalJournalNumber') as string}
+          open={journalDialogOpen}
+          onClose={() => setJournalDialogOpen(false)}
+        />
+      )}
     </Box>
   );
 };

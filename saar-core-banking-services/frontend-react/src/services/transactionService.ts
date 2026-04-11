@@ -67,6 +67,10 @@ export const transactionService = {
   /** GET /api/journal/{id} */
   getJournal: (id: number) => apiService.get<Journal>(`${JOURNAL_BASE}/${id}`),
 
+  /** GET /api/journal/by-number/{number} — look up by JournalNumber string (e.g. JNL-20260407-000001) */
+  getJournalByNumber: (journalNumber: string) =>
+    apiService.get<Journal>(`${JOURNAL_BASE}/by-number/${encodeURIComponent(journalNumber)}`),
+
   /** POST /api/journal — post a new double-entry journal */
   postJournal: (data: PostJournalRequest) => apiService.post<Journal>(JOURNAL_BASE, data),
 
