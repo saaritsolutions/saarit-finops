@@ -1,0 +1,215 @@
+name: Cypress E2E Tests
+
+# ── Triggers ──────────────────────────────────────────────────────────────────
+# Run on every PR to main + every push to main, but only when
+# frontend-react source, Cypress specs, or this workflow file change.
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'saar-core-banking-services/frontend-react/**'
+      - '.github/workflows/cypress-e2e.yml'
+  push:
+    branches: [ main ]
+    paths:
+      - 'saar-core-banking-services/frontend-react/**'
+      - '.github/workflows/cypress-e2e.yml'
+
+# Cancel any in-progress run for the same PR / branch so only the latest commit
+# is tested (saves CI minutes).
+concurrency:
+  group: cypress-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  checks:   write    # lets Cypress action post inline check results on the PR
+
+env:
+  NODE_VERSION:    '20.x'
+  FRONTEND_DIR:    saar-core-banking-services/frontend-react
+  CYPRESS_BASE_URL: http://localhost:3002
+
+# ── Job 1: Smoke Suite ────────────────────────────────────────────────────────
+# Covers all 8 modules + API health checks.  APIs are fully stubbed so no
+# backend services are needed.  Target run time < 3 min.
+jobs:
+  smoke:
+    name: Smoke Suite (all modules)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: saar-core-banking-services/frontend-react
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ env.FRONTEND_DIR }}/package-lock.json
+
+      # Use --legacy-peer-deps: our lock file was generated with npm 11 but
+      # GitHub-hosted runners ship npm 10 (same fix as in the Dockerfile).
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      # cypress-io/github-action handles:
+      #   • spawning "npm start" and waiting for port 3002
+      #   • running Cypress headlessly in Chrome
+      #   • exiting non-zero if any test fails
+      - name: Run Smoke Suite
+        uses: cypress-io/github-action@v6
+        with:
+          working-directory: ${{ env.FRONTEND_DIR }}
+          install:          false          # already installed above
+          start:            npm start
+          wait-on:          'http://localhost:3002'
+          wait-on-timeout:  120
+          browser:          chrome
+          headless:         true
+          spec:             cypress/e2e/smoke.cy.ts
+        env:
+          PORT:                 3002
+          BROWSER:              none        # suppress "opening browser" popup
+          CI:                   false       # CRA treats warnings as errors when CI=true
+          REACT_APP_VERSION:    ci-${{ github.sha }}
+          CYPRESS_BASE_URL:     ${{ env.CYPRESS_BASE_URL }}
+
+      # Always upload videos + screenshots so failures are diagnosable
+      - name: Upload smoke videos
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-videos-${{ github.run_number }}
+          path: ${{ env.FRONTEND_DIR }}/cypress/videos
+          retention-days: 14
+
+      - name: Upload smoke screenshots (on failure)
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: smoke-screenshots-${{ github.run_number }}
+          path: ${{ env.FRONTEND_DIR }}/cypress/screenshots
+          retention-days: 14
+
+# ── Job 2: Regression Suite ───────────────────────────────────────────────────
+# Runs only after Smoke passes so we get fast feedback.
+# Covers ~60 tests across 8 spec files.  All APIs stubbed — no backends needed.
+  regression:
+    name: Regression Suite (8 modules)
+    runs-on: ubuntu-latest
+    needs: smoke          # only run if smoke passed
+
+    defaults:
+      run:
+        working-directory: saar-core-banking-services/frontend-react
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ env.FRONTEND_DIR }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Run Regression Suite — Auth & Dashboard
+        uses: cypress-io/github-action@v6
+        with:
+          working-directory: ${{ env.FRONTEND_DIR }}
+          install:          false
+          start:            npm start
+          wait-on:          'http://localhost:3002'
+          wait-on-timeout:  120
+          browser:          chrome
+          headless:         true
+          spec:             cypress/e2e/regression/01-auth.cy.ts,cypress/e2e/regression/02-dashboard.cy.ts
+        env:
+          PORT:             3002
+          BROWSER:          none
+          CI:               false
+          REACT_APP_VERSION: ci-${{ github.sha }}
+          CYPRESS_BASE_URL: ${{ env.CYPRESS_BASE_URL }}
+
+      # Each subsequent spec group reuses the already-running server
+      # (the Cypress action keeps it alive between steps when start is omitted)
+      - name: Run Regression Suite — Accounts
+        uses: cypress-io/github-action@v6
+        with:
+          working-directory: ${{ env.FRONTEND_DIR }}
+          install:          false
+          spec:             cypress/e2e/regression/03-accounts.cy.ts
+          browser:          chrome
+          headless:         true
+        env:
+          PORT:             3002
+          CI:               false
+          CYPRESS_BASE_URL: ${{ env.CYPRESS_BASE_URL }}
+
+      - name: Run Regression Suite — Loans
+        uses: cypress-io/github-action@v6
+        with:
+          working-directory: ${{ env.FRONTEND_DIR }}
+          install:          false
+          spec:             cypress/e2e/regression/04-loans.cy.ts
+          browser:          chrome
+          headless:         true
+        env:
+          PORT:             3002
+          CI:               false
+          CYPRESS_BASE_URL: ${{ env.CYPRESS_BASE_URL }}
+
+      - name: Run Regression Suite — Transactions
+        uses: cypress-io/github-action@v6
+        with:
+          working-directory: ${{ env.FRONTEND_DIR }}
+          install:          false
+          spec:             cypress/e2e/regression/05-transactions.cy.ts
+          browser:          chrome
+          headless:         true
+        env:
+          PORT:             3002
+          CI:               false
+          CYPRESS_BASE_URL: ${{ env.CYPRESS_BASE_URL }}
+
+      - name: Run Regression Suite — Customers, Users, Expressions
+        uses: cypress-io/github-action@v6
+        with:
+          working-directory: ${{ env.FRONTEND_DIR }}
+          install:          false
+          spec:             >-
+            cypress/e2e/regression/06-customers.cy.ts,
+            cypress/e2e/regression/07-users.cy.ts,
+            cypress/e2e/regression/08-expression-builder.cy.ts
+          browser:          chrome
+          headless:         true
+        env:
+          PORT:             3002
+          CI:               false
+          CYPRESS_BASE_URL: ${{ env.CYPRESS_BASE_URL }}
+
+      - name: Upload regression videos
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: regression-videos-${{ github.run_number }}
+          path: ${{ env.FRONTEND_DIR }}/cypress/videos
+          retention-days: 14
+
+      - name: Upload regression screenshots (on failure)
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: regression-screenshots-${{ github.run_number }}
+          path: ${{ env.FRONTEND_DIR }}/cypress/screenshots
+          retention-days: 14
