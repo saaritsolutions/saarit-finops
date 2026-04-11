@@ -79,60 +79,103 @@ internal class StubHttpMessageHandler : HttpMessageHandler
 {
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        var path = request.RequestUri?.AbsolutePath ?? string.Empty;
+        var path  = request.RequestUri?.AbsolutePath ?? string.Empty;
+        var query = request.RequestUri?.Query        ?? string.Empty;
 
-        // GET /api/expressions -> return a single active validation expression id
+        // GET /api/expressions -> return active expression(s)
+        // Differentiate Validation (eligibility) vs Interest (rate) by query category
         if (request.Method == HttpMethod.Get && path.IndexOf("/api/expressions", StringComparison.OrdinalIgnoreCase) >= 0)
         {
-            var json = "{\"expressions\":[{\"expressionId\":\"EXPR_CREDIT_CHECK\"}], \"pagination\":{}}";
+            string json;
+            if (query.IndexOf("Interest", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                // Interest-rate expression — returnType=number so decimal deserialization works
+                json = "{\"expressions\":[{\"expressionId\":\"EXPR_INTEREST_RATE\",\"returnType\":\"number\",\"updatedAt\":\"2026-04-01T00:00:00Z\"}], \"pagination\":{}}";
+            }
+            else
+            {
+                // Eligibility/validation expression — must have updatedAt so the service keeps it
+                json = "{\"expressions\":[{\"expressionId\":\"EXPR_CREDIT_CHECK\",\"returnType\":\"string\",\"updatedAt\":\"2026-04-01T00:00:00Z\"}], \"pagination\":{}}";
+            }
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
             };
         }
 
-        // POST /api/Expressions/execute or /api/expressions/execute -> simulate execution using Variables
-        if (request.Method == HttpMethod.Post && (path.IndexOf("/api/Expressions/execute", StringComparison.OrdinalIgnoreCase) >= 0 || path.IndexOf("/api/expressions/execute", StringComparison.OrdinalIgnoreCase) >= 0))
+        // POST to any expression execute endpoint (supports both legacy /api/expressions/execute
+        // and the current /api/expression-engine/execute used by ExpressionEvaluationService)
+        if (request.Method == HttpMethod.Post && (
+            path.IndexOf("/api/Expressions/execute",       StringComparison.OrdinalIgnoreCase) >= 0 ||
+            path.IndexOf("/api/expressions/execute",       StringComparison.OrdinalIgnoreCase) >= 0 ||
+            path.IndexOf("/api/expression-engine/execute", StringComparison.OrdinalIgnoreCase) >= 0))
         {
             var body = request.Content != null
                 ? await request.Content.ReadAsStringAsync(cancellationToken)
                 : string.Empty;
-            int creditScore = 0;
+
+            string  expressionId  = string.Empty;
+            int     creditScore   = 0;
             decimal monthlyIncome = 0m;
 
             try
             {
                 using var doc = JsonDocument.Parse(body);
-                // Handle both camelCase and PascalCase keys
-                if (doc.RootElement.TryGetProperty("Variables", out var vars) || doc.RootElement.TryGetProperty("variables", out vars))
-                {
-                    if (vars.TryGetProperty("creditScore", out var cs)) creditScore = cs.GetInt32();
-                    else if (vars.TryGetProperty("customer.creditScore", out var cs2)) creditScore = cs2.GetInt32();
 
-                    if (vars.TryGetProperty("monthlyIncome", out var mi)) monthlyIncome = mi.GetDecimal();
+                // Parse ExpressionId (sent by EvaluateExpressionAsync)
+                if (doc.RootElement.TryGetProperty("ExpressionId", out var exprIdElem) ||
+                    doc.RootElement.TryGetProperty("expressionId", out exprIdElem))
+                    expressionId = exprIdElem.GetString() ?? string.Empty;
+
+                // Handle both camelCase and PascalCase variable keys
+                if (doc.RootElement.TryGetProperty("Variables", out var vars) ||
+                    doc.RootElement.TryGetProperty("variables", out vars))
+                {
+                    if (vars.TryGetProperty("creditScore", out var cs))               creditScore   = cs.GetInt32();
+                    else if (vars.TryGetProperty("customer.creditScore", out var cs2)) creditScore   = cs2.GetInt32();
+
+                    if (vars.TryGetProperty("monthlyIncome", out var mi))              monthlyIncome = mi.GetDecimal();
                     else if (vars.TryGetProperty("customer.monthlyIncome", out var mi2)) monthlyIncome = mi2.GetDecimal();
                 }
             }
             catch { /* ignore parse errors - keep defaults */ }
 
+            // Interest-rate expressions return a decimal value; all others return the eligibility string
+            if (expressionId.IndexOf("INTEREST", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                expressionId.IndexOf("RATE",     StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                var rateResp = new
+                {
+                    Success         = true,
+                    Result          = 10.5,   // fixed stub rate — tests only assert on Eligibility, not rate
+                    ResultType      = "number",
+                    ExecutionTimeMs = 3,
+                    ErrorMessage    = (string?)null,
+                    ExecutedAt      = DateTime.UtcNow
+                };
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(JsonSerializer.Serialize(rateResp), Encoding.UTF8, "application/json")
+                };
+            }
+
             string outcome = "REJECTED";
             if (creditScore >= 700 && monthlyIncome >= 15000m) outcome = "APPROVED";
-            else if (creditScore >= 650) outcome = "MANUAL_REVIEW";
+            else if (creditScore >= 650)                        outcome = "MANUAL_REVIEW";
 
             var resp = new
             {
-                Success = true,
-                Result = outcome,
-                ResultType = "string",
+                Success         = true,
+                Result          = outcome,
+                ResultType      = "string",
                 ExecutionTimeMs = 5,
-                ErrorMessage = (string?)null,
-                ExecutedAt = DateTime.UtcNow
+                ErrorMessage    = (string?)null,
+                ExecutedAt      = DateTime.UtcNow
             };
 
-            var json = JsonSerializer.Serialize(resp);
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent(json, Encoding.UTF8, "application/json")
+                Content = new StringContent(JsonSerializer.Serialize(resp), Encoding.UTF8, "application/json")
             };
         }
 

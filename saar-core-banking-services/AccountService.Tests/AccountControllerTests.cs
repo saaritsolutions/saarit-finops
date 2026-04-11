@@ -26,7 +26,8 @@ namespace AccountService.Tests
 
         private AccountController GetController(AccountDbContext context)
         {
-            return new AccountController(context);
+            return new AccountController(context, null!, null!, null!, null!,
+                Microsoft.Extensions.Logging.Abstractions.NullLogger<AccountController>.Instance);
         }
 
         // --- Begin migrated tests ---

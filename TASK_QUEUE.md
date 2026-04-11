@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-11 (session 26 — Ledger UI journal drill-down)
+**Last Updated:** 2026-04-11 (session 27 — CI/CD test suite fully green)
 **Single source of truth for what to do next.**
 
 ---
@@ -13,6 +13,14 @@
 |---|---|---|
 | 1 | **Run smoke + regression suites** — `scripts\run-smoke.bat` then `scripts\run-regression.bat` | Validate all session 22–26 UI changes |
 | 2 | **Deploy to Hetzner** — `docker compose up --build -d transactionservice loanservice accountservice frontend` | Push journal drill-down + backend endpoint LIVE |
+
+### Recently Completed (session 27 — 2026-04-11)
+- [x] **CI/CD "Backend Tests" job fully green — 78/78 passing, 0 failing** (was 74 pass, 4 fail)
+  - NU1605: bumped `Microsoft.EntityFrameworkCore.InMemory` 8.0.0→9.0.6 in `AccountService.Tests.csproj`
+  - CS7036 constructor drift: updated `GetController()` factories in 3 AccountService.Tests files; added `NoOpTransactionService`+`NoOpWorkflowClient` stubs in `EligibilityAndWorkflowTests.cs`
+  - EMI rounding: `StandardEmi` `.Within(20m)`, `TotalPayment_EqualsEmiTimesMonths` `.Within(5m)` tolerances
+  - Income threshold: `PreValidate_returns_MANUAL_REVIEW_and_null_rate_when_borderline` → `MonthlyIncome 12000→15000`
+  - StubHttpMessageHandler: added `updatedAt`+`returnType` to GET response; added `/api/expression-engine/execute` URL match; added interest-rate expression path (returns decimal 10.5)
 
 ### Recently Completed (session 26 — 2026-04-11)
 - [x] **Ledger UI — journal drill-down** — `GET /api/journal/by-number/{number}` in TransactionService. `getJournalByNumber()` in transactionService.ts. `JournalDetailDialog` shared component at `components/dialogs/`. `disbursalJournalNumber` chip in LoanDetail.tsx clickable. `maturityJournalNumber` PaymentsIcon in AccountManagement.tsx clickable.

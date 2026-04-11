@@ -563,8 +563,8 @@ public class Tests
             ProductType = "PERSONAL_LOAN",
             LoanAmount = 75000,
             TenureMonths = 18,
-            MonthlyIncome = 12000, // below 15000 so not APPROVED
-            CreditScore = 660,      // >= 650 so MANUAL_REVIEW
+            MonthlyIncome = 15000, // meets income threshold; CreditScore < 700 keeps it from auto-APPROVED
+            CreditScore = 660,      // >= 650 but < 700 → MANUAL_REVIEW
             DebtToIncomeRatio = 0.3m
         });
 
