@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-10 (session 24 — GL journal numbers + freeze/unfreeze: SCRUM-228/229/230)
+**Last Updated:** 2026-04-11 (session 25 — Hetzner deploy + Cypress smoke + regression suites)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,8 +11,15 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Deploy to Hetzner** — rebuild loanservice, expressionbuilder, accountservice, transactionservice | Sessions 19–24 changes not yet on prod |
-| 2 | **Ledger UI — disbursal/maturity link** — show journal entry number in LoanDetail and AccountDetail | Close the loop for investor demo |
+| 1 | **Ledger UI — disbursal/maturity link** — show journal entry number in LoanDetail and AccountDetail | Close the loop for investor demo |
+| 2 | **Run smoke + regression suites** — `scripts\run-smoke.bat` then `scripts\run-regression.bat` | Validate all session 22–24 UI changes |
+
+### Recently Completed (session 25 — 2026-04-11)
+- [x] **Hetzner deploy** — rebuilt expressionbuilder, loanservice, accountservice, workfloworchestration, frontend. docker-compose.yml: Services__TransactionBaseUrl wired + depends_on for both. All 11 containers healthy. Commit b134f74.
+- [x] **Cypress smoke suite** (`cypress/e2e/smoke.cy.ts`) — ~30 tests covering 8 UI modules + API health checks. All APIs cy.intercepted. Run: `scripts\run-smoke.bat`
+- [x] **Cypress regression suite** (`cypress/e2e/regression/`) — 8 spec files (~60 tests): auth, dashboard, accounts (freeze/unfreeze/maturity/premature), loans (disbursal journal), transactions (post-entry), customers, users, expression builder.
+- [x] **support/e2e.ts** — cy.loginViaApi() (real JWT from UAM) + cy.stubApis() commands.
+- [x] **run-smoke.bat + run-regression.bat** — headless cmd.exe runners for both suites.
 
 ### Recently Completed (session 24 — 2026-04-10)
 - [x] **SCRUM-228: Disbursal journal number** — `LoanApplication.DisbursalJournalNumber` field + EF migration; saved in DISBURSE action; green GL Journal # chip in LoanDetail.tsx

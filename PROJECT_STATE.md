@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-10 (session 24 — GL journal numbers + account freeze/unfreeze: SCRUM-228/229/230)
+**Last Updated:** 2026-04-11 (session 25 — Hetzner deploy + Cypress smoke + regression suites)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -142,6 +142,14 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 25 — 2026-04-11 (Hetzner deploy + Cypress smoke + regression suites)
+- **Hetzner deploy**: rebuilt expressionbuilder, loanservice, accountservice, workfloworchestration, frontend. docker-compose.yml updated with Services__TransactionBaseUrl on loanservice + accountservice + all depends_on. All 11 containers healthy. Commit b134f74.
+- **Cypress smoke suite** (`cypress/e2e/smoke.cy.ts`): 10 describe blocks covering Auth, Dashboard, Accounts, Loans, Transactions, Customers, Users, Expression Builder, Reports + API health checks. All API calls stubbed via cy.intercept(). Target < 3 min headless.
+- **Cypress regression suite** (`cypress/e2e/regression/`): 8 spec files, ~60 tests:
+  - 01-auth.cy.ts, 02-dashboard.cy.ts, 03-accounts.cy.ts (freeze/unfreeze/maturity), 04-loans.cy.ts (disbursal journal), 05-transactions.cy.ts (post-entry validation), 06-customers.cy.ts, 07-users.cy.ts (RBAC), 08-expression-builder.cy.ts.
+- **New support commands**: cy.loginViaApi() (real UAM JWT) + cy.stubApis() (bulk intercept).
+- **Batch scripts**: run-smoke.bat + run-regression.bat for cmd.exe headless runs.
 
 ### Session 24 — 2026-04-10 (GL journal numbers + freeze/unfreeze — SCRUM-228/229/230)
 - **LoanApplication.DisbursalJournalNumber** (string?, MaxLength 50) + EF migration `AddDisbursalJournalNumber`. DISBURSE saves journal number. `LoanDetail.tsx` shows green monospace GL Journal # chip (PaymentsIcon) in Loan Parameters section.
