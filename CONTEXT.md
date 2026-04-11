@@ -193,12 +193,30 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
     - `AccountManagement.tsx`: AcUnitIcon (freeze, blue) + LockOpenIcon (unfreeze, green) action buttons; PaymentsIcon tooltip on Mature rows showing journal number; Close Account button hidden when Frozen.
   - 0 TypeScript errors; AccountService builds with 0 C# errors.
 
+## Completed (continued)
+- Hetzner deployment session 25 (2026-04-11): Rebuilt expressionbuilder, loanservice, accountservice, workfloworchestration, frontend containers.
+  - docker-compose.yml updated: loanservice + Services__TransactionBaseUrl; accountservice + all 4 service URLs + depends_on.
+  - All 11 containers healthy post-deploy. Commit b134f74.
+- Cypress smoke + regression suites (session 25, 2026-04-11):
+  - **cypress/e2e/smoke.cy.ts** — 10 describe blocks × 1–5 tests = ~30 tests covering all modules. Stubs all APIs via cy.intercept(). Target < 3 min headless.
+  - **cypress/e2e/regression/** — 8 spec files, ~60 tests total:
+    - 01-auth.cy.ts (login, validation, redirect)
+    - 02-dashboard.cy.ts (KPIs, upcoming maturities, charts, navigation)
+    - 03-accounts.cy.ts (list, filter tabs, create, freeze/unfreeze, maturity, premature close)
+    - 04-loans.cy.ts (list, detail, disbursal journal, new form steps)
+    - 05-transactions.cy.ts (balances, journal entries, post entry, debit=credit validation)
+    - 06-customers.cy.ts (list, search, create, KYC)
+    - 07-users.cy.ts (users tab, roles tab, add user/role dialog)
+    - 08-expression-builder.cy.ts (list, create, test/execute)
+  - **cypress/support/e2e.ts**: added cy.loginViaApi() (real UAM JWT) + cy.stubApis() commands.
+  - **scripts/run-smoke.bat** + **scripts/run-regression.bat**: headless runners for cmd.exe.
+
 ## In Progress
 - (none)
 
 ## Pending Next
-- Deploy to Hetzner (rebuild loanservice, expressionbuilder, accountservice, transactionservice containers)
 - Wire Ledger UI view to show disbursal and maturity journal entries from loan/account detail pages
+- Run smoke + regression suites (use scripts\run-smoke.bat or scripts\run-regression.bat from cmd.exe)
 
 ## Notes
 - Eligibility expression ID currently in use: EXPR_1755237353842.
