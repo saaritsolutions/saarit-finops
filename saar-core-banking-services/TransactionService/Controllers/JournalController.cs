@@ -59,6 +59,16 @@ namespace TransactionService.Controllers
             return journal == null ? NotFound() : Ok(journal);
         }
 
+        /// <summary>Look up a journal by its journal number (e.g. JNL-20260407-000001).</summary>
+        [HttpGet("by-number/{number}")]
+        [ProducesResponseType(typeof(Journal), 200)]
+        [ProducesResponseType(404)]
+        public async Task<IActionResult> GetByNumber(string number, CancellationToken ct)
+        {
+            var journal = await _engine.GetByJournalNumberAsync(number, ct);
+            return journal == null ? NotFound() : Ok(journal);
+        }
+
         /// <summary>List recent journals, newest first.</summary>
         [HttpGet]
         [ProducesResponseType(typeof(IReadOnlyList<Journal>), 200)]

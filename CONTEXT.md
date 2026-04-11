@@ -211,12 +211,20 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - **cypress/support/e2e.ts**: added cy.loginViaApi() (real UAM JWT) + cy.stubApis() commands.
   - **scripts/run-smoke.bat** + **scripts/run-regression.bat**: headless runners for cmd.exe.
 
+## Completed (continued)
+- Ledger UI — disbursal/maturity journal drill-down (session 26, 2026-04-11):
+  - **TransactionService backend**: Added `GetByJournalNumberAsync(journalNumber)` to `IPostingEngine` + `PostingEngine`. New controller endpoint `GET /api/journal/by-number/{number}` for lookup by JournalNumber string.
+  - **transactionService.ts**: Added `getJournalByNumber(journalNumber)` method → `GET /api/journal/by-number/{encoded}`.
+  - **JournalDetailDialog** (new shared component at `components/dialogs/JournalDetailDialog.tsx`): fetches journal by number from TransactionService, shows header metadata (description, postedBy, postedAt, referenceType/Id, status chip) + double-entry table (debit/credit lines, account codes, narration, colour-coded totals row).
+  - **LoanDetail.tsx**: disbursalJournalNumber chip is now clickable (Tooltip + `onClick` → `setJournalDialogOpen(true)`); hover highlights; `JournalDetailDialog` renders conditionally.
+  - **AccountManagement.tsx**: maturityJournalNumber PaymentsIcon now clickable (`onClick` → `setJournalNumber`); hover highlights; `JournalDetailDialog` renders.
+
 ## In Progress
 - (none)
 
 ## Pending Next
-- Wire Ledger UI view to show disbursal and maturity journal entries from loan/account detail pages
 - Run smoke + regression suites (use scripts\run-smoke.bat or scripts\run-regression.bat from cmd.exe)
+- Deploy session 26 changes to Hetzner (`docker compose up --build -d transactionservice loanservice accountservice frontend`)
 
 ## Notes
 - Eligibility expression ID currently in use: EXPR_1755237353842.

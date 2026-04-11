@@ -46,6 +46,7 @@ import PaymentsIcon     from '@mui/icons-material/Payments';
 import { accountService, AccountRecord, CreateAccountDto, MatureResult, PrematureCloseResult } from '../../services/accountService';
 import PageHeader from '../../components/common/PageHeader';
 import EmptyState from '../../components/common/EmptyState';
+import JournalDetailDialog from '../../components/dialogs/JournalDetailDialog';
 
 // ─── Design tokens ─────────────────────────────────────────────────────────
 const SLATE_200 = '#E2E8F0';
@@ -123,6 +124,7 @@ const AccountManagement: React.FC = () => {
   const [successMsg,    setSuccessMsg]    = useState<string | null>(null);
   const [searchQuery,   setSearchQuery]   = useState('');
   const [statusFilter,  setStatusFilter]  = useState<StatusFilter>('All');
+  const [journalNumber, setJournalNumber] = useState<string | null>(null);
 
   // ── Load ──────────────────────────────────────────────────────────────────
   const load = useCallback(async () => {
@@ -394,8 +396,11 @@ const AccountManagement: React.FC = () => {
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                         <StatusChip label={acc.status ?? 'Active'} />
                         {acc.maturityJournalNumber && (
-                          <Tooltip title={`GL Journal: ${acc.maturityJournalNumber}`} arrow>
-                            <PaymentsIcon sx={{ fontSize: '0.95rem', color: '#0369A1', cursor: 'default' }} />
+                          <Tooltip title={`View GL Journal: ${acc.maturityJournalNumber}`} arrow>
+                            <PaymentsIcon
+                              sx={{ fontSize: '0.95rem', color: '#0369A1', cursor: 'pointer', '&:hover': { color: '#059669' } }}
+                              onClick={() => setJournalNumber(acc.maturityJournalNumber!)}
+                            />
                           </Tooltip>
                         )}
                       </Box>
@@ -521,6 +526,15 @@ const AccountManagement: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* GL Journal Detail Dialog */}
+      {journalNumber && (
+        <JournalDetailDialog
+          journalNumber={journalNumber}
+          open={!!journalNumber}
+          onClose={() => setJournalNumber(null)}
+        />
+      )}
     </Box>
   );
 };

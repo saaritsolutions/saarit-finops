@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-11 (session 25 — Hetzner deploy + Cypress smoke + regression suites)
+**Last Updated:** 2026-04-11 (session 26 — Ledger UI journal drill-down)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -142,6 +142,13 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 26 — 2026-04-11 (Ledger UI — journal drill-down)
+- **TransactionService**: `GetByJournalNumberAsync` added to `IPostingEngine` + `PostingEngine`. New `GET /api/journal/by-number/{number}` endpoint in `JournalController`.
+- **transactionService.ts**: `getJournalByNumber(journalNumber)` added → `GET /api/journal/by-number/{encoded}`.
+- **JournalDetailDialog** (new shared component `components/dialogs/JournalDetailDialog.tsx`): fetches journal from TransactionService by number, shows header metadata + MUI Table of double-entry lines (debit/credit, account codes, narration, totals row).
+- **LoanDetail.tsx**: `disbursalJournalNumber` chip is now clickable — `onClick → setJournalDialogOpen(true)` with hover highlight and Tooltip; `JournalDetailDialog` renders conditionally. Inline dialog definition replaced with shared component import.
+- **AccountManagement.tsx**: maturityJournalNumber `PaymentsIcon` now clickable — `onClick → setJournalNumber(acc.maturityJournalNumber)` with hover highlight; `JournalDetailDialog` renders. New `journalNumber` state added.
 
 ### Session 25 — 2026-04-11 (Hetzner deploy + Cypress smoke + regression suites)
 - **Hetzner deploy**: rebuilt expressionbuilder, loanservice, accountservice, workfloworchestration, frontend. docker-compose.yml updated with Services__TransactionBaseUrl on loanservice + accountservice + all depends_on. All 11 containers healthy. Commit b134f74.

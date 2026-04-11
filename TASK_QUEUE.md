@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-11 (session 25 — Hetzner deploy + Cypress smoke + regression suites)
+**Last Updated:** 2026-04-11 (session 26 — Ledger UI journal drill-down)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,8 +11,11 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Ledger UI — disbursal/maturity link** — show journal entry number in LoanDetail and AccountDetail | Close the loop for investor demo |
-| 2 | **Run smoke + regression suites** — `scripts\run-smoke.bat` then `scripts\run-regression.bat` | Validate all session 22–24 UI changes |
+| 1 | **Run smoke + regression suites** — `scripts\run-smoke.bat` then `scripts\run-regression.bat` | Validate all session 22–26 UI changes |
+| 2 | **Deploy to Hetzner** — `docker compose up --build -d transactionservice loanservice accountservice frontend` | Push journal drill-down + backend endpoint LIVE |
+
+### Recently Completed (session 26 — 2026-04-11)
+- [x] **Ledger UI — journal drill-down** — `GET /api/journal/by-number/{number}` in TransactionService. `getJournalByNumber()` in transactionService.ts. `JournalDetailDialog` shared component at `components/dialogs/`. `disbursalJournalNumber` chip in LoanDetail.tsx clickable. `maturityJournalNumber` PaymentsIcon in AccountManagement.tsx clickable.
 
 ### Recently Completed (session 25 — 2026-04-11)
 - [x] **Hetzner deploy** — rebuilt expressionbuilder, loanservice, accountservice, workfloworchestration, frontend. docker-compose.yml: Services__TransactionBaseUrl wired + depends_on for both. All 11 containers healthy. Commit b134f74.
