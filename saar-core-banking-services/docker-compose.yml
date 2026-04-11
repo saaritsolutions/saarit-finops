@@ -57,11 +57,14 @@ services:
       Services__ExpressionBaseUrl: http://expressionbuilder:5004
       Services__WorkflowBaseUrl: http://workfloworchestration:5012
       Services__DynamicFormsBaseUrl: http://dynamicfields:5013
+      Services__TransactionBaseUrl: http://transactionservice:5290
       CORS__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-https://demobank.saaritsolutions.com}
     depends_on:
       postgres:
         condition: service_healthy
       expressionbuilder:
+        condition: service_started
+      transactionservice:
         condition: service_started
     networks:
       - saar-net
@@ -160,10 +163,20 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:5210
       ConnectionStrings__DefaultConnection: "Host=postgres;Database=AccountServiceDb;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-saar_demo_2026};Port=5432"
+      Services__ExpressionBaseUrl: http://expressionbuilder:5004
+      Services__TransactionBaseUrl: http://transactionservice:5290
+      Services__WorkflowBaseUrl: http://workfloworchestration:5012
+      Services__DynamicFormsBaseUrl: http://dynamicfields:5013
       CORS__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-https://demobank.saaritsolutions.com}
     depends_on:
       postgres:
         condition: service_healthy
+      expressionbuilder:
+        condition: service_started
+      transactionservice:
+        condition: service_started
+      workfloworchestration:
+        condition: service_started
     networks:
       - saar-net
 
