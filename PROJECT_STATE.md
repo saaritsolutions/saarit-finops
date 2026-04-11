@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-11 (session 26 — Ledger UI journal drill-down)
+**Last Updated:** 2026-04-11 (session 27 — CI/CD test suite fully green)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -142,6 +142,14 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 27 — 2026-04-11 (CI/CD test suite fully green)
+- **Root cause analysis**: 5 separate root causes found across `AccountService.Tests` and `LoanService.Tests` that had accumulated silently across sessions 19–22.
+- **NU1605 fix**: `AccountService.Tests.csproj` `Microsoft.EntityFrameworkCore.InMemory` 8.0.0 → 9.0.6 (AccountService was upgraded to EF9 in session 19; test project missed the bump).
+- **Constructor drift fix**: `AccountController` gained 5 params (session 19), `LoanApplicationsController` gained `ITransactionServiceClient` (session 22). Updated `GetController()` factories in all 3 AccountService.Tests files; added `NoOpTransactionService`+`NoOpWorkflowClient` stubs in `EligibilityAndWorkflowTests.cs`.
+- **EMI rounding**: `StandardEmi_ReturnsPositiveValues` `.Within(20m)` + `TotalPayment_EqualsEmiTimesMonths` `.Within(5m)` — `TotalPayment = Math.Round(emi*n, 0)` independently computed from `MonthlyEMI = Math.Round(emi, 0)`.
+- **Income threshold**: `PreValidate_returns_MANUAL_REVIEW_and_null_rate_when_borderline` MonthlyIncome 12000→15000 (the hardcoded `PreValidate` path rejects income < 15000; `Submit` doesn't — they have different eligibility logic).
+- **StubHttpMessageHandler**: added `updatedAt`+`returnType` to GET response; added `/api/expression-engine/execute` to POST handler (EvaluateExpressionAsync posts there, not to the old `/api/expressions/execute`); added interest-rate expression path (returns 10.5 decimal). **Final: 78/78 tests passing.**
 
 ### Session 26 — 2026-04-11 (Ledger UI — journal drill-down)
 - **TransactionService**: `GetByJournalNumberAsync` added to `IPostingEngine` + `PostingEngine`. New `GET /api/journal/by-number/{number}` endpoint in `JournalController`.

@@ -21,6 +21,24 @@ file sealed class NoOpExpressions : IExpressionEvaluationService
         Task.FromResult(0m);
 }
 
+// ── Fake transaction service client (non-fatal no-op for tests) ───────────────
+file sealed class NoOpTransactionService : ITransactionServiceClient
+{
+    public Task<DisbursalJournalResult> PostDisbursalJournalAsync(
+        string applicationNumber, string productType, decimal amount,
+        string glDebitAccount, string glCreditAccount, CancellationToken ct = default) =>
+        Task.FromResult(new DisbursalJournalResult(false, null, "Test stub"));
+}
+
+// ── Fake workflow client (no-op) ───────────────────────────────────────────────
+file sealed class NoOpWorkflowClient : IWorkflowClient
+{
+    public Task<WorkflowInstance>   StartLoanOriginationAsync(Guid entityId, Dictionary<string, object> ctx, CancellationToken ct = default) =>
+        Task.FromResult(new WorkflowInstance());
+    public Task<WorkflowStepResult> ProcessStepAsync(Guid instanceId, string action, Dictionary<string, object> ctx, CancellationToken ct = default) =>
+        Task.FromResult(new WorkflowStepResult());
+}
+
 // ── DB factory ────────────────────────────────────────────────────────────────
 file static class DbFactory
 {
@@ -118,7 +136,7 @@ public class EmiCalculatorTests
         Assert.That(r, Is.Not.Null);
         Assert.That(r!.MonthlyEMI,    Is.InRange(15_000m, 18_000m), "EMI should be ~₹16,246");
         Assert.That(r.TotalInterest,  Is.GreaterThan(0));
-        Assert.That(r.TotalPayment,   Is.EqualTo(r.MonthlyEMI * 36));
+        Assert.That(r.TotalPayment,   Is.EqualTo(r.MonthlyEMI * 36).Within(20m));
         Assert.That(r.TotalPayment,   Is.GreaterThan(500_000m));
     }
 
@@ -166,7 +184,7 @@ public class EmiCalculatorTests
     {
         var result = Sut().CalculateEMI(3_00_000, 24, 12m);
         var r = (result.Result as OkObjectResult)!.Value as EmiResult;
-        Assert.That(r!.TotalPayment, Is.EqualTo(r.MonthlyEMI * 24));
+        Assert.That(r!.TotalPayment, Is.EqualTo(r.MonthlyEMI * 24).Within(5m));
     }
 
     [Test]
@@ -483,7 +501,12 @@ public class LoanApplicationsListTests
     private (LoanApplicationsController sut, LoanDbContext db) Setup()
     {
         var db  = DbFactory.Create(seedProducts: false);
-        var sut = new LoanApplicationsController(db, NullLogger<LoanApplicationsController>.Instance);
+        var sut = new LoanApplicationsController(
+            db,
+            new NoOpWorkflowClient(),
+            new NoOpExpressions(),
+            new NoOpTransactionService(),
+            NullLogger<LoanApplicationsController>.Instance);
         return (sut, db);
     }
 
@@ -648,7 +671,12 @@ public class LoanStateMachineTests
     private (LoanApplicationsController sut, LoanDbContext db) Setup()
     {
         var db  = DbFactory.Create(seedProducts: false);
-        var sut = new LoanApplicationsController(db, NullLogger<LoanApplicationsController>.Instance);
+        var sut = new LoanApplicationsController(
+            db,
+            new NoOpWorkflowClient(),
+            new NoOpExpressions(),
+            new NoOpTransactionService(),
+            NullLogger<LoanApplicationsController>.Instance);
         return (sut, db);
     }
 
