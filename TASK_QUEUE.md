@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-11 (session 27 — CI/CD test suite fully green)
+**Last Updated:** 2026-04-11 (session 28 — Hetzner deploy + ledger migration fix)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,8 +11,13 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Run smoke + regression suites** — `scripts\run-smoke.bat` then `scripts\run-regression.bat` | Validate all session 22–26 UI changes |
-| 2 | **Deploy to Hetzner** — `docker compose up --build -d transactionservice loanservice accountservice frontend` | Push journal drill-down + backend endpoint LIVE |
+| 1 | **Run smoke + regression suites** — `scripts\run-smoke.bat` then `scripts\run-regression.bat` from cmd.exe | Validate all session 22–28 changes |
+| 2 | **E2E smoke**: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog | Confirm full journal drill-down works end-to-end on live site |
+
+### Recently Completed (session 28 — 2026-04-11)
+- [x] **Hetzner deploy** — transactionservice + frontend rebuilt. All 11 containers healthy.
+- [x] **TransactionService ledger migration fix** — `AddLedgerTables` (20260411175347) creates Journals, JournalEntries, ChartOfAccounts, LedgerBalances tables that were in DbContext since bab9b9c but had NO migration. On restart: 3 schemas provisioned + 19 CoA entries seeded. Journal by-number endpoint returns 404 (tables exist). Commit `474f7ee`.
+- [x] **CI confirmed green** — Backend CI/CD #47, CI #91, Full Stack CI/CD #74 all pass for `6c5ee9c`.
 
 ### Recently Completed (session 27 — 2026-04-11)
 - [x] **CI/CD "Backend Tests" job fully green — 78/78 passing, 0 failing** (was 74 pass, 4 fail)

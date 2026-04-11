@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-11 (session 27 — CI/CD test suite fully green)
+**Last Updated:** 2026-04-11 (session 28 — Hetzner deploy + TransactionService ledger migration fix)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -142,6 +142,12 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 28 — 2026-04-11 (Hetzner deploy + TransactionService ledger migration fix)
+- **Critical infra bug fixed**: `Journals`, `JournalEntries`, `ChartOfAccounts`, `LedgerBalances` were in `TransactionDbContext` since commit `bab9b9c` (2025) but were NEVER covered by any EF migration. `TenantSchemaProvisioner.MigrateAsync()` only applied `InitialCreate` + `AddAccountHistory` on Hetzner → all journal operations (loan disbursal, account maturity, journal drill-down) returned Postgres `"relation does not exist" 500`.
+- **Migration fix**: `AddLedgerTables` (20260411175347) creates all 4 tables with unqualified names (schema: "public" qualifiers stripped per multi-tenancy pattern). Commit `474f7ee`.
+- **Hetzner deploy**: `transactionservice` + `frontend` rebuilt. On startup: 3 schemas (public, ucb_demo, nbfc_demo) provisioned + 19 Chart-of-Accounts entries seeded each. Smoke test: `GET /api/journal/by-number/FAKE-999` with UCB JWT → 404. Journal drill-down now operational on demobank.
+- **CI confirmed green**: Backend CI/CD #47, CI #91, Full Stack CI/CD #74 all passed for commit `6c5ee9c`. Initial failure of run 24281039850 was a transient NuGet CDN blip.
 
 ### Session 27 — 2026-04-11 (CI/CD test suite fully green)
 - **Root cause analysis**: 5 separate root causes found across `AccountService.Tests` and `LoanService.Tests` that had accumulated silently across sessions 19–22.

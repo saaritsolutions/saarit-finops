@@ -226,12 +226,25 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - **LoanDetail.tsx**: disbursalJournalNumber chip is now clickable (Tooltip + `onClick` → `setJournalDialogOpen(true)`); hover highlights; `JournalDetailDialog` renders conditionally.
   - **AccountManagement.tsx**: maturityJournalNumber PaymentsIcon now clickable (`onClick` → `setJournalNumber`); hover highlights; `JournalDetailDialog` renders.
 
+## Completed (continued)
+- Hetzner deploy session 28 (2026-04-11): transactionservice + frontend rebuilt and redeployed.
+  - Critical bug fixed: TransactionService had Journals/JournalEntries/ChartOfAccounts/LedgerBalances in
+    DbContext since bab9b9c (2025) but NO EF migration ever created these tables. TenantSchemaProvisioner
+    MigrateAsync() only applied InitialCreate+AddAccountHistory on Hetzner → all journal POST/GET calls
+    returned Postgres "relation does not exist" 500.
+  - Fix: AddLedgerTables migration (20260411175347) creates all 4 tables with unqualified names (schema:
+    "public" qualifiers stripped per multi-tenancy pattern). On restart: 3 schemas (public, ucb_demo,
+    nbfc_demo) provisioned + 19 Chart-of-Account entries seeded each. Commit 474f7ee.
+  - Smoke test: GET /api/journal/by-number/FAKE-999 with UCB JWT → HTTP 404 confirmed.
+  - Journal drill-down (JournalDetailDialog in LoanDetail + AccountManagement) now fully operational
+    on demobank.saaritsolutions.com.
+
 ## In Progress
 - (none)
 
 ## Pending Next
-- Run smoke + regression suites (use scripts\run-smoke.bat or scripts\run-regression.bat from cmd.exe)
-- Deploy session 26 changes to Hetzner (`docker compose up --build -d transactionservice loanservice accountservice frontend`)
+- Run smoke + regression suites (scripts\run-smoke.bat then scripts\run-regression.bat from cmd.exe)
+- E2E smoke: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog shows debit/credit lines
 
 ## Notes
 - Eligibility expression ID currently in use: EXPR_1755237353842.
