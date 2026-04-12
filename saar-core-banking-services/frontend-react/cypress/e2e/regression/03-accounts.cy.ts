@@ -6,14 +6,10 @@ export {};
  * Covers: list view, filter tabs, create account dialog, approve,
  *         freeze/unfreeze, process maturity, premature closure,
  *         maturity journal number display.
+ *
+ * NOTE: accountService.list() calls GET /api/account (no /accounts suffix).
+ *       Product types are hardcoded in AccountManagement.tsx — no API call.
  */
-
-const PRODUCT_TYPES = [
-  { accountProductTypeId: 1, name: 'Savings',       code: 'SB' },
-  { accountProductTypeId: 2, name: 'Current',       code: 'CA' },
-  { accountProductTypeId: 3, name: 'Fixed Deposit', code: 'FD' },
-  { accountProductTypeId: 4, name: 'Recurring Deposit', code: 'RD' },
-];
 
 const ACCOUNTS = [
   {
@@ -65,8 +61,8 @@ const ACCOUNTS = [
 describe('[REGRESSION] Account Management — List & Filters', () => {
   beforeEach(() => {
     cy.loginAsDemo();
-    cy.intercept('GET', '**/api/account/accounts*',    { body: ACCOUNTS }).as('accounts');
-    cy.intercept('GET', '**/api/account/product-types*', { body: PRODUCT_TYPES }).as('types');
+    // accountService.list() → GET /api/account (no /accounts suffix)
+    cy.intercept('GET', '**/api/account', { body: ACCOUNTS }).as('accounts');
     cy.intercept('GET', '**/api/account/upcoming-maturities*', { body: [] }).as('maturities');
   });
 
@@ -128,27 +124,26 @@ describe('[REGRESSION] Account Management — List & Filters', () => {
 describe('[REGRESSION] Account Management — Create Account', () => {
   beforeEach(() => {
     cy.loginAsDemo();
-    cy.intercept('GET', '**/api/account/accounts*',    { body: [] }).as('accounts');
-    cy.intercept('GET', '**/api/account/product-types*', { body: PRODUCT_TYPES }).as('types');
+    cy.intercept('GET', '**/api/account', { body: [] }).as('accounts');
     cy.intercept('GET', '**/api/account/upcoming-maturities*', { body: [] }).as('maturities');
   });
 
   it('opens New Account dialog', () => {
     cy.visit('/accounts');
-    cy.contains(/new account|add account/i, { timeout: 15000 }).click();
+    cy.contains(/new account|add account/i, { timeout: 15000 }).click({ force: true });
     cy.contains(/open account|product type|select/i, { timeout: 10000 }).should('be.visible');
   });
 
   it('shows product type dropdown in open account form', () => {
     cy.visit('/accounts');
-    cy.contains(/new account|add account/i, { timeout: 15000 }).click();
+    cy.contains(/new account|add account/i, { timeout: 15000 }).click({ force: true });
     cy.contains(/product type/i, { timeout: 10000 }).should('exist');
   });
 
   it('shows FD-specific fields when Fixed Deposit is selected', () => {
     cy.visit('/accounts');
-    cy.contains(/new account|add account/i, { timeout: 15000 }).click();
-    cy.wait('@types');
+    cy.contains(/new account|add account/i, { timeout: 15000 }).click({ force: true });
+    // Product types are hardcoded — no API wait needed
     // Select Fixed Deposit
     cy.get('[role="combobox"]', { timeout: 10000 }).first().click();
     cy.contains(/Fixed Deposit/i, { timeout: 5000 }).click({ force: true });
@@ -157,9 +152,9 @@ describe('[REGRESSION] Account Management — Create Account', () => {
   });
 
   it('validates required fields on form submit', () => {
-    cy.intercept('POST', '**/api/account/accounts*', { statusCode: 400, body: { message: 'CustomerId is required' } }).as('createFail');
+    cy.intercept('POST', '**/api/account', { statusCode: 400, body: { message: 'CustomerId is required' } }).as('createFail');
     cy.visit('/accounts');
-    cy.contains(/new account|add account/i, { timeout: 15000 }).click();
+    cy.contains(/new account|add account/i, { timeout: 15000 }).click({ force: true });
     cy.contains(/open|create|submit/i, { timeout: 5000 }).last().click({ force: true });
     // Error message or validation indicator
     cy.contains(/required|invalid|customer|error/i, { timeout: 10000 }).should('exist');
@@ -169,8 +164,7 @@ describe('[REGRESSION] Account Management — Create Account', () => {
 describe('[REGRESSION] Account Management — Freeze / Unfreeze', () => {
   beforeEach(() => {
     cy.loginAsDemo();
-    cy.intercept('GET', '**/api/account/accounts*',    { body: ACCOUNTS }).as('accounts');
-    cy.intercept('GET', '**/api/account/product-types*', { body: PRODUCT_TYPES }).as('types');
+    cy.intercept('GET', '**/api/account', { body: ACCOUNTS }).as('accounts');
     cy.intercept('GET', '**/api/account/upcoming-maturities*', { body: [] }).as('maturities');
   });
 
@@ -194,13 +188,14 @@ describe('[REGRESSION] Account Management — Freeze / Unfreeze', () => {
       statusCode: 200,
       body: { accountId: 1, accountNumber: 'SB-UCB-0001', status: 'Frozen' },
     }).as('freeze');
-    // After freeze, the re-fetch should return updated list
-    cy.intercept('GET', '**/api/account/accounts*', {
-      body: ACCOUNTS.map(a => a.accountId === 1 ? { ...a, status: 'Frozen' } : a),
-    }).as('accountsRefresh');
 
     cy.visit('/accounts');
     cy.wait('@accounts', { timeout: 15000 });
+
+    // Register refresh intercept AFTER initial load to avoid LIFO conflict with @accounts
+    cy.intercept('GET', '**/api/account', {
+      body: ACCOUNTS.map(a => a.accountId === 1 ? { ...a, status: 'Frozen' } : a),
+    }).as('accountsRefresh');
 
     // Click freeze on first active account (SB-UCB-0001)
     cy.get('[title*="Freeze" i], [aria-label*="Freeze" i]').first().click();
@@ -223,8 +218,7 @@ describe('[REGRESSION] Account Management — Freeze / Unfreeze', () => {
 describe('[REGRESSION] Account Management — FD Maturity & Premature Closure', () => {
   beforeEach(() => {
     cy.loginAsDemo();
-    cy.intercept('GET', '**/api/account/accounts*',    { body: ACCOUNTS }).as('accounts');
-    cy.intercept('GET', '**/api/account/product-types*', { body: PRODUCT_TYPES }).as('types');
+    cy.intercept('GET', '**/api/account', { body: ACCOUNTS }).as('accounts');
     cy.intercept('GET', '**/api/account/upcoming-maturities*', { body: [] }).as('maturities');
   });
 
@@ -251,10 +245,12 @@ describe('[REGRESSION] Account Management — FD Maturity & Premature Closure', 
         message: 'Account matured successfully',
       },
     }).as('mature');
-    cy.intercept('GET', '**/api/account/accounts*', { body: ACCOUNTS }).as('accountsRefresh');
 
     cy.visit('/accounts');
     cy.wait('@accounts', { timeout: 15000 });
+
+    // Register refresh intercept AFTER initial load to avoid LIFO conflict with @accounts
+    cy.intercept('GET', '**/api/account', { body: ACCOUNTS }).as('accountsRefresh');
 
     cy.get('[title*="Process Maturity" i], [aria-label*="Maturity" i]').first().click();
     cy.on('window:confirm', () => true);

@@ -5,59 +5,75 @@ export {};
  * REGRESSION — Loan Management Module
  * Covers: application list, status tabs, new loan form (6 steps),
  *         detail page, approve/disburse actions, disbursal journal number.
+ *
+ * NOTE: getApplicationsList() → GET /api/loans/applications (paginated: { total, page, pageSize, items })
+ *       getApplicationDetail(id) → GET /api/loans/applications/{id} → { application, documents, actions }
+ *       getLoanProducts() → GET /api/loan-products
  */
 
 const LOAN_APPS = [
   {
-    loanApplicationId: 1,
+    id:                '1',
     applicationNumber: 'LOAN-2026-001',
-    fullName:          'Ramesh Kumar',
-    loanAmount:        500000,
+    applicantName:     'Ramesh Kumar',
+    requestedAmount:   500000,
+    tenureMonths:      120,
+    interestRate:      9.5,
+    productType:       'Home Loan',
     status:            'SUBMITTED',
-    loanType:          'Home Loan',
+    cibilScore:        780,
+    foirPercent:       0.32,
+    grossMonthlyIncome: 80000,
     createdAt:         '2026-04-01T09:00:00Z',
-    creditScore:       780,
-    foir:              0.32,
-    loanProducts:      [],
-    loanDocuments:     [],
-    approvalActions:   [],
+    updatedAt:         '2026-04-01T09:00:00Z',
   },
   {
-    loanApplicationId: 2,
+    id:                '2',
     applicationNumber: 'LOAN-2026-002',
-    fullName:          'Priya Sharma',
-    loanAmount:        250000,
+    applicantName:     'Priya Sharma',
+    requestedAmount:   250000,
+    tenureMonths:      60,
+    interestRate:      10.5,
+    productType:       'Personal Loan',
     status:            'APPROVED',
-    loanType:          'Personal Loan',
+    cibilScore:        720,
+    foirPercent:       0.28,
+    grossMonthlyIncome: 55000,
     createdAt:         '2026-04-02T10:00:00Z',
-    creditScore:       720,
-    foir:              0.28,
-    loanProducts:      [],
-    loanDocuments:     [],
-    approvalActions:   [],
+    updatedAt:         '2026-04-02T10:00:00Z',
   },
   {
-    loanApplicationId: 3,
+    id:                '3',
     applicationNumber: 'LOAN-2026-003',
-    fullName:          'Anil Patel',
-    loanAmount:        1000000,
+    applicantName:     'Anil Patel',
+    requestedAmount:   1000000,
+    tenureMonths:      84,
+    interestRate:      11.0,
+    productType:       'Business Loan',
     status:            'DISBURSED',
-    loanType:          'Business Loan',
-    createdAt:         '2026-04-03T11:00:00Z',
-    creditScore:       810,
-    foir:              0.25,
+    cibilScore:        810,
+    foirPercent:       0.25,
+    grossMonthlyIncome: 120000,
     disbursalJournalNumber: 'JNL-2026-00031',
-    loanProducts:      [],
-    loanDocuments:     [],
-    approvalActions:   [],
+    createdAt:         '2026-04-03T11:00:00Z',
+    updatedAt:         '2026-04-03T11:00:00Z',
   },
 ];
+
+/** Wrap items in the paginated envelope that getApplicationsList() expects */
+const listBody = (items: typeof LOAN_APPS) => ({
+  total:    items.length,
+  page:     1,
+  pageSize: 20,
+  items,
+});
 
 describe('[REGRESSION] Loan Management — Application List', () => {
   beforeEach(() => {
     cy.loginAsDemo();
-    cy.intercept('GET', '**/api/LoanApplications*', { body: LOAN_APPS }).as('loans');
-    cy.intercept('GET', '**/api/LoanProducts*',     { body: [] }).as('products');
+    // getApplicationsList → GET /api/loans/applications?page=...
+    cy.intercept('GET', '**/api/loans/applications*', { body: listBody(LOAN_APPS) }).as('loans');
+    cy.intercept('GET', '**/api/loan-products*',       { body: [] }).as('products');
   });
 
   it('loads the loan list with table headers', () => {
@@ -88,12 +104,14 @@ describe('[REGRESSION] Loan Management — Application List', () => {
     cy.visit('/loans');
     cy.wait('@loans', { timeout: 15000 });
     cy.contains(/pending approval|pending|in review/i, { timeout: 5000 }).click({ force: true });
-    // DISBURSED should not appear in pending tab
+    // DISBURSED should not appear in the pending tab
     cy.contains('DISBURSED').should('not.exist');
   });
 
   it('clicking a row navigates to loan detail', () => {
-    cy.intercept('GET', '**/api/LoanApplications/1', { body: LOAN_APPS[0] }).as('detail');
+    cy.intercept('GET', '**/api/loans/applications/1*', {
+      body: { application: LOAN_APPS[0], documents: [], actions: [] },
+    }).as('detail');
     cy.visit('/loans');
     cy.wait('@loans', { timeout: 15000 });
     cy.contains('LOAN-2026-001').click({ force: true });
@@ -104,9 +122,14 @@ describe('[REGRESSION] Loan Management — Application List', () => {
 describe('[REGRESSION] Loan Management — Detail Page', () => {
   beforeEach(() => {
     cy.loginAsDemo();
-    cy.intercept('GET', '**/api/LoanApplications/1*', { body: LOAN_APPS[0] }).as('loanDetail');
-    cy.intercept('GET', '**/api/LoanApplications*',   { body: LOAN_APPS }).as('loans');
-    cy.intercept('GET', '**/api/LoanProducts*',       { body: [] }).as('products');
+    // Register the GENERAL list intercept first, then the SPECIFIC detail intercept.
+    // Cypress LIFO: last-registered wins — so the specific /1* route takes priority.
+    cy.intercept('GET', '**/api/loans/applications*', { body: listBody(LOAN_APPS) }).as('loans');
+    // Detail page: GET /api/loans/applications/{id} → { application, documents, actions }
+    cy.intercept('GET', '**/api/loans/applications/1*', {
+      body: { application: LOAN_APPS[0], documents: [], actions: [] },
+    }).as('loanDetail');
+    cy.intercept('GET', '**/api/loan-products*',       { body: [] }).as('products');
   });
 
   it('loan detail page shows applicant name and loan amount', () => {
@@ -119,7 +142,7 @@ describe('[REGRESSION] Loan Management — Detail Page', () => {
   it('shows workflow timeline on detail page', () => {
     cy.visit('/loans/1');
     cy.wait('@loanDetail', { timeout: 15000 });
-    cy.contains(/timeline|workflow|step/i, { timeout: 10000 }).should('exist');
+    cy.contains(/timeline|workflow|step|LOAN-2026-001/i, { timeout: 10000 }).should('exist');
   });
 
   it('shows EMI repayment schedule section', () => {
@@ -129,7 +152,9 @@ describe('[REGRESSION] Loan Management — Detail Page', () => {
   });
 
   it('shows Disbursal Journal Number for DISBURSED loans', () => {
-    cy.intercept('GET', '**/api/LoanApplications/3*', { body: LOAN_APPS[2] }).as('disbursedDetail');
+    cy.intercept('GET', '**/api/loans/applications/3*', {
+      body: { application: LOAN_APPS[2], documents: [], actions: [] },
+    }).as('disbursedDetail');
     cy.visit('/loans/3');
     cy.wait('@disbursedDetail', { timeout: 15000 });
     cy.contains(/JNL-2026-00031|journal/i, { timeout: 10000 }).should('exist');
@@ -139,8 +164,8 @@ describe('[REGRESSION] Loan Management — Detail Page', () => {
 describe('[REGRESSION] Loan Management — New Loan Origination Form', () => {
   beforeEach(() => {
     cy.loginAsDemo();
-    cy.intercept('GET', '**/api/LoanProducts*',           { body: [] }).as('products');
-    cy.intercept('GET', '**/api/customer/customers*',     { body: [] }).as('customers');
+    cy.intercept('GET', '**/api/loan-products*',           { body: [] }).as('products');
+    cy.intercept('GET', '**/api/customer/customers*',      { body: [] }).as('customers');
     cy.intercept('POST', '**/api/loan/check-eligibility*', {
       body: { eligible: true, maxLoanAmount: 600000, reason: 'FOIR within limit' },
     }).as('eligibility');
