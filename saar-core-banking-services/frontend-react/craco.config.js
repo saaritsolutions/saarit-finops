@@ -1,6 +1,15 @@
 const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 
 module.exports = {
+  // Disable the webpack dev-server error overlay so Cypress tests are never
+  // blocked by a full-screen iframe.  Compilation errors still appear in the
+  // terminal; the overlay is only useful for interactive human debugging.
+  devServer: {
+    client: {
+      overlay: false,
+    },
+  },
+
   webpack: {
     configure: (webpackConfig, { env }) => {
       // Only disable source maps in development for memory savings
