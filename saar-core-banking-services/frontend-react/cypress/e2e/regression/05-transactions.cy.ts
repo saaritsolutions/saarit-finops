@@ -32,8 +32,7 @@ describe('[REGRESSION] Transactions — Ledger Balances', () => {
   beforeEach(() => {
     cy.loginAsDemo();
     cy.intercept('GET', '**/api/ledger/balances*', { body: BALANCES }).as('balances');
-    cy.intercept('GET', '**/api/journals*',        { body: JOURNALS }).as('journals');
-    cy.intercept('GET', '**/api/transaction*',     { body: [] }).as('transactions');
+    cy.intercept('GET', '**/api/journal*',         { body: JOURNALS }).as('journals');
   });
 
   it('loads the transactions / ledger page', () => {
@@ -70,8 +69,7 @@ describe('[REGRESSION] Transactions — Journal Entries', () => {
   beforeEach(() => {
     cy.loginAsDemo();
     cy.intercept('GET', '**/api/ledger/balances*', { body: BALANCES }).as('balances');
-    cy.intercept('GET', '**/api/journals*',        { body: JOURNALS }).as('journals');
-    cy.intercept('GET', '**/api/transaction*',     { body: [] }).as('transactions');
+    cy.intercept('GET', '**/api/journal*',         { body: JOURNALS }).as('journals');
   });
 
   it('shows Journal Entries tab', () => {
@@ -90,7 +88,7 @@ describe('[REGRESSION] Transactions — Post Journal Entry Dialog', () => {
   beforeEach(() => {
     cy.loginAsDemo();
     cy.intercept('GET', '**/api/ledger/balances*', { body: BALANCES }).as('balances');
-    cy.intercept('GET', '**/api/journals*',        { body: JOURNALS }).as('journals');
+    cy.intercept('GET', '**/api/journal*',         { body: JOURNALS }).as('journals');
   });
 
   it('Post Journal Entry button opens a dialog', () => {
@@ -107,7 +105,7 @@ describe('[REGRESSION] Transactions — Post Journal Entry Dialog', () => {
   });
 
   it('validates that debit must equal credit before submit', () => {
-    cy.intercept('POST', '**/api/journals*', {
+    cy.intercept('POST', '**/api/journal*', {
       statusCode: 400,
       body: { message: 'Debit and credit amounts must balance' },
     }).as('badJournal');
@@ -121,7 +119,7 @@ describe('[REGRESSION] Transactions — Post Journal Entry Dialog', () => {
   });
 
   it('successful post shows confirmation', () => {
-    cy.intercept('POST', '**/api/journals*', {
+    cy.intercept('POST', '**/api/journal*', {
       statusCode: 200,
       body: { journalId: 'JNL-2026-99999', success: true },
     }).as('postJournal');
@@ -137,7 +135,7 @@ describe('[REGRESSION] Transactions — Post Journal Entry Dialog', () => {
     });
     cy.contains(/post|submit/i, { timeout: 5000 }).last().click({ force: true });
     // Either success message or the call is made
-    cy.get('@postJournal.all', { timeout: 10000 }).then((calls: any[]) => {
+    cy.get('@postJournal.all', { timeout: 10000 }).then((calls: any) => {
       if (calls.length > 0) {
         cy.contains(/success|posted|JNL-2026-99999/i).should('exist');
       }

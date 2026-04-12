@@ -5,12 +5,15 @@ export {};
  * REGRESSION — User Management Module
  * Covers: users tab, roles tab, add user dialog, role assignment,
  *         Admin/Maker/Checker colour chips.
+ *
+ * NOTE: userService.listUsers() → GET /api/users  (NOT /api/uam/users)
+ *       userService.listRoles() → GET /api/roles
  */
 
 const USERS = [
-  { id: 1, username: 'admin@ucb-demo.com',  email: 'admin@ucb-demo.com',  firstName: 'Admin',  lastName: 'User',  roles: [{ name: 'Admin' }],   status: 'Active', tenantId: 'ucb_demo' },
-  { id: 2, username: 'maker@ucb-demo.com',  email: 'maker@ucb-demo.com',  firstName: 'Maker',  lastName: 'User',  roles: [{ name: 'Maker' }],   status: 'Active', tenantId: 'ucb_demo' },
-  { id: 3, username: 'checker@ucb-demo.com', email: 'checker@ucb-demo.com', firstName: 'Checker', lastName: 'User', roles: [{ name: 'Checker' }], status: 'Active', tenantId: 'ucb_demo' },
+  { id: 1, username: 'admin@ucb-demo.com',   email: 'admin@ucb-demo.com',   firstName: 'Admin',   lastName: 'User',    userRoles: [{ userId: 1, roleId: 1, role: { id: 1, name: 'Admin' } }],   isActive: true },
+  { id: 2, username: 'maker@ucb-demo.com',   email: 'maker@ucb-demo.com',   firstName: 'Maker',   lastName: 'User',    userRoles: [{ userId: 2, roleId: 2, role: { id: 2, name: 'Maker' } }],   isActive: true },
+  { id: 3, username: 'checker@ucb-demo.com', email: 'checker@ucb-demo.com', firstName: 'Checker', lastName: 'User',    userRoles: [{ userId: 3, roleId: 3, role: { id: 3, name: 'Checker' } }], isActive: true },
 ];
 
 const ROLES = [
@@ -22,9 +25,9 @@ const ROLES = [
 describe('[REGRESSION] User Management — Users Tab', () => {
   beforeEach(() => {
     cy.loginAsDemo();
-    cy.intercept('GET', '**/api/uam/users*', { body: USERS }).as('users');
-    cy.intercept('GET', '**/api/users*',     { body: USERS }).as('usersAlt');
-    cy.intercept('GET', '**/api/roles*',     { body: ROLES }).as('roles');
+    // userService.listUsers() → GET /api/users
+    cy.intercept('GET', '**/api/users*', { body: USERS }).as('users');
+    cy.intercept('GET', '**/api/roles*', { body: ROLES }).as('roles');
   });
 
   it('loads user management page', () => {
@@ -70,7 +73,7 @@ describe('[REGRESSION] User Management — Users Tab', () => {
   });
 
   it('validates required fields on user create submit', () => {
-    cy.intercept('POST', '**/api/uam/users*', {
+    cy.intercept('POST', '**/api/users*', {
       statusCode: 400,
       body: { message: 'Email is required' },
     }).as('createFail');
@@ -85,9 +88,8 @@ describe('[REGRESSION] User Management — Users Tab', () => {
 describe('[REGRESSION] User Management — Roles Tab', () => {
   beforeEach(() => {
     cy.loginAsDemo();
-    cy.intercept('GET', '**/api/uam/users*', { body: USERS }).as('users');
-    cy.intercept('GET', '**/api/users*',     { body: USERS }).as('usersAlt');
-    cy.intercept('GET', '**/api/roles*',     { body: ROLES }).as('roles');
+    cy.intercept('GET', '**/api/users*', { body: USERS }).as('users');
+    cy.intercept('GET', '**/api/roles*', { body: ROLES }).as('roles');
   });
 
   it('Roles tab shows role list', () => {
