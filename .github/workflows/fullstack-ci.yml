@@ -1,9 +1,10 @@
 name: Full Stack CI/CD
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main, develop ]
-    paths: 
+    paths:
       - 'saar-core-banking-services/**/*'
   pull_request:
     branches: [ main ]
@@ -16,7 +17,7 @@ permissions:
 
 env:
   DOTNET_VERSION: '8.0.x'
-  NODE_VERSION: '18.x'
+  NODE_VERSION: '20.x'
 
 jobs:
   changes:

@@ -1,6 +1,7 @@
 name: Frontend CI/CD
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main, develop ]
     paths:
@@ -13,7 +14,7 @@ on:
       - '.github/workflows/frontend-ci.yml'
 
 env:
-  NODE_VERSION: '18.x'
+  NODE_VERSION: '20.x'
   WORKING_DIRECTORY: './frontend-ui'
 
 jobs:
@@ -46,7 +47,7 @@ jobs:
       run: npm run test -- --watch=false --browsers=ChromeHeadless --code-coverage
 
     - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         file: ${{ env.WORKING_DIRECTORY }}/coverage/lcov.info
         flags: frontend

@@ -4,6 +4,7 @@ name: Cypress E2E Tests
 # Run on every PR to main + every push to main, but only when
 # frontend-react source, Cypress specs, or this workflow file change.
 on:
+  workflow_dispatch:
   pull_request:
     branches: [ main ]
     paths:
