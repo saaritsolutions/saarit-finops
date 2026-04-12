@@ -103,9 +103,9 @@ jobs:
     strategy:
       matrix:
         dockerfile:
-          - AccountService/Dockerfile
-          - CustomerService/Dockerfile
-          - APIGateway/Dockerfile
+          - saar-core-banking-services/AccountService/Dockerfile
+          - saar-core-banking-services/APIGateway/Dockerfile
+          - saar-core-banking-services/LoanService/Dockerfile
 
     steps:
     - name: Checkout code
@@ -113,7 +113,7 @@ jobs:
 
     - name: Build Docker image
       run: |
-        docker build -t security-scan:latest -f ${{ matrix.dockerfile }} .
+        docker build -t security-scan:latest -f ${{ matrix.dockerfile }} ./saar-core-banking-services
 
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
