@@ -14,7 +14,11 @@ interface AuthState {
 
 // Get stored token and check if it's valid (or auto-authenticate in development)
 const storedToken = localStorage.getItem('auth-token');
-const isDevelopment = process.env.NODE_ENV === 'development';
+// Dev-mode auto-auth: bypass token check in development UNLESS explicitly disabled.
+// Set REACT_APP_DISABLE_DEV_AUTH=true in CI for regression auth tests so the
+// login form renders (PublicRoute won't redirect /login → /dashboard).
+const isDevelopment = process.env.NODE_ENV === 'development' &&
+                      process.env.REACT_APP_DISABLE_DEV_AUTH !== 'true';
 // Accept real JWTs (3 dot-separated base64 segments) as well as legacy mock tokens
 const isRealJwt   = Boolean(storedToken && storedToken.split('.').length === 3);
 const isMockToken = Boolean(storedToken && storedToken.startsWith('mock-jwt-token-'));

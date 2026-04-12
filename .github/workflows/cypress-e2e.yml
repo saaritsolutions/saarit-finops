@@ -143,6 +143,9 @@ jobs:
           CI:               false
           REACT_APP_VERSION: ci-${{ github.sha }}
           CYPRESS_BASE_URL: ${{ env.CYPRESS_BASE_URL }}
+          # Disable dev-mode auto-auth so PublicRoute shows the real login form
+          # (authSlice checks this flag; mock tokens from cy.loginAsDemo() still work)
+          REACT_APP_DISABLE_DEV_AUTH: 'true'
 
       # Each subsequent spec group reuses the already-running server
       # (the Cypress action keeps it alive between steps when start is omitted)

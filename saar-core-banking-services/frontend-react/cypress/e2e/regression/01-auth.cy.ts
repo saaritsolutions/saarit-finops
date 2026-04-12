@@ -8,8 +8,9 @@ export {};
  */
 describe('[REGRESSION] Auth — Login', () => {
   beforeEach(() => {
-    // Clear any existing session
-    window.localStorage.clear();
+    // Clear any existing session in the AUT — use cy.clearLocalStorage(), NOT
+    // window.localStorage.clear() which only clears the Cypress runner's storage.
+    cy.clearLocalStorage();
     cy.visit('/login');
   });
 
