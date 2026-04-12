@@ -22,7 +22,8 @@ describe('[REGRESSION] Auth — Login', () => {
   });
 
   it('shows inline validation error for empty credentials', () => {
-    cy.get('button[type="submit"]').click();
+    // force:true bypasses any overlay (webpack dev-server) that may cover elements
+    cy.get('button[type="submit"]').click({ force: true });
     // Either HTML5 validation or custom error
     cy.get('body').then(($b) => {
       const hasValidation = $b.find(':invalid').length > 0 ||
@@ -38,9 +39,9 @@ describe('[REGRESSION] Auth — Login', () => {
       body: { message: 'Invalid credentials' },
     }).as('badLogin');
 
-    cy.get('input[name="username"], input[type="email"]').first().type('wrong@test.com');
-    cy.get('input[name="password"], input[type="password"]').type('badpass');
-    cy.get('button[type="submit"]').click();
+    cy.get('input[name="username"], input[type="email"]').first().type('wrong@test.com', { force: true });
+    cy.get('input[name="password"], input[type="password"]').type('badpass', { force: true });
+    cy.get('button[type="submit"]').click({ force: true });
     cy.wait('@badLogin');
 
     // Should still be on login page
@@ -66,16 +67,16 @@ describe('[REGRESSION] Auth — Login', () => {
 
     cy.stubApis();
 
-    cy.get('input[name="username"], input[type="email"]').first().type('admin@saarbanking.com');
-    cy.get('input[name="password"], input[type="password"]').type('admin123');
-    cy.get('button[type="submit"]').click();
+    cy.get('input[name="username"], input[type="email"]').first().type('admin@saarbanking.com', { force: true });
+    cy.get('input[name="password"], input[type="password"]').type('admin123', { force: true });
+    cy.get('button[type="submit"]').click({ force: true });
     cy.wait('@login');
 
     cy.url({ timeout: 15000 }).should('include', '/dashboard');
   });
 
   it('accessing protected route without token redirects to login', () => {
-    window.localStorage.clear();
+    cy.clearLocalStorage();
     cy.visit('/accounts');
     cy.url({ timeout: 10000 }).should('satisfy', (url: string) =>
       url.includes('/login') || url.includes('/accounts')  // might allow render in dev
