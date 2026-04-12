@@ -49,18 +49,18 @@ jobs:
       with:
         node-version: '20.x'
         cache: 'npm'
-        cache-dependency-path: frontend-ui/package-lock.json
+        cache-dependency-path: saar-core-banking-services/frontend-react/package-lock.json
 
     - name: Frontend - Install dependencies
       if: matrix.component == 'frontend'
       run: |
-        cd frontend-ui
-        npm ci
+        cd saar-core-banking-services/frontend-react
+        npm install --legacy-peer-deps
 
     - name: Frontend - Security audit
       if: matrix.component == 'frontend'
       run: |
-        cd frontend-ui
+        cd saar-core-banking-services/frontend-react
         npm audit --audit-level=moderate || true
 
   code-security-scan:
