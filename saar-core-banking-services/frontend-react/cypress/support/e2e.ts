@@ -51,18 +51,17 @@ Cypress.Commands.add('loginViaApi', (
 // Call this before visiting a page in smoke tests.
 // ─────────────────────────────────────────────────────────────────────────────
 Cypress.Commands.add('stubApis', () => {
-  // Accounts
-  cy.intercept('GET', '**/api/account/accounts*', { body: [] }).as('getAccounts');
-  cy.intercept('GET', '**/api/account/product-types*', { body: [] }).as('getProductTypes');
-  cy.intercept('GET', '**/api/account/upcoming-maturities*', { body: [] }).as('getMaturities');
-  // Loans
-  cy.intercept('GET', '**/api/LoanApplications*', { body: [] }).as('getLoans');
+  // Accounts — accountService calls GET /api/account (base route, no /accounts suffix)
+  cy.intercept('GET', '**/api/account*', { body: [] }).as('getAccounts');
+  // Loans — loanOriginationService calls GET /api/loans/applications and /api/LoanOrigination
+  cy.intercept('GET', '**/api/loans*', { body: { total: 0, items: [], page: 1, pageSize: 20 } }).as('getLoans');
+  cy.intercept('GET', '**/api/LoanOrigination*', { body: [] }).as('getLoanOrig');
+  cy.intercept('GET', '**/api/LoanApplications*', { body: [] }).as('getLoanApplications');
   cy.intercept('GET', '**/api/LoanProducts*', { body: [] }).as('getLoanProducts');
-  cy.intercept('GET', '**/api/loan*', { body: [] }).as('getLoan');
-  // Customers
-  cy.intercept('GET', '**/api/customer/customers*', { body: [] }).as('getCustomers');
+  // Customers — customerService calls GET /api/customer (base route)
+  cy.intercept('GET', '**/api/customer*', { body: [] }).as('getCustomers');
   // Transactions / Ledger
-  cy.intercept('GET', '**/api/ledger/balances*', { body: [] }).as('getLedgerBalances');
+  cy.intercept('GET', '**/api/ledger*', { body: [] }).as('getLedger');
   cy.intercept('GET', '**/api/transaction*', { body: [] }).as('getTransactions');
   cy.intercept('GET', '**/api/journals*', { body: [] }).as('getJournals');
   // Users / Roles
