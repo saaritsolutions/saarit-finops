@@ -72,7 +72,7 @@ jobs:
           wait-on:          'http://localhost:3002'
           wait-on-timeout:  120
           browser:          chrome
-          headless:         true
+
           spec:             cypress/e2e/smoke.cy.ts
         env:
           PORT:                 3002
@@ -133,7 +133,7 @@ jobs:
           wait-on:          'http://localhost:3002'
           wait-on-timeout:  120
           browser:          chrome
-          headless:         true
+
           spec:             cypress/e2e/regression/01-auth.cy.ts,cypress/e2e/regression/02-dashboard.cy.ts
         env:
           PORT:             3002
@@ -151,7 +151,7 @@ jobs:
           install:          false
           spec:             cypress/e2e/regression/03-accounts.cy.ts
           browser:          chrome
-          headless:         true
+
         env:
           PORT:             3002
           CI:               false
@@ -164,7 +164,7 @@ jobs:
           install:          false
           spec:             cypress/e2e/regression/04-loans.cy.ts
           browser:          chrome
-          headless:         true
+
         env:
           PORT:             3002
           CI:               false
@@ -177,7 +177,7 @@ jobs:
           install:          false
           spec:             cypress/e2e/regression/05-transactions.cy.ts
           browser:          chrome
-          headless:         true
+
         env:
           PORT:             3002
           CI:               false
@@ -193,7 +193,7 @@ jobs:
             cypress/e2e/regression/07-users.cy.ts,
             cypress/e2e/regression/08-expression-builder.cy.ts
           browser:          chrome
-          headless:         true
+
         env:
           PORT:             3002
           CI:               false
