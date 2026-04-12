@@ -89,11 +89,13 @@ describe('[REGRESSION] Dashboard', () => {
     cy.contains(/account|loan|customer/i, { timeout: 15000 }).should('exist');
   });
 
-  it('navigates to accounts page from dashboard link', () => {
+  it('navigates to accounts page from dashboard quick action', () => {
     cy.stubApis();
     cy.visit('/dashboard');
-    // Click any link that navigates to accounts
-    cy.contains(/view all|account management|accounts/i, { timeout: 10000 }).first().click({ force: true });
+    // Dashboard Quick Actions section has "New Account" → navigate('/accounts/create')
+    // This is more reliable than clicking the sidebar "Accounts" item which
+    // toggles a submenu (not a direct navigation) when the sidebar is expanded.
+    cy.contains(/new account/i, { timeout: 10000 }).first().click({ force: true });
     cy.url({ timeout: 10000 }).should('include', '/account');
   });
 });
