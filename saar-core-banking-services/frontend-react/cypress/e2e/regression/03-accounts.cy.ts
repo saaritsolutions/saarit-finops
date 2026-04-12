@@ -7,8 +7,12 @@ export {};
  *         freeze/unfreeze, process maturity, premature closure,
  *         maturity journal number display.
  *
- * NOTE: accountService.list() calls GET /api/account (no /accounts suffix).
- *       Product types are hardcoded in AccountManagement.tsx — no API call.
+ * NOTE: accountService.list() → GET /api/account (no /accounts suffix).
+ *       Product types are hardcoded as ['Savings','Current','FD','RD',...] — no API.
+ *       Component checks productType.name === 'FD' (not 'Fixed Deposit') for
+ *       Process Maturity / Premature Closure button visibility.
+ *       Filter tab chips ('Frozen', 'Mature') always remain in DOM even when
+ *       a status filter is active — test by account number, not status text.
  */
 
 const ACCOUNTS = [
@@ -32,7 +36,8 @@ const ACCOUNTS = [
     maturityDate:   new Date(Date.now() + 3 * 86400000).toISOString(),
     termMonths:     12,
     annualRate:     7.5,
-    productType:    { accountProductTypeId: 3, name: 'Fixed Deposit' },
+    // IMPORTANT: component checks productType.name === 'FD' (uppercase short code)
+    productType:    { accountProductTypeId: 3, name: 'FD' },
   },
   {
     accountId:      3,
@@ -54,7 +59,7 @@ const ACCOUNTS = [
     termMonths:     6,
     annualRate:     6.5,
     maturityJournalNumber: 'JNL-2026-00042',
-    productType:    { accountProductTypeId: 3, name: 'Fixed Deposit' },
+    productType:    { accountProductTypeId: 3, name: 'FD' },
   },
 ];
 
@@ -84,16 +89,17 @@ describe('[REGRESSION] Account Management — List & Filters', () => {
   it('Active tab filters to only Active accounts', () => {
     cy.visit('/accounts');
     cy.wait('@accounts', { timeout: 15000 });
-    cy.contains(/^Active$|Active accounts/i).click({ force: true });
-    // Frozen and Mature accounts should not be in the table
-    cy.contains('Frozen').should('not.exist');
-    cy.contains('Mature').should('not.exist');
+    cy.contains(/^Active$/).click({ force: true });
+    // Check by account number — filter tab chips stay in DOM so don't assert on status text
+    cy.contains('SB-UCB-0001').should('exist');     // Active account — visible
+    cy.contains('SB-UCB-0002').should('not.exist'); // Frozen account — filtered out
+    cy.contains('FD-UCB-0002').should('not.exist'); // Mature account — filtered out
   });
 
   it('Frozen tab shows only frozen accounts', () => {
     cy.visit('/accounts');
     cy.wait('@accounts', { timeout: 15000 });
-    cy.contains(/^Frozen$/i).click({ force: true });
+    cy.contains(/^Frozen$/).click({ force: true });
     cy.contains('SB-UCB-0002').should('exist');
     cy.contains('SB-UCB-0001').should('not.exist');
   });
@@ -101,7 +107,7 @@ describe('[REGRESSION] Account Management — List & Filters', () => {
   it('Mature tab shows only mature accounts', () => {
     cy.visit('/accounts');
     cy.wait('@accounts', { timeout: 15000 });
-    cy.contains(/^Mature$|mature/i).click({ force: true });
+    cy.contains(/^Mature$/).click({ force: true });
     cy.contains('FD-UCB-0002').should('exist');
     cy.contains('SB-UCB-0001').should('not.exist');
   });
@@ -140,13 +146,14 @@ describe('[REGRESSION] Account Management — Create Account', () => {
     cy.contains(/product type/i, { timeout: 10000 }).should('exist');
   });
 
-  it('shows FD-specific fields when Fixed Deposit is selected', () => {
+  it('shows FD-specific fields when FD is selected', () => {
     cy.visit('/accounts');
     cy.contains(/new account|add account/i, { timeout: 15000 }).click({ force: true });
-    // Product types are hardcoded — no API wait needed
-    // Select Fixed Deposit
+    // Product types are hardcoded as ['Savings','Current','FD',...] — no API wait needed
+    // Select FD from the combobox
     cy.get('[role="combobox"]', { timeout: 10000 }).first().click();
-    cy.contains(/Fixed Deposit/i, { timeout: 5000 }).click({ force: true });
+    // Options show short codes: 'FD', not 'Fixed Deposit'
+    cy.contains(/^FD$/i, { timeout: 5000 }).click({ force: true });
     // FD fields: term, rate, maturity date, auto-renewal
     cy.contains(/term|tenure|maturity|rate/i, { timeout: 10000 }).should('exist');
   });
@@ -209,7 +216,7 @@ describe('[REGRESSION] Account Management — Freeze / Unfreeze', () => {
     cy.visit('/accounts');
     cy.wait('@accounts', { timeout: 15000 });
     // Frozen tab
-    cy.contains(/^Frozen$/i, { timeout: 5000 }).click({ force: true });
+    cy.contains(/^Frozen$/, { timeout: 5000 }).click({ force: true });
     // Close Account should NOT be visible for frozen rows
     cy.contains(/close account/i).should('not.exist');
   });
@@ -225,6 +232,7 @@ describe('[REGRESSION] Account Management — FD Maturity & Premature Closure', 
   it('shows Process Maturity button for Active FD accounts', () => {
     cy.visit('/accounts');
     cy.wait('@accounts', { timeout: 15000 });
+    // Component renders Process Maturity for productType.name === 'FD' && status === 'Active'
     cy.get('[title*="Process Maturity" i], [aria-label*="Maturity" i]', { timeout: 10000 })
       .should('exist');
   });
