@@ -80,6 +80,8 @@ jobs:
           CI:                   false       # CRA treats warnings as errors when CI=true
           REACT_APP_VERSION:    ci-${{ github.sha }}
           CYPRESS_BASE_URL:     ${{ env.CYPRESS_BASE_URL }}
+          # Backend services are not started in CI — skip the API health-check tests
+          CYPRESS_SKIP_API_HEALTH: 'true'
 
       # Always upload videos + screenshots so failures are diagnosable
       - name: Upload smoke videos
