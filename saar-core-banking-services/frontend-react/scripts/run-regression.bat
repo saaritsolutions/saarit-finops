@@ -38,8 +38,12 @@ echo ====================================================
 echo.
 
 REM Start React if not already running
+REM REACT_APP_DISABLE_DEV_AUTH=true disables the dev-mode auto-auth bypass so the
+REM login form renders normally for the 01-auth.cy.ts regression tests.
+REM cy.loginAsDemo() still works because it sets a mock-jwt-token-* in localStorage
+REM which authSlice accepts via the isMockToken check.
 echo [1/2] Starting React frontend (port 3002)...
-start "React Frontend" cmd /k "cd /d %FRONTEND_DIR% && set PORT=3002 && set BROWSER=none && set REACT_APP_VERSION=dev && node_modules\.bin\craco start"
+start "React Frontend" cmd /k "cd /d %FRONTEND_DIR% && set PORT=3002 && set BROWSER=none && set REACT_APP_VERSION=dev && set REACT_APP_DISABLE_DEV_AUTH=true && node_modules\.bin\craco start"
 
 echo Waiting 22 seconds for React to compile...
 timeout /t 22 /nobreak > nul

@@ -251,6 +251,23 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - Journal drill-down (JournalDetailDialog in LoanDetail + AccountManagement) now fully operational
     on demobank.saaritsolutions.com.
 
+## Completed (continued)
+- Cypress regression suite pre-run fixes (session 30, 2026-04-13) — commit TBD:
+  - **Root cause 1 — dev-mode auto-auth blocks auth tests**: `REACT_APP_DISABLE_DEV_AUTH=true` added to
+    `run-regression.bat` React start command. authSlice short-circuits `isDevelopment=false` when this
+    env var is set, so the login form renders properly for `01-auth.cy.ts`. `cy.loginAsDemo()` still works
+    via the `isMockToken` path (mock-jwt-token-* prefix).
+  - **Root cause 2 — MUI v7 Tooltip sets no DOM title/aria-label**: Freeze Account, Unfreeze Account,
+    Process Maturity, Premature Closure IconButtons in AccountManagement.tsx had no DOM `aria-label`
+    attribute. MUI Tooltip's `title` prop only creates a popover — NOT a DOM `title` or `aria-label`.
+    Fix: added explicit `aria-label="Freeze Account"`, `aria-label="Unfreeze Account"`,
+    `aria-label="Process Maturity"`, `aria-label="Premature Closure"` to the four IconButton elements.
+    Also improves screen-reader accessibility.
+  - **Root cause 3 — "New Expression" button does not exist**: SimpleExpressionBuilder.tsx uses a
+    "Create/Edit" TAB (index 1), not a button. Five tests in `08-expression-builder.cy.ts` updated:
+    "New Expression button is visible" → "Create/Edit tab is visible in the tab bar";
+    all tests that clicked "new expression" now click `cy.contains(/Create\/Edit/i)` instead.
+
 ## In Progress
 - (none)
 

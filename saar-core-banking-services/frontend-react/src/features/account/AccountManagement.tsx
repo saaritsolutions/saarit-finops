@@ -424,28 +424,28 @@ const AccountManagement: React.FC = () => {
                       {/* FD/RD lifecycle actions */}
                       {(acc.productType?.name === 'FD' || acc.productType?.name === 'RD') && acc.status === 'Active' && (
                         <Tooltip title="Process Maturity">
-                          <IconButton size="small" onClick={() => handleMature(acc)} sx={{ color: '#0369A1', '&:hover': { color: '#075985', backgroundColor: '#F0F9FF' } }}>
+                          <IconButton aria-label="Process Maturity" size="small" onClick={() => handleMature(acc)} sx={{ color: '#0369A1', '&:hover': { color: '#075985', backgroundColor: '#F0F9FF' } }}>
                             <SavingsIcon sx={{ fontSize: '1rem' }} />
                           </IconButton>
                         </Tooltip>
                       )}
                       {(acc.productType?.name === 'FD' || acc.productType?.name === 'RD') && acc.status === 'Active' && (
                         <Tooltip title="Premature Closure">
-                          <IconButton size="small" onClick={() => handlePrematureClose(acc)} sx={{ color: '#D97706', '&:hover': { color: '#B45309', backgroundColor: '#FFFBEB' } }}>
+                          <IconButton aria-label="Premature Closure" size="small" onClick={() => handlePrematureClose(acc)} sx={{ color: '#D97706', '&:hover': { color: '#B45309', backgroundColor: '#FFFBEB' } }}>
                             <MoneyOffIcon sx={{ fontSize: '1rem' }} />
                           </IconButton>
                         </Tooltip>
                       )}
                       {acc.status === 'Active' && (
                         <Tooltip title="Freeze Account">
-                          <IconButton size="small" onClick={() => handleFreeze(acc)} sx={{ color: '#0369A1', '&:hover': { color: '#075985', backgroundColor: '#E0F2FE' } }}>
+                          <IconButton aria-label="Freeze Account" size="small" onClick={() => handleFreeze(acc)} sx={{ color: '#0369A1', '&:hover': { color: '#075985', backgroundColor: '#E0F2FE' } }}>
                             <AcUnitIcon sx={{ fontSize: '1rem' }} />
                           </IconButton>
                         </Tooltip>
                       )}
                       {acc.status === 'Frozen' && (
                         <Tooltip title="Unfreeze Account">
-                          <IconButton size="small" onClick={() => handleUnfreeze(acc)} sx={{ color: '#059669', '&:hover': { color: '#047857', backgroundColor: '#ECFDF5' } }}>
+                          <IconButton aria-label="Unfreeze Account" size="small" onClick={() => handleUnfreeze(acc)} sx={{ color: '#059669', '&:hover': { color: '#047857', backgroundColor: '#ECFDF5' } }}>
                             <LockOpenIcon sx={{ fontSize: '1rem' }} />
                           </IconButton>
                         </Tooltip>

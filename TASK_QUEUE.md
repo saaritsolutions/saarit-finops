@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-12 (session 29 — Cypress smoke test fixes)
+**Last Updated:** 2026-04-13 (session 30 — Cypress regression pre-run fixes)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,15 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Trigger Cypress E2E CI** — push to main → verify smoke suite is 29/29 green in GitHub Actions | Confirm all 12 fixes landed correctly in CI |
-| 2 | **Run regression suite locally** — `scripts\run-regression.bat` from cmd.exe | Validate session 25 regression specs still pass |
+| 1 | **Run regression suite locally** — `scripts\run-regression.bat` from cmd.exe | Session 30 fixes are in place; now actually run to verify all ~60 tests pass |
+| 2 | **Trigger Cypress E2E CI** — push to main → verify smoke suite is 29/29 green in GitHub Actions | Confirm session 29 fixes landed in CI + verify session 30 commit doesn't regress |
 | 3 | **E2E smoke**: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog | Confirm full journal drill-down works end-to-end on live site |
+
+### Recently Completed (session 30 — 2026-04-13)
+- [x] **Cypress regression pre-run fixes** (3 root causes):
+  - `run-regression.bat`: Added `REACT_APP_DISABLE_DEV_AUTH=true` → auth tests now see the login form
+  - `AccountManagement.tsx`: Added `aria-label` to Freeze/Unfreeze/Process Maturity/Premature Closure IconButtons (MUI v7 Tooltip does NOT propagate DOM `title` attribute; test selectors need `aria-label`)
+  - `08-expression-builder.cy.ts`: 5 tests fixed — "New Expression button" → "Create/Edit tab" pattern
 
 ### Recently Completed (session 29 — 2026-04-12)
 - [x] **12 failing Cypress smoke tests fixed** (commit `1f8f780`):
