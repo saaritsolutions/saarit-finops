@@ -5,6 +5,10 @@ export {};
  * REGRESSION — Expression Builder Module
  * Covers: expression list, create/edit expression, template picker,
  *         run/test expression, seed expressions present.
+ *
+ * NOTE: SimpleExpressionBuilder.tsx uses TABS, not a "New Expression" button.
+ *       Tabs: Expressions (0) | Create/Edit (1) | Templates (2) | Functions (3) | Test (4)
+ *       To create an expression, click the "Create/Edit" tab.
  */
 
 const EXPRESSIONS = [
@@ -68,9 +72,10 @@ describe('[REGRESSION] Expression Builder — List', () => {
     cy.contains(/LoanEligibility|WorkflowRouting|InterestCalc|category/i, { timeout: 10000 }).should('exist');
   });
 
-  it('New Expression button is visible', () => {
+  it('Create/Edit tab is visible in the tab bar', () => {
     cy.visit('/expressions/simple');
-    cy.contains(/new expression|create expression|add expression/i, { timeout: 15000 })
+    // SimpleExpressionBuilder uses tabs — "Create/Edit" is tab index 1
+    cy.contains(/Create\/Edit/i, { timeout: 15000 })
       .should('be.visible');
   });
 });
@@ -82,15 +87,15 @@ describe('[REGRESSION] Expression Builder — Create Expression', () => {
     cy.intercept('GET', '**/api/Expressions*', { body: EXPRESSIONS }).as('expressionsAlt');
   });
 
-  it('clicking New Expression opens create form or dialog', () => {
+  it('clicking Create/Edit tab opens expression form', () => {
     cy.visit('/expressions/simple');
-    cy.contains(/new expression|create expression|add expression/i, { timeout: 15000 }).click();
+    cy.contains(/Create\/Edit/i, { timeout: 15000 }).click();
     cy.contains(/name|expression|category/i, { timeout: 10000 }).should('exist');
   });
 
   it('create form has Name, Expression, and Category fields', () => {
     cy.visit('/expressions/simple');
-    cy.contains(/new expression|create expression|add expression/i, { timeout: 15000 }).click();
+    cy.contains(/Create\/Edit/i, { timeout: 15000 }).click();
     cy.contains(/name/i, { timeout: 10000 }).should('exist');
     cy.contains(/expression|formula/i, { timeout: 5000 }).should('exist');
   });
@@ -102,7 +107,7 @@ describe('[REGRESSION] Expression Builder — Create Expression', () => {
     }).as('createFail');
 
     cy.visit('/expressions/simple');
-    cy.contains(/new expression|create expression|add expression/i, { timeout: 15000 }).click();
+    cy.contains(/Create\/Edit/i, { timeout: 15000 }).click();
     cy.contains(/save|create|submit/i, { timeout: 5000 }).last().click({ force: true });
     cy.contains(/required|name|error/i, { timeout: 10000 }).should('exist');
   });
@@ -119,7 +124,7 @@ describe('[REGRESSION] Expression Builder — Create Expression', () => {
     cy.intercept('GET', '**/api/expressions*', { body: [...EXPRESSIONS, newExpr] }).as('refresh');
 
     cy.visit('/expressions/simple');
-    cy.contains(/new expression|create expression|add expression/i, { timeout: 15000 }).click();
+    cy.contains(/Create\/Edit/i, { timeout: 15000 }).click();
 
     cy.get('input[name="name"], input[placeholder*="name" i]').first().type('Test Expression', { force: true });
     cy.get('input[name="expression"], textarea[name="expression"]').first().type('amount > 1000', { force: true });

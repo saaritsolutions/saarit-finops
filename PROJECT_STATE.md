@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-12 (session 29 — Cypress smoke test fixes, all 29 tests fixed)
+**Last Updated:** 2026-04-13 (session 30 — Cypress regression suite pre-run fixes)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -142,6 +142,12 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 30 — 2026-04-13 (Cypress regression suite pre-run fixes)
+- **3 root causes fixed** before running regression locally:
+  1. **`run-regression.bat`**: Added `set REACT_APP_DISABLE_DEV_AUTH=true` to React start command. authSlice already had this escape hatch but the bat file was not using it. Fixes all `01-auth.cy.ts` tests (login form no longer auto-redirects in dev mode). `cy.loginAsDemo()` (mock-jwt-token-* path) still works.
+  2. **`AccountManagement.tsx`**: Added `aria-label` to 4 IconButton elements (Freeze Account, Unfreeze Account, Process Maturity, Premature Closure). MUI v7 Tooltip `title` prop creates a popover but does NOT set a DOM `title` attribute on the child — so `[title*="Freeze" i]` selectors in `03-accounts.cy.ts` would find zero elements. Also improves screen-reader accessibility.
+  3. **`08-expression-builder.cy.ts`**: 5 tests fixed — "New Expression button is visible" → "Create/Edit tab is visible"; all tests that clicked `/new expression|create expression/i` now click `cy.contains(/Create\/Edit/i)` instead. SimpleExpressionBuilder.tsx has always used a tabbed interface (not a button).
 
 ### Session 29 — 2026-04-12 (Cypress smoke test fixes — 12/29 → 0 failing)
 - **12 failing smoke tests fixed** (commit `1f8f780`). Root causes:
