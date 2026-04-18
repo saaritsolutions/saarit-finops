@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-13 (session 31 — Cypress regression suite ALL GREEN 86/86)
+**Last Updated:** 2026-04-18 (session 32 — CI all green, push to main confirmed)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,8 +11,13 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Trigger Cypress E2E CI** — push to main → verify smoke suite is 29/29 green in GitHub Actions | Regression suite is 86/86 locally; confirm CI is green too |
-| 2 | **E2E smoke on live site**: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog | Confirm full journal drill-down works end-to-end on demobank.saaritsolutions.com |
+| 1 | **E2E live smoke**: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog | Last unverified piece — confirm journal drill-down works on live site |
+
+### Recently Completed (session 32 — 2026-04-18)
+- [x] **CI all green — push to main** (ad906f6 → main):
+  - CI (backend 78 tests): ✅  |  Full Stack CI/CD: ✅  |  Security Scan: ✅  |  Cypress E2E: ✅ (8m)
+  - Smoke suite (29/29) + Regression suite (86/86) both pass in GitHub Actions
+  - All 4 workflows succeeded on first run — no flakiness
 
 ### Recently Completed (session 31 — 2026-04-13)
 - [x] **Cypress regression suite ALL GREEN — 86/86 passing** (commit 903181b):

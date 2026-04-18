@@ -292,9 +292,16 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
 ## In Progress
 - (none)
 
+## Completed (continued)
+- CI fully green — all 4 workflows pass (session 32, 2026-04-18):
+  - CI (backend tests): ✅ 2m 37s
+  - Full Stack CI/CD: ✅ 3m 50s
+  - Security Scan: ✅ 4m 39s
+  - Cypress E2E Tests (smoke + regression): ✅ 8m 05s
+  - Commit pushed: ad906f6 → main
+
 ## Pending Next
-- Trigger cypress-e2e CI and confirm all 29 smoke tests pass (push to main to trigger)
-- E2E smoke: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog shows debit/credit lines
+- E2E smoke: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog shows debit/credit lines on demobank.saaritsolutions.com
 
 ## Notes
 - Eligibility expression ID currently in use: EXPR_1755237353842.
