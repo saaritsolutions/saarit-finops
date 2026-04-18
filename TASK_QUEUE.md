@@ -15,7 +15,7 @@
 | 2 | **E2E smoke on live site**: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog | Confirm full journal drill-down works end-to-end on demobank.saaritsolutions.com |
 
 ### Recently Completed (session 31 — 2026-04-13)
-- [x] **Cypress regression suite ALL GREEN — 86/86 passing** (commit TBD):
+- [x] **Cypress regression suite ALL GREEN — 86/86 passing** (commit 903181b):
   - `env -i` breakthrough: Cypress Electron binary now runs from Git Bash without cmd.exe (strips MSYS env vars; needs PowerShell in PATH)
   - `05-transactions.cy.ts`: fixed BALANCES mock shape (`normalBalance`/`debitTotal`/`creditTotal` required); fixed JOURNALS field names; fixed journal tab click to scope to `[role="tab"]`
   - `06-customers.cy.ts`: MUI TextField spread doesn't add `name` attr → fixed selector to `find('input:not([type="hidden"])').first()`
