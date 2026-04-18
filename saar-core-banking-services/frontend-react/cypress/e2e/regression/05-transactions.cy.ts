@@ -7,23 +7,31 @@ export {};
  *         debit=credit validation, idempotency key field.
  */
 
+// Fields match LedgerBalance interface: normalBalance, debitTotal, creditTotal, balance
 const BALANCES = [
-  { accountCode: '1010', accountName: 'Cash & Bank Balances', balance: 5000000,  currency: 'INR', accountType: 'Asset'     },
-  { accountCode: '1020', accountName: 'Loans & Advances',     balance: 12000000, currency: 'INR', accountType: 'Asset'     },
-  { accountCode: '2010', accountName: 'Deposits Payable',     balance: 8500000,  currency: 'INR', accountType: 'Liability' },
-  { accountCode: '3010', accountName: 'Share Capital',        balance: 5000000,  currency: 'INR', accountType: 'Equity'    },
-  { accountCode: '5010', accountName: 'Interest Expense',     balance: 350000,   currency: 'INR', accountType: 'Expense'   },
+  { accountCode: '1010', accountName: 'Cash & Bank Balances', normalBalance: 'Debit',  debitTotal: 5000000,  creditTotal: 0,       balance: 5000000  },
+  { accountCode: '1020', accountName: 'Loans & Advances',     normalBalance: 'Debit',  debitTotal: 12000000, creditTotal: 0,       balance: 12000000 },
+  { accountCode: '2010', accountName: 'Deposits Payable',     normalBalance: 'Credit', debitTotal: 0,        creditTotal: 8500000, balance: 8500000  },
+  { accountCode: '3010', accountName: 'Share Capital',        normalBalance: 'Credit', debitTotal: 0,        creditTotal: 5000000, balance: 5000000  },
+  { accountCode: '5010', accountName: 'Interest Expense',     normalBalance: 'Debit',  debitTotal: 350000,   creditTotal: 0,       balance: 350000   },
 ];
 
+// Fields match Journal interface: journalNumber, status, postedBy, idempotencyKey, referenceType
+// JournalEntry fields: journalEntryId, accountName, narration, entryDate
 const JOURNALS = [
   {
-    journalId:      'JNL-2026-00001',
+    journalId:      1,
+    journalNumber:  'JNL-2026-00001',
+    idempotencyKey: 'test-001',
     description:    'Loan Disbursement — LOAN-2026-003',
+    referenceType:  'LoanDisbursement',
+    referenceId:    'LOAN-2026-003',
+    postedBy:       'demo-user',
     postedAt:       '2026-04-10T14:30:00Z',
-    totalAmount:    1000000,
+    status:         'Posted',
     entries: [
-      { entryId: 1, accountCode: '1020', debitAmount: 1000000, creditAmount: 0,       description: 'DR Loans' },
-      { entryId: 2, accountCode: '1010', debitAmount: 0,       creditAmount: 1000000, description: 'CR Cash'  },
+      { journalEntryId: 1, journalId: 1, accountCode: '1020', accountName: 'Loans & Advances',     debitAmount: 1000000, creditAmount: 0,       currency: 'INR', narration: 'DR Loans', entryDate: '2026-04-10' },
+      { journalEntryId: 2, journalId: 1, accountCode: '1010', accountName: 'Cash & Bank Balances', debitAmount: 0,       creditAmount: 1000000, currency: 'INR', narration: 'CR Cash',  entryDate: '2026-04-10' },
     ],
   },
 ];
@@ -79,7 +87,8 @@ describe('[REGRESSION] Transactions — Journal Entries', () => {
 
   it('displays journal entry with description', () => {
     cy.visit('/transactions');
-    cy.contains(/journal/i, { timeout: 10000 }).click({ force: true });
+    // "Post Journal Entry" button appears before the tabs in DOM — scope click to tab element
+    cy.contains('[role="tab"]', /Journal Entries/i, { timeout: 10000 }).click({ force: true });
     cy.contains(/JNL-2026-00001|Loan Disbursement|LOAN-2026/i, { timeout: 10000 }).should('exist');
   });
 });

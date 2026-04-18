@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-13 (session 30 — Cypress regression suite pre-run fixes)
+**Last Updated:** 2026-04-13 (session 31 — Cypress regression suite ALL GREEN 86/86)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -142,6 +142,15 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 31 — 2026-04-13 (Cypress regression suite ALL GREEN — 86/86 passing)
+- **`env -i` Cypress breakthrough**: Cypress Electron binary can now run from Git Bash by stripping all MSYS/Cygwin environment variables. Command: `env -i PATH="C:\\Windows\\System32\\WindowsPowerShell\\v1.0;..." CYPRESS_BASE_URL="http://localhost:3002" node ./node_modules/cypress/bin/cypress run --spec "..."`. Need PowerShell in PATH so Cypress can spawn `powershell.exe` for browser detection. This permanently resolves the "Cypress CANNOT run from Git Bash" limitation.
+- **15 regression failures fixed** across 4 spec files (was 86 tests, 71 pass, 15 fail → 86/86):
+  - `05-transactions.cy.ts`: BALANCES mock missing `normalBalance`/`debitTotal`/`creditTotal` → `INR(undefined)` crashed React on render. JOURNALS mock had wrong field names. Journal tab click now uses `[role="tab"]` scope.
+  - `06-customers.cy.ts`: MUI TextField with `{...field('firstName')}` spread does NOT add `name` attr → `input[name="firstName"]` finds nothing. Fix: `cy.get('[role="dialog"]').find('input:not([type="hidden"])').first()`.
+  - `07-users.cy.ts`: Tab labels runtime value is "Users (3)" not "Users" — anchored regex `/^Users$/` never matches. Role table has no description column — test renamed. "New Role" button only shows when `tab===1`.
+  - `08-expression-builder.cy.ts` (complete rewrite): `cy.wait([...]).catch()` invalid — Cypress chainable has no `.catch()`; `{ body: EXPRESSIONS[] }` wrong — component reads `data.expressions`; EXPRESSIONS items missing `id` field; textarea has no `name` attr.
+- **Final result**: 86/86 green, 0 failing, 1m 39s runtime.
 
 ### Session 30 — 2026-04-13 (Cypress regression suite pre-run fixes)
 - **3 root causes fixed** before running regression locally:

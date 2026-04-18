@@ -138,7 +138,8 @@ describe('[REGRESSION] Customer Management — Create Customer', () => {
 
     cy.visit('/customers');
     cy.contains(/new customer|add customer/i, { timeout: 15000 }).click();
-    cy.get('input[name="firstName"], input[placeholder*="name" i]').first().type('New Test', { force: true });
+    // MUI TextField has no name/placeholder — use first text input inside the dialog
+    cy.get('[role="dialog"]').find('input[type="text"], input:not([type="hidden"])').first().type('New Test', { force: true });
     cy.contains(/save|create|submit/i, { timeout: 5000 }).last().click({ force: true });
 
     cy.get('@createOk.all', { timeout: 10000 }).then((calls: any) => {

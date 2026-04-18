@@ -35,6 +35,9 @@ Thumbs.db
 /saar-core-banking-services/frontend-ui/.angular/cache
 /saar-core-banking-services/frontend-ui/dist
 
+# Jira credentials (never commit)
+.jira.env
+
 # Cypress test artifacts
 cypress/screenshots/
 cypress/videos/

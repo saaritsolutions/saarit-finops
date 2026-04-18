@@ -260,28 +260,28 @@ const UserManagement: React.FC = () => {
             (admin@saarbanking.com / maker / checker).
           </Alert>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 label="Username *" fullWidth size="small"
                 value={uUsername}
                 onChange={e => setUUsername(e.target.value)}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 label="Email *" fullWidth size="small" type="email"
                 value={uEmail}
                 onChange={e => setUEmail(e.target.value)}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 label="Password *" fullWidth size="small" type="password"
                 value={uPassword}
                 onChange={e => setUPassword(e.target.value)}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <FormControlLabel
                 control={
                   <Switch

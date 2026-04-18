@@ -252,7 +252,7 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
     on demobank.saaritsolutions.com.
 
 ## Completed (continued)
-- Cypress regression suite pre-run fixes (session 30, 2026-04-13) — commit TBD:
+- Cypress regression suite pre-run fixes (session 30, 2026-04-13) — commit 5017104:
   - **Root cause 1 — dev-mode auto-auth blocks auth tests**: `REACT_APP_DISABLE_DEV_AUTH=true` added to
     `run-regression.bat` React start command. authSlice short-circuits `isDevelopment=false` when this
     env var is set, so the login form renders properly for `01-auth.cy.ts`. `cy.loginAsDemo()` still works
@@ -268,12 +268,32 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
     "New Expression button is visible" → "Create/Edit tab is visible in the tab bar";
     all tests that clicked "new expression" now click `cy.contains(/Create\/Edit/i)` instead.
 
+## Completed (continued)
+- Cypress regression suite ALL GREEN — 86/86 passing (session 31, 2026-04-13) — commit TBD:
+  - **`env -i` breakthrough**: Discovered that Cypress Electron binary can run from Git Bash by stripping
+    all MSYS/Cygwin env vars with `env -i`. Pass explicit Windows PATH (include PowerShell v1.0 dir) +
+    USERPROFILE/APPDATA/TEMP to create a clean Windows-like environment. Permanently solves the
+    "Cypress CANNOT run from Git Bash" limitation without needing cmd.exe or batch files.
+  - **15 regression failures fixed** across 4 spec files:
+    - `05-transactions.cy.ts` (4 fixes): BALANCES mock missing `normalBalance`/`debitTotal`/`creditTotal`
+      → `INR(undefined)` TypeError crash; JOURNALS mock wrong field names; journal tab click now scoped to
+      `[role="tab"]` to avoid matching "Post Journal Entry" button first.
+    - `06-customers.cy.ts` (1 fix): `input[name="firstName"]` selector fails — MUI TextField does NOT
+      add `name` attr when using spread `{...field('firstName')}`. Fixed to:
+      `cy.get('[role="dialog"]').find('input:not([type="hidden"])').first()`.
+    - `07-users.cy.ts` (3 fixes): Tab labels are "Users (3)" at runtime (not "Users") — regex must NOT
+      anchor. Role descriptions not rendered in RoleRecord component — test renamed to check role names.
+      "New Role" button gated on `tab===1` — click Roles tab first.
+    - `08-expression-builder.cy.ts` (7 fixes, complete rewrite): `cy.wait([...]).catch()` invalid syntax;
+      mock was `{ body: EXPRESSIONS[] }` but component reads `data.expressions` — wrapped in object;
+      EXPRESSIONS items missing `id` field; expression textarea has no `name` attr.
+  - **Final result: 86/86 tests green, 0 failing, 1 min 39 sec** across 8 spec files.
+
 ## In Progress
 - (none)
 
 ## Pending Next
 - Trigger cypress-e2e CI and confirm all 29 smoke tests pass (push to main to trigger)
-- Run regression suite locally: `scripts\run-regression.bat` from cmd.exe
 - E2E smoke: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog shows debit/credit lines
 
 ## Notes

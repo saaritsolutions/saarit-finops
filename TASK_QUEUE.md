@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-13 (session 30 — Cypress regression pre-run fixes)
+**Last Updated:** 2026-04-13 (session 31 — Cypress regression suite ALL GREEN 86/86)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,17 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Run regression suite locally** — `scripts\run-regression.bat` from cmd.exe | Session 30 fixes are in place; now actually run to verify all ~60 tests pass |
-| 2 | **Trigger Cypress E2E CI** — push to main → verify smoke suite is 29/29 green in GitHub Actions | Confirm session 29 fixes landed in CI + verify session 30 commit doesn't regress |
-| 3 | **E2E smoke**: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog | Confirm full journal drill-down works end-to-end on live site |
+| 1 | **Trigger Cypress E2E CI** — push to main → verify smoke suite is 29/29 green in GitHub Actions | Regression suite is 86/86 locally; confirm CI is green too |
+| 2 | **E2E smoke on live site**: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog | Confirm full journal drill-down works end-to-end on demobank.saaritsolutions.com |
+
+### Recently Completed (session 31 — 2026-04-13)
+- [x] **Cypress regression suite ALL GREEN — 86/86 passing** (commit TBD):
+  - `env -i` breakthrough: Cypress Electron binary now runs from Git Bash without cmd.exe (strips MSYS env vars; needs PowerShell in PATH)
+  - `05-transactions.cy.ts`: fixed BALANCES mock shape (`normalBalance`/`debitTotal`/`creditTotal` required); fixed JOURNALS field names; fixed journal tab click to scope to `[role="tab"]`
+  - `06-customers.cy.ts`: MUI TextField spread doesn't add `name` attr → fixed selector to `find('input:not([type="hidden"])').first()`
+  - `07-users.cy.ts`: tab labels are "Users (3)" at runtime — fixed regex anchoring; role description not rendered — test checks role names; New Role button gated on tab===1
+  - `08-expression-builder.cy.ts`: complete rewrite — `cy.wait().catch()` invalid; mock must be `{ expressions: [...] }` not plain array; EXPRESSIONS missing `id`; textarea selector fixed
+  - Final: 86/86 green across 01-auth through 08-expression-builder in 1m 39s
 
 ### Recently Completed (session 30 — 2026-04-13)
 - [x] **Cypress regression pre-run fixes** (3 root causes):
