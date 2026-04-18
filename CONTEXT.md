@@ -269,7 +269,7 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
     all tests that clicked "new expression" now click `cy.contains(/Create\/Edit/i)` instead.
 
 ## Completed (continued)
-- Cypress regression suite ALL GREEN — 86/86 passing (session 31, 2026-04-13) — commit TBD:
+- Cypress regression suite ALL GREEN — 86/86 passing (session 31, 2026-04-13) — commit 903181b:
   - **`env -i` breakthrough**: Discovered that Cypress Electron binary can run from Git Bash by stripping
     all MSYS/Cygwin env vars with `env -i`. Pass explicit Windows PATH (include PowerShell v1.0 dir) +
     USERPROFILE/APPDATA/TEMP to create a clean Windows-like environment. Permanently solves the
