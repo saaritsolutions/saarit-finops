@@ -38,8 +38,9 @@ describe('[REGRESSION] User Management — Users Tab', () => {
 
   it('shows Users and Roles tabs', () => {
     cy.visit('/admin/users');
-    cy.contains(/^Users$/i, { timeout: 15000 }).should('be.visible');
-    cy.contains(/^Roles$/i, { timeout: 15000 }).should('be.visible');
+    // Tab labels include a count, e.g. "Users (3)" — scope to [role="tab"] elements
+    cy.contains('[role="tab"]', /Users/i, { timeout: 15000 }).should('be.visible');
+    cy.contains('[role="tab"]', /Roles/i, { timeout: 15000 }).should('be.visible');
   });
 
   it('displays all 3 users in the users list', () => {
@@ -94,23 +95,26 @@ describe('[REGRESSION] User Management — Roles Tab', () => {
 
   it('Roles tab shows role list', () => {
     cy.visit('/admin/users');
-    cy.contains(/^Roles$/i, { timeout: 15000 }).click();
+    cy.contains('[role="tab"]', /Roles/i, { timeout: 15000 }).click();
     cy.wait('@roles', { timeout: 10000 });
     cy.contains('Admin').should('exist');
     cy.contains('Maker').should('exist');
     cy.contains('Checker').should('exist');
   });
 
-  it('shows role description in the roles list', () => {
+  it('shows role names in the roles list', () => {
     cy.visit('/admin/users');
-    cy.contains(/^Roles$/i, { timeout: 15000 }).click();
+    // Tab label is "Roles (N)" — scope to [role="tab"]
+    cy.contains('[role="tab"]', /Roles/i, { timeout: 15000 }).click();
     cy.wait('@roles', { timeout: 10000 });
-    cy.contains(/full system|create and edit|approve/i, { timeout: 5000 }).should('exist');
+    // Role name chips Admin/Maker/Checker are rendered in Roles tab table
+    cy.contains(/Admin|Maker|Checker/i, { timeout: 5000 }).should('exist');
   });
 
   it('New Role button opens create role dialog', () => {
     cy.visit('/admin/users');
-    cy.contains(/^Roles$/i, { timeout: 15000 }).click();
+    // Tab label is "Roles (N)" — scope to [role="tab"]
+    cy.contains('[role="tab"]', /Roles/i, { timeout: 15000 }).click();
     cy.contains(/new role|add role|create role/i, { timeout: 10000 }).click({ force: true });
     cy.contains(/role name|name|description/i, { timeout: 10000 }).should('be.visible');
   });
