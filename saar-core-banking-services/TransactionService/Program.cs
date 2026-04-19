@@ -65,7 +65,16 @@ builder.Services.AddScoped<IPostingEngine, PostingEngine>();
 builder.Services.AddScoped<ILedgerService, LedgerService>();
 builder.Services.AddScoped<ITransactionRuleEvaluationService, TransactionRuleEvaluationService>();
 builder.Services.AddScoped<LedgerSeedService>();
-builder.Services.AddHttpClient();
+
+// Named HttpClient for ExpressionBuilderService (used by PostingEngine + TransactionRuleEvaluationService)
+var exprUrl = builder.Configuration["Services:ExpressionBaseUrl"] ?? "http://localhost:5004";
+builder.Services.AddHttpClient("ExpressionBuilder", client =>
+{
+    client.BaseAddress = new Uri(exprUrl.EndsWith('/') ? exprUrl : exprUrl + "/");
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+    client.Timeout = TimeSpan.FromSeconds(5); // fail fast — expression engine is non-critical
+});
+builder.Services.AddHttpClient(); // anonymous client for any other inter-service calls
 
 // ── CORS — allow React frontend on all local ports in dev ────────────────────
 builder.Services.AddCors(options =>

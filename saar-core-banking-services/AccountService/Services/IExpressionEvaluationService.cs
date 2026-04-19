@@ -6,6 +6,18 @@ namespace AccountService.Services
     {
         Task<T> EvaluateExpressionAsync<T>(string expressionId, Dictionary<string, object> context);
         Task<decimal?> CalculateDepositInterestRateAsync(string accountType, decimal amount, int termMonths);
+
+        /// <summary>
+        /// Calculates the monthly account maintenance charge using EXPR_AMC_FEE_UCB.
+        /// Returns the fee amount (₹); returns the hard-coded fallback (₹50/₹100) if the
+        /// expression service is unavailable or no active FeeCalculation expression exists.
+        /// </summary>
+        Task<decimal> CalculateMaintenanceFeeAsync(
+            decimal averageMonthlyBalance,
+            string  accountType,
+            int     accountAgeMonths,
+            string  customerSegment,
+            decimal minimumBalanceRequired);
     }
 
     public class ExpressionEvaluationService : IExpressionEvaluationService
@@ -111,6 +123,53 @@ namespace AccountService.Services
                 return null;
             }
         }
+
+        public async Task<decimal> CalculateMaintenanceFeeAsync(
+            decimal averageMonthlyBalance,
+            string  accountType,
+            int     accountAgeMonths,
+            string  customerSegment,
+            decimal minimumBalanceRequired)
+        {
+            // Hard-coded fallback: ₹50 for savings, ₹100 for current
+            decimal fallback = string.Equals(accountType, "SAVINGS", StringComparison.OrdinalIgnoreCase)
+                ? 50m : 100m;
+
+            try
+            {
+                // Find the latest active FeeCalculation expression
+                var baseUrl = _httpClient.BaseAddress?.ToString() ?? "http://localhost:5004";
+                var listUrl = $"{baseUrl.TrimEnd('/')}/api/expressions" +
+                              "?category=FeeCalculation&status=Active&page=1&pageSize=1";
+                var list = await _httpClient.GetFromJsonAsync<ExprListResponse>(listUrl);
+
+                if (list?.expressions == null || list.expressions.Count == 0)
+                {
+                    _logger.LogDebug("No active FeeCalculation expression — using fallback ₹{Fee}", fallback);
+                    return fallback;
+                }
+
+                var exprId = list.expressions
+                    .OrderByDescending(e => e.updatedAt)
+                    .First().expressionId;
+
+                var ctx = new Dictionary<string, object>
+                {
+                    ["averageMonthlyBalance"]  = averageMonthlyBalance,
+                    ["accountType"]            = accountType,
+                    ["accountAgeMonths"]       = accountAgeMonths,
+                    ["customerSegment"]        = customerSegment,
+                    ["minimumBalanceRequired"] = minimumBalanceRequired,
+                };
+                return await EvaluateExpressionAsync<decimal>(exprId, ctx);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "CalculateMaintenanceFeeAsync failed — using fallback ₹{Fee}", fallback);
+                return fallback;
+            }
+        }
     }
 
     public class ExpressionResult
@@ -121,5 +180,18 @@ namespace AccountService.Services
         public int     ExecutionTimeMs { get; set; }
         public string? ErrorMessage   { get; set; }
         public DateTime ExecutedAt   { get; set; }
+    }
+
+    // Minimal DTO for the list-expressions endpoint (used by CalculateMaintenanceFeeAsync)
+    internal class ExprListResponse
+    {
+        public List<ExprListItem> expressions { get; set; } = new();
+    }
+
+    internal class ExprListItem
+    {
+        public string expressionId { get; set; } = string.Empty;
+        public string returnType   { get; set; } = string.Empty;
+        public string updatedAt    { get; set; } = string.Empty;
     }
 }
