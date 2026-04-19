@@ -11,6 +11,13 @@ This file maps the major functional requirements from `CBS_Requirements_for_UCBs
 | 5. Cash Department at Branch                                  | Transaction Service, Account Service, GL & Accounting |
 | 6. Cash Credit and Overdraft                                  | Loan Service, Account Service, Product & Param Management, Business Rules Engine |
 | 7. Loan Processing                                            | Loan Service, Customer Service, Workflow Orchestration, Product & Param Management, Business Rules Engine |
+| 7a. Gold Loan (Jewel Loan) — SAAR-GL-001                     | Loan Service (Gold sub-module: Models/Gold, Controllers/Gold, Services/Gold), Transaction Service (GL 1025/4015/5050), Workflow Orchestration |
+| Framework: Expression Engine wiring — SAAR-EXPR-001          | AccountService (TP-ACC-001 txn limits, TP-ACC-002 fee calc), TransactionService (TP-TXN-001 NPA classification, TP-TXN-002 CTR trigger), ExpressionBuilderService |
+| Framework: DynamicFields real forms — SAAR-DFS-001           | DynamicFieldsSchemaService (DB-backed FieldSchema entity, per-product/per-tenant schemas), React frontend (DynamicForm renderer) |
+| Framework: Workflow multi-level approval — SAAR-WF-001       | WorkflowOrchestrationService (ApprovalLevel entity, ApprovalChain, escalation), LoanService, AccountService |
+| Framework: Bank Configuration + feature toggles — SAAR-CFG-001 | New BankConfiguration sub-module (or extend DynamicFieldsSchemaService), React Settings UI, all domain services (feature flag checks) |
+| Framework: Expression → Workflow routing — SAAR-EXPR-002     | WorkflowOrchestrationService (ApprovalRequirement.Condition = expressionId), ExpressionBuilderService |
+| Framework: Low-Code Admin UI — SAAR-ADMIN-001                | React frontend (extend SimpleExpressionBuilder.tsx, WorkflowDesigner, BankConfig UI), all framework services |
 | 8. Bills                                                      | Transaction Service, GL & Accounting       |
 | 9. Remittances                                                | Remittance & Payment Service, Card & ATM Service |
 | 10. Interest and Fee Calculation                              | Interest & Fee Service, Deposit Service, GL & Accounting, Compliance Service |
