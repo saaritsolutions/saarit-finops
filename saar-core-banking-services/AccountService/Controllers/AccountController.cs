@@ -729,5 +729,64 @@ namespace AccountService.Controllers
             _logger.LogInformation("Account {Id} ({No}) unfrozen.", id, account.AccountNumber);
             return Ok(new { accountId = account.AccountId, accountNumber = account.AccountNumber, status = account.Status });
         }
+
+        // ── SAAR-EXPR-001: POST /api/account/{id}/calculate-fee ──────────────────
+        /// <summary>
+        /// Calculates and charges the monthly account maintenance fee.
+        /// Evaluates EXPR_AMC_FEE_UCB (FeeCalculation category) via ExpressionBuilderService.
+        /// Falls back to ₹50 (savings) / ₹100 (current) if expression service is unavailable.
+        /// Fee = 0 → waived; fee > 0 → debit posted via TransactionService.
+        /// </summary>
+        [HttpPost("{id}/calculate-fee")]
+        public async Task<ActionResult<object>> CalculateMaintenanceFee(
+            int id, [FromBody] CalculateFeeRequest? req)
+        {
+            var account = await _context.Accounts
+                .Include(a => a.ProductType)
+                .FirstOrDefaultAsync(a => a.AccountId == id);
+            if (account == null) return NotFound();
+            if (account.DateClosed != null) return BadRequest("Account is closed.");
+            if (account.Status == "Frozen")  return BadRequest("Account is frozen.");
+
+            var accountType  = account.ProductType?.Name?.ToUpper() ?? "SAVINGS";
+            var accountAge   = (int)((DateTime.UtcNow - account.DateOpened).TotalDays / 30);
+            var customerSeg  = req?.CustomerSegment ?? "REGULAR";
+            var minBalance   = account.ProductType?.MinimumOpeningAmount ?? 0m;
+            var avgBalance   = account.Balance; // proxy: use current balance as monthly average
+
+            var fee = await _expressions.CalculateMaintenanceFeeAsync(
+                avgBalance, accountType, accountAge, customerSeg, minBalance);
+
+            if (fee <= 0m)
+            {
+                _logger.LogInformation(
+                    "AMC waived for account {Id} ({No}) — segment={Seg}.",
+                    id, account.AccountNumber, customerSeg);
+                return Ok(new { accountId = id, fee = 0m, applied = false });
+            }
+
+            var postedBy = User?.Identity?.Name ?? "system";
+            var result   = await _transactions.PostMaintenanceFeeAsync(
+                account.AccountNumber, fee, postedBy);
+
+            if (!result.Success)
+            {
+                _logger.LogWarning(
+                    "Failed to post AMC journal for account {Id}: {Err}", id, result.Error);
+                return StatusCode(503, new { error = "Fee calculated but could not post journal.", fee });
+            }
+
+            _logger.LogInformation(
+                "AMC ₹{Fee} charged for account {Id} ({No}) — journal {JN}.",
+                fee, id, account.AccountNumber, result.JournalNumber);
+            return Ok(new { accountId = id, fee, applied = true, journalNumber = result.JournalNumber });
+        }
+    }
+
+    /// <summary>Request body for POST /api/account/{id}/calculate-fee.</summary>
+    public class CalculateFeeRequest
+    {
+        /// <summary>Customer segment for fee waiver logic: REGULAR / PRIORITY / SENIOR_CITIZEN / STAFF</summary>
+        public string CustomerSegment { get; set; } = "REGULAR";
     }
 }

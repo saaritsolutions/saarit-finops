@@ -311,6 +311,74 @@ public class ExpressionSeedService
                             "\"1020|1010\"",
             tags: new[] { "gl-mapping", "loan", "disbursal", "double-entry" }
         ),
+
+        // ── 18. DAILY TRANSACTION LIMIT CHECK (SAAR-EXPR-001 / TransactionService) ──
+        Def(
+            expressionId: "EXPR_DAILY_LIMIT_CHECK",
+            name: "Daily Transaction Limit Check (UCB Default)",
+            description: "Returns true if the journal debit amount is within the bank's per-transaction limit. " +
+                         "UCB default: ₹2,00,000 per transaction. Edit this expression to change the limit " +
+                         "without any code deployment. Variable: amount = total debit amount (₹).",
+            category: "TransactionLimit",
+            usageType: "Validation",
+            returnType: "boolean",
+            contextType: "Transaction",
+            expressionText: "amount <= 200000m",
+            tags: new[] { "transaction", "limit", "ucb", "daily-limit", "pmla" }
+        ),
+
+        // ── 19. CTR TRIGGER — Cash Transaction Report (SAAR-EXPR-001 / TransactionService) ──
+        Def(
+            expressionId: "EXPR_CTR_TRIGGER",
+            name: "Cash Transaction Report (CTR) Trigger",
+            description: "Returns true if the transaction amount triggers an RBI CTR filing requirement. " +
+                         "RBI mandate: cash transactions ≥ ₹10,00,000 in a single transaction. " +
+                         "Variable: cashAmount = total debit/credit amount (₹).",
+            category: "ComplianceTrigger",
+            usageType: "Compliance",
+            returnType: "boolean",
+            contextType: "Transaction",
+            expressionText: "cashAmount >= 1000000m",
+            tags: new[] { "ctr", "compliance", "rbi", "cash", "pmla", "aml" }
+        ),
+
+        // ── 20. ACCOUNT MAINTENANCE CHARGE (SAAR-EXPR-001 / AccountService) ──
+        Def(
+            expressionId: "EXPR_AMC_FEE_UCB",
+            name: "Account Maintenance Charge (UCB Default)",
+            description: "Returns the monthly account maintenance fee (₹) based on average balance, " +
+                         "account type, and customer segment. Senior citizens and staff are always waived. " +
+                         "Accounts above minimum balance threshold are waived. " +
+                         "Variables: customerSegment, averageMonthlyBalance, minimumBalanceRequired, accountType.",
+            category: "FeeCalculation",
+            usageType: "Calculation",
+            returnType: "decimal",
+            contextType: "Account",
+            expressionText: "customerSegment == \"SENIOR_CITIZEN\" || customerSegment == \"STAFF\" ? 0m : " +
+                            "averageMonthlyBalance >= minimumBalanceRequired ? 0m : " +
+                            "accountType == \"SAVINGS\" ? 50m : 100m",
+            tags: new[] { "fee", "amc", "account-maintenance", "savings", "current", "ucb" }
+        ),
+
+        // ── 21. NPA CLASSIFICATION — RBI IRACP Norms (SAAR-EXPR-001) ──
+        Def(
+            expressionId: "EXPR_NPA_CLASSIFICATION",
+            name: "NPA Classification (RBI IRACP Norms)",
+            description: "Returns the NPA category for an overdue loan account per RBI Income Recognition " +
+                         "and Asset Classification (IRACP) norms. " +
+                         "Standard → Special Mention (1–30 days) → Sub-Standard (31–90 days) → " +
+                         "Doubtful (91–365 days) → Loss (>365 days). " +
+                         "Variable: daysOverdue = number of days since payment was due.",
+            category: "NPAClassification",
+            usageType: "Compliance",
+            returnType: "string",
+            contextType: "LoanApplication",
+            expressionText: "daysOverdue == 0 ? \"STANDARD\" : " +
+                            "daysOverdue <= 30 ? \"SPECIAL_MENTION\" : " +
+                            "daysOverdue <= 90 ? \"SUB_STANDARD\" : " +
+                            "daysOverdue <= 365 ? \"DOUBTFUL\" : \"LOSS\"",
+            tags: new[] { "npa", "classification", "rbi", "iracp", "compliance", "loan" }
+        ),
     };
 
     // ──────────────────────────────────────────────────────────

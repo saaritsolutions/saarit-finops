@@ -300,7 +300,26 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - Cypress E2E Tests (smoke + regression): ✅ 8m 05s
   - Commit pushed: ad906f6 → main
 
+## Completed (continued)
+- SAAR-EXPR-001 — Expression engine wired to AccountService + TransactionService (session 34, 2026-04-19):
+  - **4 new seed expressions** added to ExpressionSeedService: `EXPR_DAILY_LIMIT_CHECK` (TransactionLimit),
+    `EXPR_CTR_TRIGGER` (ComplianceTrigger), `EXPR_AMC_FEE_UCB` (FeeCalculation), `EXPR_NPA_CLASSIFICATION` (NPAClassification)
+  - **TransactionService TP-TXN-001 (daily limit)**: `PostingEngine.PostAsync` now calls `EXPR_DAILY_LIMIT_CHECK`
+    before posting — returns HTTP 422 if expression returns `false`. Fail-open: if expression service is unreachable,
+    journal posts anyway. Feature flag: `FeatureFlags:EnableExpressions`.
+  - **TransactionService TP-TXN-002 (CTR)**: Fire-and-forget `CheckCtrThresholdAsync` evaluates `EXPR_CTR_TRIGGER`
+    post-posting and creates `ComplianceAlert` (CTR/PENDING) when ₹10L+ cash transaction detected.
+  - **ComplianceAlert entity**: New model + `DbSet` in `TransactionDbContext` + EF migration `AddComplianceAlerts`
+    (schema qualifiers stripped for multi-tenancy). New `ComplianceController` exposes `GET/PATCH /api/compliance/alerts`.
+  - **AccountService TP-ACC-002 (AMC fee)**: `CalculateMaintenanceFeeAsync` added to `IExpressionEvaluationService`
+    — looks up latest `FeeCalculation` expression, evaluates it, falls back to ₹50/₹100 if unavailable.
+    New endpoint `POST /api/account/{id}/calculate-fee` charges AMC via `PostMaintenanceFeeAsync` in TransactionServiceClient.
+  - **9 new unit tests** (all green): 4 expression trigger tests in TransactionService.Tests; 5 AMC service tests in
+    AccountService.Tests. Old `PostingEngine` tests fixed for constructor signature change (3 new DI params).
+  - Total test counts: TransactionService 20/20 ✅, AccountService 24/24 ✅
+
 ## Pending Next
+- SAAR-EXPR-001 Hetzner deploy: `docker compose up --build -d transactionservice accountservice expressionbuilder` after push
 - E2E smoke: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog shows debit/credit lines on demobank.saaritsolutions.com
 
 ## Notes

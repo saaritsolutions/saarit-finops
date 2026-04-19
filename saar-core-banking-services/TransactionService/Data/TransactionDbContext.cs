@@ -33,6 +33,9 @@ namespace TransactionService.Data
         public DbSet<ChartOfAccount> ChartOfAccounts { get; set; }
         public DbSet<LedgerBalance> LedgerBalances { get; set; }
 
+        // ── Compliance tables (SAAR-EXPR-001) ───────────────────────────────
+        public DbSet<ComplianceAlert> ComplianceAlerts { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -87,6 +90,21 @@ namespace TransactionService.Data
                 e.HasIndex(b => b.AccountCode).IsUnique();
                 e.Property(b => b.DebitTotal).HasPrecision(18, 2);
                 e.Property(b => b.CreditTotal).HasPrecision(18, 2);
+            });
+
+            // ── ComplianceAlert (SAAR-EXPR-001) ──────────────────────────────
+            modelBuilder.Entity<ComplianceAlert>(e =>
+            {
+                e.HasKey(a => a.Id);
+                e.Property(a => a.AlertType).IsRequired().HasMaxLength(10);
+                e.Property(a => a.JournalNumber).IsRequired().HasMaxLength(30);
+                e.Property(a => a.ReferenceId).HasMaxLength(100);
+                e.Property(a => a.Status).IsRequired().HasMaxLength(20);
+                e.Property(a => a.TriggerAmount).HasPrecision(18, 2);
+                e.Property(a => a.ReviewedBy).HasMaxLength(100);
+                e.Property(a => a.ReviewNotes).HasMaxLength(500);
+                e.HasIndex(a => new { a.AlertType, a.Status });
+                e.HasIndex(a => a.JournalNumber);
             });
         }
 

@@ -11,7 +11,18 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **E2E live smoke**: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog | Last unverified piece — confirm journal drill-down works on live site |
+| 1 | **Hetzner deploy SAAR-EXPR-001**: rebuild transactionservice + accountservice + expressionbuilder | ComplianceAlerts migration must run on server; new seeds must load |
+| 2 | **E2E live smoke**: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog | Last unverified piece — confirm journal drill-down works on live site |
+| 3 | **SAAR-EXPR-002 planning**: STR trigger + interest rate override + TransactionService fee expressions | Next framework gap from FRAMEWORK_GAP_BACKLOG.md |
+
+### Recently Completed (session 34 — 2026-04-19)
+- [x] **SAAR-EXPR-001 complete — Expression engine wired to AccountService + TransactionService**:
+  - 4 new expressions seeded: EXPR_DAILY_LIMIT_CHECK, EXPR_CTR_TRIGGER, EXPR_AMC_FEE_UCB, EXPR_NPA_CLASSIFICATION
+  - TransactionService: PostingEngine calls EXPR_DAILY_LIMIT_CHECK (fail-422 on block, fail-open when service down)
+  - TransactionService: CheckCtrThresholdAsync (fire-and-forget CTR alert creation via EXPR_CTR_TRIGGER)
+  - ComplianceAlert entity + EF migration AddComplianceAlerts (schema qualifiers stripped) + ComplianceController
+  - AccountService: CalculateMaintenanceFeeAsync + POST /api/account/{id}/calculate-fee + PostMaintenanceFeeAsync
+  - 9 new unit tests; all existing tests preserved. TransactionService 20/20 ✅, AccountService 24/24 ✅
 
 ### Recently Completed (session 32 — 2026-04-18)
 - [x] **CI all green — push to main** (ad906f6 → main):

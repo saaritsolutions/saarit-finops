@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using System.Net.Http.Json;
+using System.Text.Json;
 using TransactionService.Data;
 using TransactionService.Models;
 
@@ -40,14 +42,25 @@ namespace TransactionService.Services
     {
         private readonly TransactionDbContext _db;
         private readonly ILogger<PostingEngine> _logger;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IConfiguration _config;
+        private readonly IServiceScopeFactory _scopeFactory;
 
         // Thread-safe sequence for JournalNumber generation (resets on service restart; fine for demo)
         private static long _seq = 0;
 
-        public PostingEngine(TransactionDbContext db, ILogger<PostingEngine> logger)
+        public PostingEngine(
+            TransactionDbContext db,
+            ILogger<PostingEngine> logger,
+            IHttpClientFactory httpClientFactory,
+            IConfiguration config,
+            IServiceScopeFactory scopeFactory)
         {
             _db = db;
             _logger = logger;
+            _httpClientFactory = httpClientFactory;
+            _config = config;
+            _scopeFactory = scopeFactory;
         }
 
         public async Task<Journal> PostAsync(PostJournalRequest request, CancellationToken ct = default)
@@ -75,6 +88,50 @@ namespace TransactionService.Services
                 throw new InvalidOperationException(
                     $"Journal is imbalanced: debits={totalDebits:N2} ≠ credits={totalCredits:N2}. " +
                     "Every journal entry must satisfy debits = credits.");
+
+            // ── Expression limit check (fail-open) ───────────────────────────
+            if (_config.GetValue<bool>("FeatureFlags:EnableExpressions"))
+            {
+                try
+                {
+                    var exprClient = _httpClientFactory.CreateClient("ExpressionBuilder");
+                    var limitReq = new
+                    {
+                        ExpressionId = "EXPR_DAILY_LIMIT_CHECK",
+                        Variables = new Dictionary<string, object> { ["amount"] = totalDebits }
+                    };
+                    var limitResp = await exprClient.PostAsJsonAsync(
+                        "/api/expression-engine/execute", limitReq, ct);
+                    if (limitResp.IsSuccessStatusCode)
+                    {
+                        var result = await limitResp.Content
+                            .ReadFromJsonAsync<ExprEvalResult>(cancellationToken: ct);
+                        if (result?.Success == true)
+                        {
+                            var allowed = result.Result switch
+                            {
+                                bool b => b,
+                                JsonElement je when je.ValueKind == JsonValueKind.True  => true,
+                                JsonElement je when je.ValueKind == JsonValueKind.False => false,
+                                JsonElement je when je.ValueKind == JsonValueKind.String
+                                    => !string.Equals(je.GetString(), "false",
+                                        StringComparison.OrdinalIgnoreCase),
+                                _ => true
+                            };
+                            if (!allowed)
+                                throw new InvalidOperationException(
+                                    $"Transaction of ₹{totalDebits:N2} exceeds the bank's transaction limit. " +
+                                    "Update EXPR_DAILY_LIMIT_CHECK in the Expression Builder to change this limit.");
+                        }
+                    }
+                }
+                catch (InvalidOperationException) { throw; }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex,
+                        "Expression limit check failed (fail-open) — journal will be posted anyway.");
+                }
+            }
 
             // ── Resolve account names from ChartOfAccounts ───────────────────
             var codes = request.Entries.Select(e => e.AccountCode).Distinct().ToList();
@@ -135,7 +192,64 @@ namespace TransactionService.Services
                 journal.ReferenceType, journal.ReferenceId ?? "-",
                 totalDebits, journal.PostedBy);
 
+            // ── Fire-and-forget CTR check (non-blocking, post-posting) ──────��
+            _ = CheckCtrThresholdAsync(journal, totalDebits);
+
             return journal;
+        }
+
+        /// <summary>
+        /// Evaluates EXPR_CTR_TRIGGER via ExpressionBuilderService and creates a ComplianceAlert
+        /// if the transaction amount meets the RBI Cash Transaction Report threshold (default ₹10L).
+        /// Runs fire-and-forget — never blocks or fails the journal post.
+        /// </summary>
+        private async Task CheckCtrThresholdAsync(Journal journal, decimal amount)
+        {
+            if (!_config.GetValue<bool>("FeatureFlags:EnableExpressions")) return;
+            try
+            {
+                var exprClient = _httpClientFactory.CreateClient("ExpressionBuilder");
+                var req = new
+                {
+                    ExpressionId = "EXPR_CTR_TRIGGER",
+                    Variables = new Dictionary<string, object> { ["cashAmount"] = amount }
+                };
+                var resp = await exprClient.PostAsJsonAsync("/api/expression-engine/execute", req);
+                if (!resp.IsSuccessStatusCode) return;
+
+                var result = await resp.Content.ReadFromJsonAsync<ExprEvalResult>();
+                var triggered = result?.Success == true && result.Result switch
+                {
+                    bool b => b,
+                    JsonElement je when je.ValueKind == JsonValueKind.True  => true,
+                    JsonElement je when je.ValueKind == JsonValueKind.String
+                        && string.Equals(je.GetString(), "true", StringComparison.OrdinalIgnoreCase) => true,
+                    _ => false
+                };
+
+                if (!triggered) return;
+
+                using var scope = _scopeFactory.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<TransactionDbContext>();
+                db.ComplianceAlerts.Add(new ComplianceAlert
+                {
+                    AlertType     = "CTR",
+                    JournalNumber = journal.JournalNumber,
+                    ReferenceId   = journal.ReferenceId ?? string.Empty,
+                    TriggerAmount = amount,
+                    Status        = "PENDING",
+                    CreatedAt     = DateTime.UtcNow,
+                });
+                await db.SaveChangesAsync();
+                _logger.LogInformation(
+                    "CTR alert created for journal {JN} — amount ₹{Amt:N2}.",
+                    journal.JournalNumber, amount);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "CTR check failed for journal {JN} (non-fatal).", journal.JournalNumber);
+            }
         }
 
         private async Task SaveJournalAndBalancesAsync(Journal journal, DateTime now, CancellationToken ct)
@@ -184,5 +298,13 @@ namespace TransactionService.Services
                      .Skip((page - 1) * pageSize)
                      .Take(pageSize)
                      .ToListAsync(ct);
+    }
+
+    // ── DTO for ExpressionBuilderService /api/expression-engine/execute response ──
+    internal sealed class ExprEvalResult
+    {
+        public bool    Success        { get; set; }
+        public object? Result         { get; set; }
+        public string? ErrorMessage   { get; set; }
     }
 }

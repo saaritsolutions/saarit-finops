@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-13 (session 31 — Cypress regression suite ALL GREEN 86/86)
+**Last Updated:** 2026-04-19 (session 34 — SAAR-EXPR-001 expression engine wired to AccountService + TransactionService)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -42,6 +42,11 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 - **Real JWT Auth** — UserAccessManagementService /api/auth/login endpoint, BCrypt seed users, JWT 8h (SCRUM-2,3,4)
 - **Double-entry Ledger Backend** — PostingEngine, idempotency, LedgerBalance, 16 unit tests (bab9b9c)
 - **Loan Wizard (M1 Complete)** — dynamic schema-driven form, EMI estimate, file upload, input masking
+- **Expression Engine Wired (SAAR-EXPR-001)** — ExpressionBuilderService now consumed by AccountService + TransactionService:
+  - TransactionService: journal posting calls EXPR_DAILY_LIMIT_CHECK (fail-open); CTR alert created via EXPR_CTR_TRIGGER (fire-and-forget)
+  - AccountService: EXPR_AMC_FEE_UCB evaluates maintenance fee; POST /api/account/{id}/calculate-fee charges via TransactionService
+  - ComplianceAlert entity + EF migration AddComplianceAlerts; ComplianceController (GET/PATCH /api/compliance/alerts)
+  - 4 seed expressions; 9 new unit tests; TransactionService 20/20, AccountService 24/24
 
 ### Partially Implemented
 - **LoanService** (~35%) — eligibility, interest rate, origination, workflow steps; disbursement missing

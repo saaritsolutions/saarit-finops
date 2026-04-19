@@ -1,5 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Net;
+using System.Text;
 using TransactionService.Data;
 using TransactionService.Services;
 
@@ -21,8 +24,30 @@ public class PostingEngineTests
         return new TransactionDbContext(opts);
     }
 
+    /// <summary>
+    /// Creates a PostingEngine with EnableExpressions=false (default for unit tests).
+    /// The httpClientFactory and scopeFactory are unused when expressions are disabled.
+    /// </summary>
     private static PostingEngine MakeEngine(TransactionDbContext db) =>
-        new PostingEngine(db, NullLogger<PostingEngine>.Instance);
+        new PostingEngine(
+            db,
+            NullLogger<PostingEngine>.Instance,
+            null!,   // httpClientFactory — not called when EnableExpressions=false
+            new ConfigurationBuilder().Build(),  // all flags default to false
+            null!);  // scopeFactory — not called when EnableExpressions=false
+
+    /// <summary>
+    /// Creates a PostingEngine with EnableExpressions=true and a supplied fake HttpClientFactory.
+    /// </summary>
+    private static PostingEngine MakeEngineWithExpressions(TransactionDbContext db, IHttpClientFactory factory) =>
+        new PostingEngine(
+            db,
+            NullLogger<PostingEngine>.Instance,
+            factory,
+            new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?> { ["FeatureFlags:EnableExpressions"] = "true" })
+                .Build(),
+            null!);  // scopeFactory — CTR check runs fire-and-forget; null is safe in tests
 
     private static PostJournalRequest LoanDisbursement(string key = "KEY-001", decimal amount = 100_000m) =>
         new PostJournalRequest
@@ -303,5 +328,166 @@ public class PostingEngineTests
         Assert.That(journal.Entries.Sum(e => e.DebitAmount),
                     Is.EqualTo(journal.Entries.Sum(e => e.CreditAmount)));
         Assert.That(journal.Entries, Has.Count.EqualTo(3));
+    }
+}
+
+// ── Expression trigger tests (SAAR-EXPR-001) ──────────────────────────────────
+
+/// <summary>
+/// Tests for PostingEngine expression evaluation (TP-TXN-001: daily limit check).
+/// Uses a fake HttpMessageHandler to control ExpressionBuilderService responses.
+/// </summary>
+public class PostingEngineExpressionTests
+{
+    private static TransactionDbContext MakeDb(string name)
+    {
+        var opts = new DbContextOptionsBuilder<TransactionDbContext>()
+            .UseInMemoryDatabase(name)
+            .Options;
+        return new TransactionDbContext(opts);
+    }
+
+    /// <summary>Creates an IHttpClientFactory that always returns the given JSON body with the given status code.</summary>
+    private static IHttpClientFactory MakeFactory(string responseJson, HttpStatusCode status = HttpStatusCode.OK)
+    {
+        var handler = new FakeHttpHandler(responseJson, status);
+        var client  = new HttpClient(handler) { BaseAddress = new Uri("http://localhost:5004/") };
+        return new SingletonHttpClientFactory(client);
+    }
+
+    private static PostJournalRequest SmallJournal(decimal amount = 10_000m) => new PostJournalRequest
+    {
+        IdempotencyKey = $"TEST-{Guid.NewGuid()}",
+        Description    = "Test journal",
+        ReferenceType  = "Test",
+        PostedBy       = "unit-test",
+        Entries        = new()
+        {
+            new() { AccountCode = "1020", DebitAmount  = amount, CreditAmount = 0m },
+            new() { AccountCode = "2010", DebitAmount  = 0m,     CreditAmount = amount },
+        }
+    };
+
+    [Test]
+    public async Task PostAsync_BlocksTransaction_WhenExpressionReturnsFalse()
+    {
+        // Expression service returns { "success": true, "result": false } → block
+        var json    = """{"success":true,"result":false}""";
+        var factory = MakeFactory(json);
+        using var db = MakeDb(nameof(PostAsync_BlocksTransaction_WhenExpressionReturnsFalse));
+        var engine  = new PostingEngine(
+            db,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<PostingEngine>.Instance,
+            factory,
+            new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?> { ["FeatureFlags:EnableExpressions"] = "true" })
+                .Build(),
+            null!);
+
+        var ex = Assert.ThrowsAsync<InvalidOperationException>(
+            () => engine.PostAsync(SmallJournal(250_000m)));
+
+        Assert.That(ex!.Message, Does.Contain("transaction limit"));
+    }
+
+    [Test]
+    public async Task PostAsync_AllowsTransaction_WhenExpressionReturnsTrue()
+    {
+        // Expression service returns { "success": true, "result": true } → allow
+        var json    = """{"success":true,"result":true}""";
+        var factory = MakeFactory(json);
+        using var db = MakeDb(nameof(PostAsync_AllowsTransaction_WhenExpressionReturnsTrue));
+        var engine  = new PostingEngine(
+            db,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<PostingEngine>.Instance,
+            factory,
+            new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?> { ["FeatureFlags:EnableExpressions"] = "true" })
+                .Build(),
+            null!);
+
+        var journal = await engine.PostAsync(SmallJournal(50_000m));
+
+        Assert.That(journal.Status, Is.EqualTo("Posted"));
+    }
+
+    [Test]
+    public async Task PostAsync_FailsOpen_WhenExpressionServiceUnreachable()
+    {
+        // Expression service throws — journal should still post (fail-open policy)
+        var handler = new ThrowingHttpHandler();
+        var client  = new HttpClient(handler) { BaseAddress = new Uri("http://localhost:5004/") };
+        var factory = new SingletonHttpClientFactory(client);
+        using var db = MakeDb(nameof(PostAsync_FailsOpen_WhenExpressionServiceUnreachable));
+        var engine  = new PostingEngine(
+            db,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<PostingEngine>.Instance,
+            factory,
+            new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?> { ["FeatureFlags:EnableExpressions"] = "true" })
+                .Build(),
+            null!);
+
+        // Should NOT throw — fail-open policy
+        var journal = await engine.PostAsync(SmallJournal());
+
+        Assert.That(journal.Status, Is.EqualTo("Posted"));
+    }
+
+    [Test]
+    public async Task PostAsync_ExpressionDisabled_NeverCallsExpressionService()
+    {
+        // Feature flag off → expression service should not be called
+        var handler = new CountingHttpHandler();
+        var client  = new HttpClient(handler) { BaseAddress = new Uri("http://localhost:5004/") };
+        var factory = new SingletonHttpClientFactory(client);
+        using var db = MakeDb(nameof(PostAsync_ExpressionDisabled_NeverCallsExpressionService));
+        var engine  = new PostingEngine(
+            db,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<PostingEngine>.Instance,
+            factory,
+            new ConfigurationBuilder().Build(), // EnableExpressions = false
+            null!);
+
+        await engine.PostAsync(SmallJournal());
+
+        Assert.That(handler.CallCount, Is.EqualTo(0));
+    }
+
+    // ── Fake HTTP helpers ─────────────────────────────────────────────────────
+
+    private sealed class FakeHttpHandler : HttpMessageHandler
+    {
+        private readonly string     _json;
+        private readonly HttpStatusCode _status;
+        public FakeHttpHandler(string json, HttpStatusCode status = HttpStatusCode.OK)
+            => (_json, _status) = (json, status);
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage req, CancellationToken ct)
+            => Task.FromResult(new HttpResponseMessage(_status)
+               { Content = new StringContent(_json, Encoding.UTF8, "application/json") });
+    }
+
+    private sealed class ThrowingHttpHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage req, CancellationToken ct)
+            => throw new HttpRequestException("Simulated connection refused");
+    }
+
+    private sealed class CountingHttpHandler : HttpMessageHandler
+    {
+        public int CallCount { get; private set; }
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage req, CancellationToken ct)
+        {
+            CallCount++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+               { Content = new StringContent("""{"success":true,"result":true}""", Encoding.UTF8, "application/json") });
+        }
+    }
+
+    private sealed class SingletonHttpClientFactory : IHttpClientFactory
+    {
+        private readonly HttpClient _client;
+        public SingletonHttpClientFactory(HttpClient client) => _client = client;
+        public HttpClient CreateClient(string name) => _client;
     }
 }
