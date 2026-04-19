@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-19 (session 34 — SAAR-EXPR-001 expression engine wired to AccountService + TransactionService)
+**Last Updated:** 2026-04-19 (session 35 — SAAR-DFS-001 Dynamic Forms Service fully implemented)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -27,7 +27,7 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ### Completed / Working
 - **Loan Eligibility Check** — expression-based rules execute against applicant data; expression ID `EXPR_1755237353842` is active in dev
 - **Expression Builder UI** — create, edit, test, and browse banking rule expressions from the React frontend
-- **Dynamic Forms** — DynamicFieldsSchemaService returns a 7-field demo schema; frontend renders forms from schema
+- **Dynamic Forms (SAAR-DFS-001)** — DynamicFieldsSchemaService rebuilt as a production DB-backed service: 5 seed schemas (PERSONAL_LOAN, GOLD_LOAN, ACCOUNT_OPENING_SB, ACCOUNT_OPENING_FD, KYC_INDIVIDUAL), schema versioning + history, tenant-override fallback chain, field-level validation API; LoanService proxies to DFS
 - **AI-Assisted Rule Generation** — OpenAI GPT generates expressions and forms from natural language prompts
 - **Workflow Visualization** — WorkflowTimeline with SLA chips, status colours, retry button, expandable notes
 - **Customer Management UI** — full CRUD with PAN/Aadhaar validation (live at /customers)
@@ -147,6 +147,15 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 35 — 2026-04-19 (SAAR-DFS-001 Dynamic Forms Service fully implemented)
+- **DynamicFieldsSchemaService** rebuilt from a 7-field stub into a real multi-tenant DB-backed service.
+- **Models**: `FormSchema` + `FormSchemaHistory`. **DbContext**: `DynamicFormsDbContext` with `TenantModelCacheKeyFactory` (identical pattern to AccountService). **EF migration**: `AddFormSchemas` (schema qualifiers stripped for multi-tenancy).
+- **TenantSchemaProvisioner**: provisions `public`, `ucb_demo`, `nbfc_demo` schemas on startup. **TenantResolutionMiddleware**: resolves tenant from JWT `tenant_id` claim → `X-Tenant-ID` header → `"public"` fallback.
+- **FormSchemaSeedService** (IHostedService): seeds 5 schemas idempotently — PERSONAL_LOAN (12 fields, 3 sections), GOLD_LOAN (10 fields), ACCOUNT_OPENING_SB (10 fields), ACCOUNT_OPENING_FD (8 fields), KYC_INDIVIDUAL (8 fields). All include PAN/Aadhaar/mobile/pincode regex validation + Indian state dropdown.
+- **FormsController (6 endpoints)**: GET schema (tenant fallback), GET list (admin), PUT save+version+history, POST reset, GET history, POST validate.
+- **LoanService** updated: `DynamicFormsClient` rewritten — new `GetFormSchemaAsync` calls DFS API; `GetLoanFormSchemaAsync` kept as default interface method returning null (backwards-compat). `AdminConfigController` proxies GET/PUT to DFS when `EnableDynamicForms=true`.
+- **DynamicFieldsSchemaService.Tests**: 13/13 NUnit tests green (EF InMemory 9.0.6). Test project added to solution.
 
 ### Session 31 — 2026-04-13 (Cypress regression suite ALL GREEN — 86/86 passing)
 - **`env -i` Cypress breakthrough**: Cypress Electron binary can now run from Git Bash by stripping all MSYS/Cygwin environment variables. Command: `env -i PATH="C:\\Windows\\System32\\WindowsPowerShell\\v1.0;..." CYPRESS_BASE_URL="http://localhost:3002" node ./node_modules/cypress/bin/cypress run --spec "..."`. Need PowerShell in PATH so Cypress can spawn `powershell.exe` for browser detection. This permanently resolves the "Cypress CANNOT run from Git Bash" limitation.

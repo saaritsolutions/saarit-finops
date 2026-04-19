@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-18 (session 32 — CI all green, push to main confirmed)
+**Last Updated:** 2026-04-19 (session 35 — SAAR-DFS-001 complete)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,19 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Hetzner deploy SAAR-EXPR-001**: rebuild transactionservice + accountservice + expressionbuilder | ComplianceAlerts migration must run on server; new seeds must load |
+| 1 | **Hetzner deploy (SAAR-EXPR-001 + SAAR-DFS-001)**: rebuild transactionservice + accountservice + expressionbuilder + dynamicfields | ComplianceAlerts migration + new DFS tables must run on server; new seeds must load |
 | 2 | **E2E live smoke**: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog | Last unverified piece — confirm journal drill-down works on live site |
-| 3 | **SAAR-EXPR-002 planning**: STR trigger + interest rate override + TransactionService fee expressions | Next framework gap from FRAMEWORK_GAP_BACKLOG.md |
+| 3 | **SAAR-DFS-002 planning**: React Form Builder UI — drag-and-drop builder persisting schemas to DFS via PUT /api/forms/{formType} | Next step on DFS backlog — makes dynamic forms configurable from the UI without dev involvement |
+
+### Recently Completed (session 35 — 2026-04-19)
+- [x] **SAAR-DFS-001 complete — Dynamic Forms Service fully implemented**:
+  - DynamicFieldsSchemaService rebuilt from 7-field stub → production DB-backed multi-tenant service
+  - FormSchema + FormSchemaHistory entities; EF migration AddFormSchemas (schema qualifiers stripped)
+  - TenantSchemaProvisioner + TenantResolutionMiddleware (mirrors AccountService pattern)
+  - FormSchemaSeedService: 5 schemas seeded at startup (PERSONAL_LOAN, GOLD_LOAN, ACCOUNT_OPENING_SB, ACCOUNT_OPENING_FD, KYC_INDIVIDUAL)
+  - 6 endpoints: GET schema (fallback chain), list, save+version+history, reset, history, validate
+  - LoanService: DynamicFormsClient rewritten; AdminConfigController proxies to DFS when EnableDynamicForms=true
+  - DynamicFieldsSchemaService.Tests: 13/13 NUnit tests green; project added to solution
 
 ### Recently Completed (session 34 — 2026-04-19)
 - [x] **SAAR-EXPR-001 complete — Expression engine wired to AccountService + TransactionService**:
