@@ -293,6 +293,17 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
 - (none)
 
 ## Completed (continued)
+- SAAR-DFS-001 — Dynamic Forms Service rebuilt (session 35, 2026-04-19):
+  - **DynamicFieldsSchemaService** upgraded from a 7-field demo stub to a production-quality DB-backed service
+  - **Full multi-tenancy**: TenantResolutionMiddleware, TenantModelCacheKeyFactory, HasDefaultSchema, TenantSchemaProvisioner (mirrors AccountService pattern)
+  - **FormSchema + FormSchemaHistory** entities; EF migration `AddFormSchemas` (schema qualifiers stripped)
+  - **FormSchemaSeedService** (IHostedService): seeds 5 schemas at startup — PERSONAL_LOAN (12 fields), GOLD_LOAN (10), ACCOUNT_OPENING_SB (10), ACCOUNT_OPENING_FD (8), KYC_INDIVIDUAL (8). Each schema has sections, PAN/Aadhaar/mobile/pincode regex validation, Indian state dropdowns
+  - **6 API endpoints**: `GET /api/forms/{formType}` (tenant fallback chain → public → 404), `GET /api/forms` (admin list), `PUT /api/forms/{formType}` (save + version increment + history), `POST /api/forms/{formType}/reset` (drop tenant override), `GET /api/forms/{formType}/history` (paginated), `POST /api/forms/validate` (field-level validation: required, min/max, maxLength, regex)
+  - **LoanService** updated: `DynamicFormsClient.GetFormSchemaAsync` calls new DFS API; `GetLoanFormSchemaAsync` kept as default interface method (backwards-compat for LoanOriginationController); `AdminConfigController` proxies PUT/GET to DFS when `EnableDynamicForms=true`
+  - **DynamicFieldsSchemaService.Tests** (13/13 tests green): schema fallback chain, 404 on unknown, case-insensitive, save/version/history/deactivation, validate required/range/regex/unknown-field-warning
+  - Test project bumped to EF InMemory 9.0.6 to match production service (NU1605 prevention)
+
+## Completed (continued)
 - CI fully green — all 4 workflows pass (session 32, 2026-04-18):
   - CI (backend tests): ✅ 2m 37s
   - Full Stack CI/CD: ✅ 3m 50s
@@ -319,8 +330,9 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - Total test counts: TransactionService 20/20 ✅, AccountService 24/24 ✅
 
 ## Pending Next
-- SAAR-EXPR-001 Hetzner deploy: `docker compose up --build -d transactionservice accountservice expressionbuilder` after push
+- Hetzner deploy (SAAR-EXPR-001 + SAAR-DFS-001): `docker compose up --build -d transactionservice accountservice expressionbuilder dynamicfields` after push
 - E2E smoke: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog shows debit/credit lines on demobank.saaritsolutions.com
+- SAAR-DFS-002: React Form Builder UI — drag-and-drop form builder that persists schemas to DynamicFieldsSchemaService via PUT /api/forms/{formType}
 
 ## Notes
 - Eligibility expression ID currently in use: EXPR_1755237353842.
