@@ -95,3 +95,61 @@ LoanAccount (post-disbursement)
 - Section 11: NPA classification (RBI IRAC norms)
 - Section 11.1: Sub-Standard, Doubtful, Loss categories
 - Section 11.2: Provision creation per RBI norms
+
+---
+
+## Gold Loan Sub-Module (SAAR-GL-001 — Session 33+)
+
+**Architectural Pattern:** Sub-module within LoanService (ADR-013)
+**Folder:** `Models/Gold/`, `Controllers/Gold/`, `Services/Gold/`
+
+### Additional Entities
+| Entity | Relationship | Purpose |
+|---|---|---|
+| GoldLoanDetails | 1:1 with LoanApplication | Scheme, tenure, appraiser, vault location, pledge totals |
+| GoldPledgeItem | 1:N with GoldLoanDetails | Individual ornament: weight, purity, valued amount |
+| GoldRateMaster | Standalone (per tenant) | Daily IBJA 22K rate log |
+| MarginCall | 1:N with GoldLoanDetails | LTV breach events (Phase 3) |
+| AuctionNotice | 1:N with GoldLoanDetails | RBI-mandated 14-day auction notices (Phase 4) |
+
+### Gold Loan API Endpoints
+| Method | Path | Description |
+|---|---|---|
+| POST | `/api/gold-loan/applications` | Create gold loan (LoanApplication + GoldLoanDetails) |
+| GET | `/api/gold-loan/applications` | List gold loans with pledge totals and LTV |
+| GET | `/api/gold-loan/applications/{id}` | Full detail: pledge items + margin calls + auction |
+| POST | `/api/gold-loan/applications/{id}/pledge-items` | Add pledge item (ornament/bar) |
+| DELETE | `/api/gold-loan/applications/{id}/pledge-items/{itemId}` | Remove pledge item (DRAFT only) |
+| POST | `/api/gold-loan/applications/{id}/sanction` | Sanction: verify LTV ≤ 75%, issue pledge receipt |
+| POST | `/api/gold-loan/applications/{id}/disburse` | Disburse: GL DR 1025 / CR 1010 |
+| POST | `/api/gold-loan/applications/{id}/repay` | Record repayment |
+| POST | `/api/gold-loan/applications/{id}/close` | Close: GL DR 1010 / CR 1025 + CR 4015, release gold |
+| POST | `/api/gold-loan/applications/{id}/margin-calls` | Create margin call (LTV breach) |
+| PATCH | `/api/gold-loan/margin-calls/{id}/respond` | Record customer margin call response |
+| POST | `/api/gold-loan/applications/{id}/auction-notices` | Issue 14-day auction notice |
+| POST | `/api/gold-loan/auction-notices/{id}/conduct` | Record auction outcome + GL |
+| GET | `/api/gold-loan/ltv-report` | LTV status of all active gold loans |
+| GET | `/api/gold-rate/today` | Get today's IBJA rate |
+| GET | `/api/gold-rate` | Rate history |
+| POST | `/api/gold-rate` | Admin: enter today's rate |
+
+### Gold Loan GL Accounts (New — added to TransactionService)
+| Code | Name | Type | Normal |
+|---|---|---|---|
+| 1025 | Gold Loans Outstanding | Asset | Debit |
+| 2050 | Gold in Custody | Liability | Credit |
+| 4015 | Gold Loan Interest Income | Income | Credit |
+| 5050 | Auction Expenses | Expense | Debit |
+
+### Gold Loan Lifecycle
+```
+DRAFT → SUBMITTED → APPRAISED → SANCTIONED → DISBURSED
+  → CLOSED (bullet repayment)
+  → MARGIN_CALL_OPEN → AUCTION_NOTICE_ISSUED → AUCTION_SETTLED
+```
+
+### RBI Regulatory Compliance
+- LTV cap 75% enforced at sanction (hard stop)
+- 14-day minimum auction notice period enforced in AuctionNotice entity
+- Auction proceeds surplus must be returned to borrower (tracked via SurplusReturnedAt)
+- Daily gold rate management for LTV monitoring
