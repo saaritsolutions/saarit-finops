@@ -97,6 +97,10 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:5013
       CORS__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-https://demobank.saaritsolutions.com}
+      ConnectionStrings__DefaultConnection: "Host=postgres;Database=DynamicFormsDb;Username=postgres;Password=${POSTGRES_PASSWORD:-saar_demo_2026}"
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - saar-net
 
