@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-19 (session 35 — SAAR-DFS-001 complete)
+**Last Updated:** 2026-04-21 (session 36 — SAAR-DFS-002 Form Builder UI complete)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,18 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Hetzner deploy (SAAR-EXPR-001 + SAAR-DFS-001)**: rebuild transactionservice + accountservice + expressionbuilder + dynamicfields | ComplianceAlerts migration + new DFS tables must run on server; new seeds must load |
+| 1 | **Hetzner deploy (SAAR-DFS-002)**: `docker compose up --build -d nginx frontend` | nginx /api/forms proxy block + rebuilt React with Form Builder |
 | 2 | **E2E live smoke**: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog | Last unverified piece — confirm journal drill-down works on live site |
-| 3 | **SAAR-DFS-002 planning**: React Form Builder UI — drag-and-drop builder persisting schemas to DFS via PUT /api/forms/{formType} | Next step on DFS backlog — makes dynamic forms configurable from the UI without dev involvement |
+| 3 | **Form Builder manual smoke**: load PERSONAL_LOAN → edit a label → save v2 → check History | Verify the full Form Builder flow on demobank.saaritsolutions.com |
+
+### Recently Completed (session 36 — 2026-04-21)
+- [x] **SAAR-DFS-002 complete — Form Builder UI implemented**:
+  - `SAAR_DFS_002_REQUIREMENTS.md`: JIRA-format requirement doc (9 FRs, 5 NFRs, 12-step test plan)
+  - `dynamicFormsService.ts`: typed fetch-based API client (list/get/save/reset/history) with auth-token header
+  - `FormBuilder.tsx`: 4-tab page — Schemas list, Field Editor (split pane: Accordion sections + ▲/▼ cards + property panel), Preview (SchemaForm reuse), History + View JSON dialog
+  - `AppRouter.tsx`: `/admin/form-builder` route, lazy-loaded, `SYSTEM_CONFIG` gated
+  - `Sidebar.tsx`: "Form Builder" entry with DynamicFormIcon under Administration
+  - `nginx/nginx.conf`: `/api/forms` → `dynamicfields:5013` proxy added
 
 ### Recently Completed (session 35 — 2026-04-19)
 - [x] **SAAR-DFS-001 complete — Dynamic Forms Service fully implemented**:

@@ -23,6 +23,7 @@ const SimpleExpressionBuilder = lazy(() => import('../pages/SimpleExpressionBuil
 const WorldClassExpressionBuilder = lazy(() => import('../pages/WorldClassExpressionBuilder'));
 const EndToEndDemo = lazy(() => import('../pages/EndToEndDemo'));
 const AIDynamicFormDesigner = lazy(() => import('../pages/AIDynamicFormDesigner'));
+const FormBuilder = lazy(() => import('../pages/FormBuilder'));
 const Unauthorized = lazy(() => import('../components/common/Unauthorized'));
 const NotFound = lazy(() => import('../components/common/NotFound'));
 
@@ -174,6 +175,9 @@ export const AppRouter: React.FC = () => {
           <Route
             path="admin/ai-form-designer"
             element={<ProtectedRoute requiredPermission={BANKING_PERMISSIONS.SYSTEM_CONFIG}><AIDynamicFormDesigner /></ProtectedRoute>} />
+          <Route
+            path="admin/form-builder"
+            element={<ProtectedRoute requiredPermission={BANKING_PERMISSIONS.SYSTEM_CONFIG}><FormBuilder /></ProtectedRoute>} />
           
           {/* Reports */}
           <Route
