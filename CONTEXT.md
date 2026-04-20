@@ -329,10 +329,20 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
     AccountService.Tests. Old `PostingEngine` tests fixed for constructor signature change (3 new DI params).
   - Total test counts: TransactionService 20/20 ✅, AccountService 24/24 ✅
 
+## Completed (continued)
+- SAAR-DFS-002 — Form Builder UI (session 36, 2026-04-21):
+  - **`dynamicFormsService.ts`** (new): typed API client for all 5 DFS endpoints (list, get, save, reset, history) using `auth-token` from localStorage
+  - **`FormBuilder.tsx`** (new, 4 tabs): Schemas table with Edit/History/Reset actions; Field Editor (split-pane — Accordion sections + FieldCard stack with ▲/▼/✕, right-side FieldPropertyEditor with conditional inputs for number/text/select types); Preview (reuses `SchemaForm` with `readonly=true`); History table with View JSON dialog
+  - **`AppRouter.tsx`**: lazy-loaded `/admin/form-builder` route gated by `BANKING_PERMISSIONS.SYSTEM_CONFIG`
+  - **`Sidebar.tsx`**: Form Builder entry with `DynamicFormIcon` under Administration section
+  - **`nginx/nginx.conf`**: added `/api/forms` location block → `dynamicfields:5013` (was only `/api/DynamicForm` before)
+  - **`SAAR_DFS_002_REQUIREMENTS.md`**: JIRA-format requirement doc with 9 FRs, 5 NFRs, 12-step test plan
+  - No new npm dependencies; no backend changes
+
 ## Pending Next
-- Hetzner deploy (SAAR-EXPR-001 + SAAR-DFS-001): `docker compose up --build -d transactionservice accountservice expressionbuilder dynamicfields` after push
+- Hetzner deploy (SAAR-DFS-002): `docker compose up --build -d nginx frontend` — picks up nginx /api/forms proxy + rebuilt React with Form Builder
 - E2E smoke: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog shows debit/credit lines on demobank.saaritsolutions.com
-- SAAR-DFS-002: React Form Builder UI — drag-and-drop form builder that persists schemas to DynamicFieldsSchemaService via PUT /api/forms/{formType}
+- SAAR-DFS-003 (future): drag-and-drop reorder, section create/delete, form type create/delete
 
 ## Notes
 - Eligibility expression ID currently in use: EXPR_1755237353842.

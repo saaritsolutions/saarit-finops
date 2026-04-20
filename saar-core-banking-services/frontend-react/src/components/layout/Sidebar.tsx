@@ -37,6 +37,7 @@ import {
   Code as ExpressionBuilderIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
+  DynamicForm as DynamicFormIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
@@ -162,6 +163,7 @@ const menuSections: MenuSection[] = [
           { id: 'workflow',          title: 'Workflow Management',   icon: <WorkflowIcon fontSize="small" />,         path: '/admin/workflow', permission: 'admin.workflow' },
           { id: 'expression-builder',title: 'Expression Builder',   icon: <ExpressionBuilderIcon fontSize="small" />,path: '/expressions',    permission: BANKING_PERMISSIONS.EXPRESSION_BUILDER },
           { id: 'end-to-end-demo',   title: 'End-to-End Demo',      icon: <TrendingUpIcon fontSize="small" />,        path: '/demo',           permission: BANKING_PERMISSIONS.EXPRESSION_BUILDER },
+          { id: 'form-builder',      title: 'Form Builder',         icon: <DynamicFormIcon fontSize="small" />,       path: '/admin/form-builder', permission: BANKING_PERMISSIONS.SYSTEM_CONFIG },
         ],
       },
     ],

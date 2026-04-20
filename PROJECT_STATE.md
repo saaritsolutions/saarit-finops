@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-19 (session 35 — SAAR-DFS-001 Dynamic Forms Service fully implemented)
+**Last Updated:** 2026-04-21 (session 36 — SAAR-DFS-002 Form Builder UI implemented)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -147,6 +147,15 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 36 — 2026-04-21 (SAAR-DFS-002 Form Builder UI)
+- **`dynamicFormsService.ts`** (new): typed `fetch`-based API client for all 5 DFS endpoints (list, get, save, reset, history). Uses `auth-token` from localStorage for Bearer auth.
+- **`FormBuilder.tsx`** (new, 4-tab page): Tab 0 = Schemas table (Edit/History/Reset per row); Tab 1 = Field Editor — split pane with MUI Accordion sections + `FieldCard` stack (▲/▼/✕) left + `FieldPropertyEditor` right (conditional Min/Max/MaxLength/Options/Regex inputs per field type); Tab 2 = Preview (reuses `SchemaForm` with `readonly=true`); Tab 3 = History table + View JSON dialog.
+- **`AppRouter.tsx`**: lazy-loaded `/admin/form-builder` route protected by `BANKING_PERMISSIONS.SYSTEM_CONFIG`.
+- **`Sidebar.tsx`**: "Form Builder" entry with `DynamicFormIcon` added to Administration children array.
+- **`nginx/nginx.conf`**: added `/api/forms` location block → `dynamicfields:5013` (was only `/api/DynamicForm`).
+- **`SAAR_DFS_002_REQUIREMENTS.md`**: JIRA-format requirement doc with 9 FRs (FR-FB-001 to 009), 5 NFRs, 12-step test plan.
+- No new npm dependencies; no backend changes.
 
 ### Session 35 — 2026-04-19 (SAAR-DFS-001 Dynamic Forms Service fully implemented)
 - **DynamicFieldsSchemaService** rebuilt from a 7-field stub into a real multi-tenant DB-backed service.
@@ -339,7 +348,10 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ## 6. Pending Work
 
 ### In Progress
-- **M4: Form builder MVP** — drag-and-drop form builder UI; persist schemas to DynamicFieldsSchemaService
+- **Hetzner deploy (SAAR-DFS-002)**: `docker compose up --build -d nginx frontend` — nginx /api/forms proxy + rebuilt React frontend with Form Builder page
+
+### Recently Completed
+- **M4: Form Builder (SAAR-DFS-002)** — 4-tab React page: schema list, field editor (▲/▼/property panel), preview, history. Deployed via PR #SAAR-DFS-002.
 
 ### Milestone Backlog (from CONTEXT.md)
 | Milestone | Description |
