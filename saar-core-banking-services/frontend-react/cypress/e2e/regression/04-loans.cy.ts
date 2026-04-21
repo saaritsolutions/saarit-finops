@@ -170,6 +170,15 @@ describe('[REGRESSION] Loan Management — New Loan Origination Form', () => {
     cy.intercept('POST', '**/api/loan/check-eligibility*', {
       body: { eligible: true, maxLoanAmount: 600000, reason: 'FOIR within limit' },
     }).as('eligibility');
+    // DFS-003: LoanOrigination fetches PERSONAL_LOAN schema on mount.
+    // Return empty fields so no Bank-Configured accordion appears — existing tests unaffected.
+    cy.intercept('GET', '**/api/forms/PERSONAL_LOAN*', {
+      body: {
+        formType: 'PERSONAL_LOAN', tenantId: 'ucb_demo', version: 1, isDefault: true,
+        updatedAt: new Date().toISOString(),
+        schema: JSON.stringify({ title: 'Personal Loan', fields: [], sections: [] }),
+      },
+    }).as('dfsSchema');
   });
 
   it('new loan page shows step 1: Personal Information', () => {

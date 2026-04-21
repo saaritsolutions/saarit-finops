@@ -71,6 +71,14 @@ Cypress.Commands.add('stubApis', () => {
   // Expressions
   cy.intercept('GET', '**/api/expressions*', { body: [] }).as('getExpressions');
   cy.intercept('GET', '**/api/Expressions*', { body: [] }).as('getExpressionsAlt');
+  // DFS — LoanOrigination fetches PERSONAL_LOAN schema on mount (SAAR-DFS-003)
+  cy.intercept('GET', '**/api/forms*', {
+    body: {
+      formType: 'PERSONAL_LOAN', tenantId: 'public', version: 1, isDefault: true,
+      updatedAt: new Date().toISOString(),
+      schema: JSON.stringify({ title: 'Personal Loan', fields: [], sections: [] }),
+    },
+  }).as('getDfsSchema');
   // Reports
   cy.intercept('GET', '**/api/reports*', { body: [] }).as('getReports');
 });
