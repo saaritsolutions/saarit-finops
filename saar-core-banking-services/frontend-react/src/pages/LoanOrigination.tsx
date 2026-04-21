@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Accordion, AccordionDetails, AccordionSummary,
   Alert, Box, Button, Card, CardContent, Checkbox, Chip,
   CircularProgress, Divider, FormControlLabel, Grid, IconButton,
   InputAdornment, LinearProgress, MenuItem, Radio,
   RadioGroup, Skeleton, Slider, Snackbar, Stack,
   TextField, Tooltip, Typography, useTheme,
 } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CheckCircleIcon     from '@mui/icons-material/CheckCircle';
 import CancelIcon          from '@mui/icons-material/Cancel';
 import WarningAmberIcon    from '@mui/icons-material/WarningAmber';
@@ -22,6 +24,9 @@ import ArrowBackIcon       from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon    from '@mui/icons-material/ArrowForward';
 import SendIcon            from '@mui/icons-material/Send';
 import PageHeader          from '../components/common/PageHeader';
+import SchemaForm          from '../components/forms/SchemaForm';
+import { dynamicFormsService } from '../services/dynamicFormsService';
+import type { DFSFormSchema } from '../services/dynamicFormsService';
 import {
   getLoanProducts, getDocumentChecklist, checkEligibility, calculateEMI,
   submitFullApplication,
@@ -330,6 +335,21 @@ const LOAN_PURPOSES = [
   'Debt Consolidation','Working Capital','Equipment Purchase','Other',
 ];
 
+// ── DFS integration constants ─────────────────────────────────────────────────
+// Fields already hardcoded in the form — custom DFS fields will exclude these
+const HARDCODED_DFS_FIELDS = new Set([
+  'fullName', 'dateOfBirth', 'panNumber', 'aadhaarNumber', 'email', 'phoneNumber',
+  'employmentType', 'monthlyIncome', 'employerName',
+  'loanAmount', 'loanTenureMonths', 'loanPurpose',
+]);
+
+// Maps DFS section key → wizard step index
+const DFS_SECTION_TO_STEP: Record<string, number> = {
+  applicant_details: 0,
+  employment_income: 1,
+  loan_details: 2,
+};
+
 // ── Main Component ────────────────────────────────────────────────────────────
 const LoanOrigination: React.FC = () => {
   const theme = useTheme();
@@ -350,6 +370,8 @@ const LoanOrigination: React.FC = () => {
   const eligTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadTarget, setUploadTarget]  = useState<string | null>(null);
+  const [dfsSchema,     setDfsSchema]    = useState<DFSFormSchema | null>(null);
+  const [customFields,  setCustomFields] = useState<Record<string, any>>({});
 
   const setField = useCallback((k: keyof FormState, v: any) =>
     setForm(f => ({ ...f, [k]: v })), []);
@@ -368,6 +390,13 @@ const LoanOrigination: React.FC = () => {
       .then(r => setChecklist(r.items))
       .catch(() => setChecklist([]));
   }, [form.productType]);
+
+  // ── Load DFS schema once on mount (additive custom fields) ───────────────
+  useEffect(() => {
+    dynamicFormsService.getSchema('PERSONAL_LOAN')
+      .then(res => setDfsSchema(JSON.parse(res.schema) as DFSFormSchema))
+      .catch(() => { /* DFS offline — custom fields simply not shown */ });
+  }, []);
 
   // ── Debounced eligibility check ──────────────────────────────────────────
   useEffect(() => {
@@ -563,6 +592,33 @@ const LoanOrigination: React.FC = () => {
     );
   }
 
+  // ── Bank-Configured Fields (DFS additive integration) ────────────────────
+  const BankConfiguredFields = ({ stepIndex }: { stepIndex: number }) => {
+    if (!dfsSchema) return null;
+    const customForStep = dfsSchema.fields.filter(f =>
+      !HARDCODED_DFS_FIELDS.has(f.name) &&
+      DFS_SECTION_TO_STEP[f.section ?? ''] === stepIndex
+    );
+    if (customForStep.length === 0) return null;
+    const partialSchema: DFSFormSchema = { ...dfsSchema!, fields: customForStep, sections: [] };
+    return (
+      <Accordion sx={{ mt: 2, border: '1px dashed', borderColor: 'divider' }}>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography variant="subtitle2" color="text.secondary">
+            Bank-Configured Fields ({customForStep.length})
+          </Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <SchemaForm
+            schema={partialSchema}
+            values={customFields}
+            onChange={(name, value) => setCustomFields(prev => ({ ...prev, [name]: value }))}
+          />
+        </AccordionDetails>
+      </Accordion>
+    );
+  };
+
   const selectedProduct = products.find(p => p.productCode === form.productType);
   const amount = parseFloat(form.requestedAmount) || 0;
   const months = parseInt(form.tenureMonths) || 36;
@@ -721,6 +777,7 @@ const LoanOrigination: React.FC = () => {
                 </Grid>
               </Box>
             )}
+            <BankConfiguredFields stepIndex={0} />
           </CardContent>
         </Card>
       )}
@@ -840,6 +897,7 @@ const LoanOrigination: React.FC = () => {
                 })()}
               </Box>
             )}
+            <BankConfiguredFields stepIndex={1} />
           </CardContent>
         </Card>
       )}
@@ -945,6 +1003,7 @@ const LoanOrigination: React.FC = () => {
                     </Grid>
                   </Box>
                 )}
+                <BankConfiguredFields stepIndex={2} />
               </CardContent>
             </Card>
           </Grid>
@@ -1190,6 +1249,24 @@ const LoanOrigination: React.FC = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* Bank-Configured Fields summary */}
+          {dfsSchema && Object.keys(customFields).length > 0 && (
+            <Card sx={{ border: `1px solid ${SLATE_200}`, borderRadius: 2 }}>
+              <CardContent sx={{ p: 3 }}>
+                <SectionHeader icon={<ExpandMoreIcon />} title="Bank-Configured Fields" />
+                {dfsSchema.fields
+                  .filter(f => !HARDCODED_DFS_FIELDS.has(f.name) && customFields[f.name] !== undefined)
+                  .map(f => (
+                    <Stack key={f.name} direction="row" justifyContent="space-between" sx={{ mb: 1 }}>
+                      <Typography sx={{ fontSize: '0.75rem', color: SLATE_500 }}>{f.label}</Typography>
+                      <Typography sx={{ fontSize: '0.8125rem', fontWeight: 500 }}>{String(customFields[f.name])}</Typography>
+                    </Stack>
+                  ))
+                }
+              </CardContent>
+            </Card>
+          )}
         </Stack>
       )}
 

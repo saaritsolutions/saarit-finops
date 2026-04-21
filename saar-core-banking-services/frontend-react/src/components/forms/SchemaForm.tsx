@@ -99,6 +99,8 @@ const renderField = (f: FormField, val: any, onChange: (n: string, v: any) => vo
           ))}
         </TextField>
       );
+    case 'textarea':
+      return <TextField multiline minRows={3} {...common} />;
     default:
       return <TextField {...common} />;
   }

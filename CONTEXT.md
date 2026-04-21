@@ -346,10 +346,24 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - Fix (61e12e2): loop over all KnownTenants (public/ucb_demo/nbfc_demo) using `StaticTenantService` + tenant connection string (pattern from TenantSchemaProvisioner)
   - Verified: 5 seeds in each of 3 schemas; list and get endpoints work for authenticated UCB user; nginx /api/forms proxy confirmed live
 
+## Completed (continued)
+- SAAR-DFS-003 — Wire DFS into LoanOrigination (Additive) (session 38, 2026-04-21):
+  - **`SAAR_DFS_003_REQUIREMENTS.md`**: JIRA-format requirement doc (8 FRs, 4 NFRs, 10-step test plan + offline resilience check)
+  - **`SchemaForm.tsx`**: Added `textarea` case to `renderField` switch — `<TextField multiline minRows={3} {...common} />` — was missing, would crash render on any DFS field with type=textarea
+  - **`LoanOrigination.tsx`**: Wired DFS schema into 6-step loan wizard using additive approach:
+    - New imports: `Accordion`, `AccordionDetails`, `AccordionSummary`, `ExpandMoreIcon`, `SchemaForm`, `dynamicFormsService`, `DFSFormSchema`
+    - Constants `HARDCODED_DFS_FIELDS` (exclusion set, 12 fields) + `DFS_SECTION_TO_STEP` mapping (applicant_details→0, employment_income→1, loan_details→2)
+    - State: `dfsSchema: DFSFormSchema | null` + `customFields: Record<string, any>` added
+    - `useEffect` on mount: fetches `PERSONAL_LOAN` schema from DFS, parses JSON; fails silently if DFS offline
+    - `BankConfiguredFields` inline component: filters fields not in exclusion set + matching step index, renders in dashed-border `<Accordion>` containing `<SchemaForm>`
+    - Steps 0, 1, 2: each renders `<BankConfiguredFields stepIndex={N} />` after hardcoded form content
+    - Review step (Step 5): "Bank-Configured Fields" `<Card>` summary section shows all entered custom field label+value pairs (only rendered when customFields has entries)
+  - No backend changes; no new npm dependencies; zero TypeScript errors in changed files
+
 ## Pending Next
 - E2E smoke: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog shows debit/credit lines on demobank.saaritsolutions.com
-- Form Builder manual smoke on demobank: sidebar → Administration → Form Builder → edit PERSONAL_LOAN → save v2 → verify History tab
-- SAAR-DFS-003 (future): drag-and-drop reorder, section create/delete, form type create/delete
+- Form Builder + DFS-003 manual smoke on demobank: add a custom field via Form Builder → reload New Loan Application → verify custom field appears in Step 0
+- SAAR-DFS-004 (future): wire DFS into GOLD_LOAN form; submit customFields to backend; conditional visibility
 
 ## Notes
 - Eligibility expression ID currently in use: EXPR_1755237353842.
