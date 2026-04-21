@@ -193,6 +193,7 @@ services:
         REACT_APP_API_BASE_URL: https://demobank.saaritsolutions.com
         REACT_APP_LOAN_SERVICE_BASE_URL: https://demobank.saaritsolutions.com
         REACT_APP_EXPRESSION_API_URL: https://demobank.saaritsolutions.com
+        REACT_APP_DYNAMIC_FORMS_API_URL: https://demobank.saaritsolutions.com
     restart: unless-stopped
     networks:
       saar-net:
