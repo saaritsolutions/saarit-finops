@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-21 (session 37 — Cypress regression 108/108)
+**Last Updated:** 2026-04-21 (session 38 — SAAR-DFS-003 LoanOrigination DFS additive wiring)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -147,6 +147,19 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 38 — 2026-04-21 (SAAR-DFS-003 — LoanOrigination DFS additive wiring)
+- **`SAAR_DFS_003_REQUIREMENTS.md`**: JIRA-format requirement doc (8 FRs FR-LO-001 to FR-LO-008; AC-01 to AC-05; offline-resilience test plan).
+- **`SchemaForm.tsx`**: Added `case 'textarea': return <TextField multiline minRows={3} {...common} />;` — was the only missing type case, would crash on any DFS textarea field.
+- **`LoanOrigination.tsx`**: Wired DFS schema as additive "Bank-Configured Fields" layer:
+  - Imports: `Accordion`/`AccordionSummary`/`AccordionDetails` + `ExpandMoreIcon` (from MUI); `SchemaForm`; `dynamicFormsService` + `DFSFormSchema` type.
+  - `HARDCODED_DFS_FIELDS` Set — 12 field names already in the hardcoded form; custom fields must not include these.
+  - `DFS_SECTION_TO_STEP` map — `applicant_details→0`, `employment_income→1`, `loan_details→2`.
+  - `dfsSchema`/`customFields` state; `useEffect` on mount fetches `PERSONAL_LOAN` schema, silent-fails if DFS offline.
+  - `BankConfiguredFields({ stepIndex })` inline component — filters fields by step+exclusion, renders dashed-border Accordion + SchemaForm; returns null if no custom fields for that step.
+  - Steps 0/1/2 each call `<BankConfiguredFields stepIndex={N} />` at bottom of CardContent.
+  - Review step (Step 5): "Bank-Configured Fields" summary Card with label/value rows (conditional on customFields having entries).
+- **Zero TypeScript errors** in both changed files (`tsc --noEmit` confirms); pre-existing FormBuilder.tsx errors unaffected.
 
 ### Session 37 — 2026-04-21 (Cypress regression 108/108 — Form Builder spec added)
 - **`09-form-builder.cy.ts`** (new, 22 tests): Cypress regression spec for SAAR-DFS-002 Form Builder UI.
@@ -355,7 +368,7 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ## 6. Pending Work
 
 ### In Progress
-- **Hetzner deploy (SAAR-DFS-002)**: `docker compose up --build -d nginx frontend` — nginx /api/forms proxy + rebuilt React frontend with Form Builder page
+- **Hetzner deploy (SAAR-DFS-003)**: `docker compose up --build -d frontend` — rebuild React frontend with DFS-wired LoanOrigination
 
 ### Recently Completed
 - **M4: Form Builder (SAAR-DFS-002)** — 4-tab React page: schema list, field editor (▲/▼/property panel), preview, history. Deployed via PR #SAAR-DFS-002.

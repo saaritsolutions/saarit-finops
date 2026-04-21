@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-21 (session 37 — Cypress regression 108/108)
+**Last Updated:** 2026-04-21 (session 38 — SAAR-DFS-003 LoanOrigination DFS additive wiring)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,16 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **E2E live smoke**: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog | Last unverified piece — confirm journal drill-down works on live site |
-| 2 | **Form Builder manual smoke**: sidebar → Form Builder → edit PERSONAL_LOAN → save v2 → check History | Verify Form Builder CRUD flow on demobank.saaritsolutions.com |
-| 3 | **CI green check**: push `09-form-builder.cy.ts` → verify GitHub Actions Cypress E2E workflow still passes (108/108) | Regression count rose 86→108; confirm CI picks up new spec cleanly |
+| 1 | **Hetzner deploy SAAR-DFS-003**: `docker compose up --build -d frontend` on Hetzner → rebuild frontend with DFS-wired LoanOrigination | Get custom fields live on demobank |
+| 2 | **Manual smoke DFS-003**: admin adds `referralCode` field via Form Builder → reload New Application → verify accordion appears in Step 0 | Validates the full low-code demo story end-to-end |
+| 3 | **E2E live smoke**: log in → disburse loan → click GL Journal # chip → verify JournalDetailDialog | Last unverified piece — confirm journal drill-down works on live site |
+
+### Recently Completed (session 38 — 2026-04-21)
+- [x] **SAAR-DFS-003 complete — DFS wired into LoanOrigination (additive)**:
+  - `SAAR_DFS_003_REQUIREMENTS.md`: requirement doc (8 FRs, 4 NFRs, offline-resilience test plan)
+  - `SchemaForm.tsx`: `textarea` case added (1 line — `<TextField multiline minRows={3} {...common} />`)
+  - `LoanOrigination.tsx`: `HARDCODED_DFS_FIELDS` exclusion set + `DFS_SECTION_TO_STEP` mapping + `dfsSchema`/`customFields` state + DFS `useEffect` fetch + `BankConfiguredFields` inline component + accordion in Steps 0/1/2 + Review summary card
+  - Zero TypeScript errors in changed files; no backend changes; no new npm dependencies
 
 ### Recently Completed (session 37 — 2026-04-21)
 - [x] **09-form-builder.cy.ts**: 22-test Cypress regression spec for SAAR-DFS-002 Form Builder UI. Covers all 4 tabs, schema list, Edit→Field Editor, section accordions, Save→chip, History tab, View JSON dialog. All 22 green; full suite **108/108** (was 86/86).
