@@ -339,9 +339,16 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - **`SAAR_DFS_002_REQUIREMENTS.md`**: JIRA-format requirement doc with 9 FRs, 5 NFRs, 12-step test plan
   - No new npm dependencies; no backend changes
 
+## Completed (continued)
+- SAAR-DFS-002 deployed to Hetzner (session 36, 2026-04-21):
+  - Frontend + nginx rebuilt; all 9 service containers + nginx healthy
+  - Bug found: `FormSchemaSeedService` only seeded the `public` Postgres schema; UCB/NBFC users got 404 on /api/forms/{formType} because tenant schemas had empty `FormSchemas` tables
+  - Fix (61e12e2): loop over all KnownTenants (public/ucb_demo/nbfc_demo) using `StaticTenantService` + tenant connection string (pattern from TenantSchemaProvisioner)
+  - Verified: 5 seeds in each of 3 schemas; list and get endpoints work for authenticated UCB user; nginx /api/forms proxy confirmed live
+
 ## Pending Next
-- Hetzner deploy (SAAR-DFS-002): `docker compose up --build -d nginx frontend` — picks up nginx /api/forms proxy + rebuilt React with Form Builder
 - E2E smoke: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog shows debit/credit lines on demobank.saaritsolutions.com
+- Form Builder manual smoke on demobank: sidebar → Administration → Form Builder → edit PERSONAL_LOAN → save v2 → verify History tab
 - SAAR-DFS-003 (future): drag-and-drop reorder, section create/delete, form type create/delete
 
 ## Notes

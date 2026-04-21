@@ -11,18 +11,20 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Hetzner deploy (SAAR-DFS-002)**: `docker compose up --build -d nginx frontend` | nginx /api/forms proxy block + rebuilt React with Form Builder |
-| 2 | **E2E live smoke**: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog | Last unverified piece — confirm journal drill-down works on live site |
-| 3 | **Form Builder manual smoke**: load PERSONAL_LOAN → edit a label → save v2 → check History | Verify the full Form Builder flow on demobank.saaritsolutions.com |
+| 1 | **E2E live smoke**: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog | Last unverified piece — confirm journal drill-down works on live site |
+| 2 | **Form Builder manual smoke**: sidebar → Form Builder → edit PERSONAL_LOAN → save v2 → check History | Verify Form Builder CRUD flow on demobank.saaritsolutions.com |
+| 3 | **SAAR-DFS-003 planning**: drag-and-drop reorder, section create/delete (lower priority) | Next DFS backlog item |
 
 ### Recently Completed (session 36 — 2026-04-21)
-- [x] **SAAR-DFS-002 complete — Form Builder UI implemented**:
+- [x] **SAAR-DFS-002 complete + deployed — Form Builder UI live on demobank**:
   - `SAAR_DFS_002_REQUIREMENTS.md`: JIRA-format requirement doc (9 FRs, 5 NFRs, 12-step test plan)
   - `dynamicFormsService.ts`: typed fetch-based API client (list/get/save/reset/history) with auth-token header
   - `FormBuilder.tsx`: 4-tab page — Schemas list, Field Editor (split pane: Accordion sections + ▲/▼ cards + property panel), Preview (SchemaForm reuse), History + View JSON dialog
   - `AppRouter.tsx`: `/admin/form-builder` route, lazy-loaded, `SYSTEM_CONFIG` gated
   - `Sidebar.tsx`: "Form Builder" entry with DynamicFormIcon under Administration
   - `nginx/nginx.conf`: `/api/forms` → `dynamicfields:5013` proxy added
+  - **Bug fixed (61e12e2)**: `FormSchemaSeedService` now seeds all 3 tenant schemas; UCB/NBFC users can list and load all 5 form schemas
+  - Verified: 5 seeds × 3 schemas; list/get endpoints confirmed via curl smoke test
 
 ### Recently Completed (session 35 — 2026-04-19)
 - [x] **SAAR-DFS-001 complete — Dynamic Forms Service fully implemented**:
