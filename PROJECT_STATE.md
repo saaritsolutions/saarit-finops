@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-21 (session 36 — SAAR-DFS-002 Form Builder UI implemented)
+**Last Updated:** 2026-04-21 (session 37 — Cypress regression 108/108)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -147,6 +147,13 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 37 — 2026-04-21 (Cypress regression 108/108 — Form Builder spec added)
+- **`09-form-builder.cy.ts`** (new, 22 tests): Cypress regression spec for SAAR-DFS-002 Form Builder UI.
+  - 3 describe blocks: Schemas Tab (10 tests), Field Editor Tab (7 tests), History Tab (5 tests).
+  - Single `stubFormsApi()` route-handler intercept dispatches GET requests by URL shape (list vs schema-get vs history).
+  - Covers: page load, 4 tabs, schema table, version chips, aria-label buttons, Edit→Field Editor tab switch, section accordions, field labels, Save→Saved v2 chip, History tab, View JSON dialog.
+  - All 22 tests green on first run (19s). Full regression suite: **108/108** (was 86/86).
 
 ### Session 36 — 2026-04-21 (SAAR-DFS-002 Form Builder UI)
 - **`dynamicFormsService.ts`** (new): typed `fetch`-based API client for all 5 DFS endpoints (list, get, save, reset, history). Uses `auth-token` from localStorage for Bearer auth.
