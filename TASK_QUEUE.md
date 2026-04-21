@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-21 (session 36 — SAAR-DFS-002 Form Builder UI complete)
+**Last Updated:** 2026-04-21 (session 37 — Cypress regression 108/108)
 **Single source of truth for what to do next.**
 
 ---
@@ -13,7 +13,10 @@
 |---|---|---|
 | 1 | **E2E live smoke**: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog | Last unverified piece — confirm journal drill-down works on live site |
 | 2 | **Form Builder manual smoke**: sidebar → Form Builder → edit PERSONAL_LOAN → save v2 → check History | Verify Form Builder CRUD flow on demobank.saaritsolutions.com |
-| 3 | **SAAR-DFS-003 planning**: drag-and-drop reorder, section create/delete (lower priority) | Next DFS backlog item |
+| 3 | **CI green check**: push `09-form-builder.cy.ts` → verify GitHub Actions Cypress E2E workflow still passes (108/108) | Regression count rose 86→108; confirm CI picks up new spec cleanly |
+
+### Recently Completed (session 37 — 2026-04-21)
+- [x] **09-form-builder.cy.ts**: 22-test Cypress regression spec for SAAR-DFS-002 Form Builder UI. Covers all 4 tabs, schema list, Edit→Field Editor, section accordions, Save→chip, History tab, View JSON dialog. All 22 green; full suite **108/108** (was 86/86).
 
 ### Recently Completed (session 36 — 2026-04-21)
 - [x] **SAAR-DFS-002 complete + deployed — Form Builder UI live on demobank**:
