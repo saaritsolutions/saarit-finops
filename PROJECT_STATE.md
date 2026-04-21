@@ -403,13 +403,11 @@ Per `EXECUTION_ROADMAP.md`:
 
 ## 7. Next Recommended Steps (Ordered by Impact)
 
-1. **M2: Workflow Timeline polish** — add SLA chips, status colour coding, retry/notes to WorkflowTimeline component
-2. **TransactionService: double-entry ledger** — posting engine with idempotency; highest-impact missing backend piece
-3. **CustomerService: KYC stub** — `KycStatus` enum, PAN format endpoint, Aadhaar upload placeholder
-4. **APIGateway: JWT auth + routing** — required for any real service-to-service flow
-5. **Add `.gitattributes`** — `* text=auto` to eliminate CRLF warnings on Windows commits
-6. **InterestFeeService: daily accrual engine** — needed for savings account demo
-7. **WorkflowOrchestration: persisted state machine** — enables real loan approval workflow
+1. **SAAR-GL-001 (Gold Loan Phase 1)** — HIGH priority, APPROVED. Requirement doc `GOLD_LOAN_REQUIREMENTS.md` + ADR-013 written. New entities: `GoldLoanDetails`, `GoldPledgeItem`, `GoldRateMaster`, `MarginCall`. Phase 1 scope: core origination + bullet repayment + LTV calc + GL accounting + React form + detail page.
+2. **Hetzner deploy SAAR-DFS-003** — `docker compose up --build -d frontend` — rebuild React frontend with DFS-wired LoanOrigination
+3. **SAAR-WF-001 (Multi-Level Approval Routing)** — HIGH priority; depends on loan state machine being stable (GL-001 adds another)
+4. **SAAR-CFG-001 (Bank Configuration + Feature Toggles)** — MEDIUM priority
+5. **APIGateway: JWT auth + routing** — required for any real service-to-service flow
 
 ---
 
