@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-21 (session 38 — SAAR-DFS-003 LoanOrigination DFS additive wiring)
+**Last Updated:** 2026-04-21 (session 39 — SAAR-GL-001 prioritized as next feature)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,8 +11,8 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Hetzner deploy SAAR-DFS-003**: `docker compose up --build -d frontend` on Hetzner → rebuild frontend with DFS-wired LoanOrigination | Get custom fields live on demobank |
-| 2 | **Manual smoke DFS-003**: admin adds `referralCode` field via Form Builder → reload New Application → verify accordion appears in Step 0 | Validates the full low-code demo story end-to-end |
+| 1 | **SAAR-GL-001 — Gold Loan Phase 1**: Requirement doc exists (`GOLD_LOAN_REQUIREMENTS.md`), ADR-013 written, HIGH priority, APPROVED. Next feature to build. | Core product differentiator for UCB market; all prerequisite work (DFS, Workflow, Loan state machine) is done |
+| 2 | **Hetzner deploy SAAR-DFS-003**: `docker compose up --build -d frontend` on Hetzner → rebuild frontend with DFS-wired LoanOrigination | Get custom fields live on demobank |
 | 3 | **E2E live smoke**: log in → disburse loan → click GL Journal # chip → verify JournalDetailDialog | Last unverified piece — confirm journal drill-down works on live site |
 
 ### Recently Completed (session 38 — 2026-04-21)

@@ -361,8 +361,12 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - No backend changes; no new npm dependencies; zero TypeScript errors in changed files
 
 ## Pending Next
+- **SAAR-GL-001 (Gold Loan Phase 1)** — HIGH priority, APPROVED. Requirement doc (`GOLD_LOAN_REQUIREMENTS.md`) + ADR-013 already written. Next feature to implement: GoldLoanDetails + GoldPledgeItem entities, GoldRateMaster, LTV calc, state machine (DRAFT→APPROVED→DISBURSED→CLOSED), bullet repayment, GL accounting, React origination form + detail page.
+- Hetzner deploy SAAR-DFS-003: `docker compose up --build -d frontend` — rebuild frontend with DFS-wired LoanOrigination
 - E2E smoke: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog shows debit/credit lines on demobank.saaritsolutions.com
 - Form Builder + DFS-003 manual smoke on demobank: add a custom field via Form Builder → reload New Loan Application → verify custom field appears in Step 0
+- SAAR-WF-001 (Multi-Level Approval Routing) — HIGH priority, after GL-001
+- SAAR-CFG-001 (Bank Configuration + Feature Toggles) — MEDIUM priority
 - SAAR-DFS-004 (future): wire DFS into GOLD_LOAN form; submit customFields to backend; conditional visibility
 
 ## Notes
