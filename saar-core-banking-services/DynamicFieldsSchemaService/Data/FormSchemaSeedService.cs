@@ -1,13 +1,19 @@
 using DynamicFieldsSchemaService.Models;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace DynamicFieldsSchemaService.Data
 {
     /// <summary>
-    /// Seeds 5 default form schemas (TenantId="public", IsDefault=true) on startup.
-    /// Idempotent — skips seeding if any record with (FormType, TenantId="public") already exists.
+    /// Seeds 5 default form schemas (TenantId="public", IsDefault=true) on startup
+    /// into EVERY provisioned tenant schema so authenticated UCB/NBFC users can read defaults.
+    /// Idempotent — skips seeding if any record with (FormType, TenantId="public") already exists
+    /// in that tenant's schema.
     /// </summary>
     public class FormSchemaSeedService : IHostedService
     {
+        private static readonly string[] KnownTenants = { "public", "ucb_demo", "nbfc_demo" };
+
         private readonly IServiceProvider _services;
         private readonly ILogger<FormSchemaSeedService> _logger;
 
@@ -19,9 +25,27 @@ namespace DynamicFieldsSchemaService.Data
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            using var scope = _services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<DynamicFormsDbContext>();
+            foreach (var tenantId in KnownTenants)
+                await SeedSchemaAsync(tenantId, cancellationToken);
+        }
 
+        private async Task SeedSchemaAsync(string tenantId, CancellationToken cancellationToken)
+        {
+            using var scope = _services.CreateScope();
+            var baseOptions = scope.ServiceProvider.GetRequiredService<DbContextOptions<DynamicFormsDbContext>>();
+
+            // Build a tenant-specific connection string (same pattern as TenantSchemaProvisioner)
+            string tenantConnStr;
+            using (var tmp = new DynamicFormsDbContext(baseOptions, new StaticTenantService(tenantId)))
+                tenantConnStr = new NpgsqlConnectionStringBuilder(
+                    tmp.Database.GetConnectionString()!) { SearchPath = tenantId }.ToString();
+
+            var opts = new DbContextOptionsBuilder<DynamicFormsDbContext>()
+                .UseNpgsql(tenantConnStr)
+                .Options;
+            using var db = new DynamicFormsDbContext(opts, new StaticTenantService(tenantId));
+
+            var seeded = false;
             foreach (var seed in BuildSeeds())
             {
                 var exists = db.FormSchemas.Any(s =>
@@ -29,10 +53,12 @@ namespace DynamicFieldsSchemaService.Data
                 if (exists) continue;
 
                 db.FormSchemas.Add(seed);
-                _logger.LogInformation("[DFS Seed] Inserted default schema for '{FormType}'", seed.FormType);
+                seeded = true;
+                _logger.LogInformation("[DFS Seed] Inserted '{FormType}' into schema '{Schema}'",
+                    seed.FormType, tenantId);
             }
 
-            await db.SaveChangesAsync(cancellationToken);
+            if (seeded) await db.SaveChangesAsync(cancellationToken);
         }
 
         public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
