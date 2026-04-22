@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-21 (session 38 — SAAR-DFS-003 LoanOrigination DFS additive wiring)
+**Last Updated:** 2026-04-22 (session 40 — SAAR-GL-001 Gold Loan Phase 1 complete)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -147,6 +147,22 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 40 — 2026-04-22 (SAAR-GL-001 — Gold Loan Phase 1 complete)
+- **ADR-013 Option C**: Gold/ subfolder inside LoanService (port 5130, LoanDbContext, LoanServiceDb). No new microservice.
+- **3 new EF entities** (GoldRateMaster, GoldPledgeItem, GoldLoanDetails) + `AddGoldLoanTables` migration (schema qualifiers stripped).
+- **GoldRateService + GoldRateController** (`/api/gold-rate`): today's rate, rate history, create rate entry. `IGoldRateService.GetTodayRateAsync()` returns most-recent entry + isLatest flag.
+- **GoldLoanController** (`/api/gold-loan`): full state machine — DRAFT→SUBMITTED→APPRAISED→SANCTIONED→DISBURSED→CLOSED. SANCTION validates LTV ≤ 75%, assigns PledgeReceiptNumber `PR-{year}-{seq:D6}`, ApplicationNumber `GL-{year}-{seq:D6}`. DISBURSE posts GL journal (idempotency key `GL-DISBURSE-{appNo}`). CLOSE posts closure journal + marks all pledge items released.
+- **TransactionService LedgerSeedService**: 4 new GL accounts — 1030 (Gold Loans), 2020 (Gold Pledges Liability), 4010 (Gold Loan Interest Income), 5020 (Gold Loan Provision).
+- **ITransactionServiceClient**: 2 new methods — `PostGoldLoanDisbursalJournalAsync` + `PostGoldLoanClosureJournalAsync`.
+- **GoldRateService registered** in `LoanService/Program.cs`.
+- **goldLoanService.ts**: typed frontend API client (10 functions, 8 types).
+- **4 new React pages**: `GoldRateAdmin.tsx`, `GoldLoanList.tsx`, `GoldLoanOrigination.tsx`, `GoldLoanDetail.tsx`.
+- **AppRouter.tsx**: 4 lazy-loaded routes (permission-gated). **Sidebar.tsx**: Gold Loans section + Gold Rate admin. **Dashboard.tsx**: Gold Loans Active KPI stat card.
+- **GoldLoanTests.cs**: 4 NUnit tests (LTV correct, LTV>75% rejected, no pledge items rejected, GoldRateService fallback to yesterday's rate).
+- **10-gold-loan.cy.ts**: 17 Cypress regression tests (3 describe blocks: Gold Rate Admin, Gold Loan List, Gold Loan Detail).
+- **Stub fixes**: `NoOpTransactionService` given 2 new gold journal methods; all 4 `FakeForms`/`FakeFormsWithSchema`/`FakeFormsThrow` stubs given `GetFormSchemaAsync` (pre-existing DFS-001 gap).
+- **Test result: 82/82 passing** (78 existing + 4 new).
 
 ### Session 38 — 2026-04-21 (SAAR-DFS-003 — LoanOrigination DFS additive wiring)
 - **`SAAR_DFS_003_REQUIREMENTS.md`**: JIRA-format requirement doc (8 FRs FR-LO-001 to FR-LO-008; AC-01 to AC-05; offline-resilience test plan).
@@ -403,11 +419,11 @@ Per `EXECUTION_ROADMAP.md`:
 
 ## 7. Next Recommended Steps (Ordered by Impact)
 
-1. **SAAR-GL-001 (Gold Loan Phase 1)** — HIGH priority, APPROVED. Requirement doc `GOLD_LOAN_REQUIREMENTS.md` + ADR-013 written. New entities: `GoldLoanDetails`, `GoldPledgeItem`, `GoldRateMaster`, `MarginCall`. Phase 1 scope: core origination + bullet repayment + LTV calc + GL accounting + React form + detail page.
-2. **Hetzner deploy SAAR-DFS-003** — `docker compose up --build -d frontend` — rebuild React frontend with DFS-wired LoanOrigination
-3. **SAAR-WF-001 (Multi-Level Approval Routing)** — HIGH priority; depends on loan state machine being stable (GL-001 adds another)
-4. **SAAR-CFG-001 (Bank Configuration + Feature Toggles)** — MEDIUM priority
-5. **APIGateway: JWT auth + routing** — required for any real service-to-service flow
+1. **Hetzner deploy SAAR-GL-001** — `docker compose up --build -d loanservice frontend` — rebuild loanservice (new gold loan migration + controllers) and frontend (4 new pages + sidebar/dashboard updates).
+2. **Hetzner deploy SAAR-DFS-003** — `docker compose up --build -d frontend` (can combine with GL-001 deploy above).
+3. **SAAR-WF-001 (Multi-Level Approval Routing)** — HIGH priority; loan state machine now stable with Gold Loan added.
+4. **SAAR-CFG-001 (Bank Configuration + Feature Toggles)** — MEDIUM priority.
+5. **APIGateway: JWT auth + routing** — required for any real service-to-service flow.
 
 ---
 

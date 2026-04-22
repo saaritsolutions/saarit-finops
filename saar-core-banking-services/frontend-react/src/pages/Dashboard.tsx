@@ -28,7 +28,9 @@ import {
   ArrowForward as ArrowRightIcon,
   Circle as DotIcon,
   EventAvailable as EventAvailableIcon,
+  Diamond as DiamondIcon,
 } from '@mui/icons-material';
+import { getGoldLoanApplications } from '../services/goldLoanService';
 import { accountService, MaturityRecord } from '../services/accountService';
 import {
   AreaChart,
@@ -177,11 +179,24 @@ const Dashboard: React.FC = () => {
   const [maturities,        setMaturities]        = useState<MaturityRecord[]>([]);
   const [maturitiesLoading, setMaturitiesLoading] = useState(true);
 
+  // ── Gold Loan stats ───────────────────────────────────────────────────────
+  const [goldLoanCount,       setGoldLoanCount]       = useState<number | null>(null);
+  const [goldLoanOutstanding, setGoldLoanOutstanding] = useState<number | null>(null);
+
   useEffect(() => {
     accountService.upcomingMaturities(30)
       .then(data => setMaturities(data))
       .catch(() => setMaturities([]))
       .finally(() => setMaturitiesLoading(false));
+
+    // Silently fetch gold loan stats
+    getGoldLoanApplications({ status: 'DISBURSED', pageSize: 200 })
+      .then(res => {
+        setGoldLoanCount(res.total);
+        const outstanding = res.items.reduce((s, i) => s + (i.sanctionedAmount || 0), 0);
+        setGoldLoanOutstanding(outstanding);
+      })
+      .catch(() => { /* ignore — service may not be running */ });
   }, []);
 
   return (
@@ -189,11 +204,21 @@ const Dashboard: React.FC = () => {
       <PageHeader title="Dashboard" subtitle={`${greeting} — ${today}`} />
 
       {/* KPI Cards */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', xl: 'repeat(4,1fr)' }, gap: 2.5, mb: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', xl: 'repeat(5,1fr)' }, gap: 2.5, mb: 3 }}>
         <StatCard title="Total Customers"   value="12,847" subtitle="Active customer accounts"  icon={<PeopleIcon />}        trend="up"   trendLabel="+12% this month"     iconColor="#2563EB" iconBg="#EFF6FF" />
         <StatCard title="Total Deposits"    value="₹2.4B"  subtitle="Current deposits balance"  icon={<AccountBalanceIcon />} trend="up"   trendLabel="+8.2% this month"    iconColor="#10B981" iconBg="#ECFDF5" />
         <StatCard title="Daily Transactions" value="8,432" subtitle="Processed today"            icon={<ReceiptIcon />}        trend="up"   trendLabel="+15.3% vs yesterday" iconColor="#F59E0B" iconBg="#FFFBEB" />
         <StatCard title="Active Loans"      value="₹847M"  subtitle="Outstanding loan amount"   icon={<MoneyIcon />}          trend="down" trendLabel="-2.1% this month"    iconColor="#8B5CF6" iconBg="#F5F3FF" />
+        <StatCard
+          title="Gold Loans Active"
+          value={goldLoanCount !== null ? String(goldLoanCount) : '—'}
+          subtitle={goldLoanOutstanding !== null ? `₹${(goldLoanOutstanding / 100000).toFixed(1)}L outstanding` : 'Gold loan portfolio'}
+          icon={<DiamondIcon />}
+          trend="up"
+          trendLabel="Disbursed"
+          iconColor="#EAB308"
+          iconBg="#FEF9C3"
+        />
       </Box>
 
       {/* Charts */}

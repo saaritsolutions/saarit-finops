@@ -196,4 +196,6 @@ file class FakeForms : IDynamicFormsClient
 {
     public Task<List<DynamicField>> GetLoanFormSchemaAsync(string productType)
         => Task.FromResult(new List<DynamicField> { new DynamicField { Id = 1, Name = "fullName" } });
+    public Task<LoanService.Services.FormSchemaResponse?> GetFormSchemaAsync(string formType)
+        => Task.FromResult<LoanService.Services.FormSchemaResponse?>(null);
 }

@@ -360,12 +360,27 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
     - Review step (Step 5): "Bank-Configured Fields" `<Card>` summary section shows all entered custom field label+value pairs (only rendered when customFields has entries)
   - No backend changes; no new npm dependencies; zero TypeScript errors in changed files
 
+## Completed (continued)
+- SAAR-GL-001 — Gold Loan Phase 1: core origination + bullet repayment (session 40, 2026-04-22):
+  - **ADR-013 Option C**: Gold/ subfolder inside LoanService — same DB (LoanServiceDb), same EF context (LoanDbContext), port 5130
+  - **Entities**: `GoldRateMaster` (date, ratePerGram, source, isLatest), `GoldPledgeItem` (NetWeightGrams, PurityCarats, GoldRatePerGram, ValuedAmount, IsReleased), `GoldLoanDetails` (1:1 with LoanApplication — ApplicationNumber, status, ValuationDetails, PledgeReceiptNumber, MaturityDate, etc.)
+  - **EF migration**: `AddGoldLoanTables` — 3 new tables, FK to LoanApplications, schema qualifiers stripped
+  - **GL accounts**: 4 new CoA entries in TransactionService LedgerSeedService (1030 Gold Loans, 2020 Gold Pledges Liability, 4010 Gold Loan Interest Income, 5020 Gold Loan Provision)
+  - **TransactionServiceClient**: 2 new methods — `PostGoldLoanDisbursalJournalAsync` + `PostGoldLoanClosureJournalAsync` (idempotency keys `GL-DISBURSE-{appNo}` and `GL-CLOSE-{appNo}`)
+  - **IGoldRateService / GoldRateService / GoldRateController**: CRUD for gold rate admin; `GetTodayRateAsync()` with isLatest flag; `GET /api/gold-rate/today`, `GET /api/gold-rate`, `POST /api/gold-rate`
+  - **GoldLoanController** (`/api/gold-loan`): POST applications, GET list, GET detail, add/remove pledge items, POST action (state machine: SUBMIT → APPRAISE → SANCTION → DISBURSE → CLOSE). LTV cap 75% at sanction, PledgeReceiptNumber `PR-{year}-{seq:D6}`, ApplicationNumber `GL-{year}-{seq:D6}`, GL journals on DISBURSE + CLOSE
+  - **Frontend**: `goldLoanService.ts` (typed API client), `GoldRateAdmin.tsx` (rate entry + history), `GoldLoanList.tsx` (status tabs + LTV color coding), `GoldLoanOrigination.tsx` (5-step wizard, live LTV preview, bullet repayment estimate), `GoldLoanDetail.tsx` (pledge tab, loan terms tab, timeline, action dialog per status, JournalDetailDialog reuse)
+  - **Routes**: `/gold-loans`, `/gold-loans/new`, `/gold-loans/:id`, `/admin/gold-rate` (all lazy-loaded, permission-gated)
+  - **Tests**: `GoldLoanTests.cs` (4 NUnit tests — LTV, over-LTV rejection, no-items submit, GoldRateService fallback); `10-gold-loan.cy.ts` (17 Cypress regression tests across 3 suites)
+  - **Stub fixes**: Added gold journal methods to `NoOpTransactionService`; added `GetFormSchemaAsync` to all 4 `FakeForms` stubs (pre-existing DFS-001 gap surfaced during build)
+  - **Test result**: 82/82 LoanService.Tests green (78 existing + 4 new gold loan tests)
+
 ## Pending Next
-- **SAAR-GL-001 (Gold Loan Phase 1)** — HIGH priority, APPROVED. Requirement doc (`GOLD_LOAN_REQUIREMENTS.md`) + ADR-013 already written. Next feature to implement: GoldLoanDetails + GoldPledgeItem entities, GoldRateMaster, LTV calc, state machine (DRAFT→APPROVED→DISBURSED→CLOSED), bullet repayment, GL accounting, React origination form + detail page.
+- Hetzner deploy SAAR-GL-001: `docker compose up --build -d loanservice frontend` — deploy gold loan backend + updated frontend
 - Hetzner deploy SAAR-DFS-003: `docker compose up --build -d frontend` — rebuild frontend with DFS-wired LoanOrigination
 - E2E smoke: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog shows debit/credit lines on demobank.saaritsolutions.com
 - Form Builder + DFS-003 manual smoke on demobank: add a custom field via Form Builder → reload New Loan Application → verify custom field appears in Step 0
-- SAAR-WF-001 (Multi-Level Approval Routing) — HIGH priority, after GL-001
+- SAAR-WF-001 (Multi-Level Approval Routing) — HIGH priority, after GL-001 deployed
 - SAAR-CFG-001 (Bank Configuration + Feature Toggles) — MEDIUM priority
 - SAAR-DFS-004 (future): wire DFS into GOLD_LOAN form; submit customFields to backend; conditional visibility
 

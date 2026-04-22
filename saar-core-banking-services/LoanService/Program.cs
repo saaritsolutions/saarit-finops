@@ -111,6 +111,9 @@ builder.Services.AddHttpClient<ITransactionServiceClient, TransactionServiceClie
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
 
+// Gold Loan services
+builder.Services.AddScoped<LoanService.Services.Gold.IGoldRateService, LoanService.Services.Gold.GoldRateService>();
+
 // Add DbContext (use InMemory for integration tests)
 if (builder.Environment.IsEnvironment("IntegrationTesting"))
 {
