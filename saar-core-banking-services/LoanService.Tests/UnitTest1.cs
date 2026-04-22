@@ -683,6 +683,8 @@ file class FakeForms : IDynamicFormsClient
 {
     public Task<List<DynamicField>> GetLoanFormSchemaAsync(string productType)
         => Task.FromResult(new List<DynamicField> { new DynamicField { Id = 1, Name = "fullName" } });
+    public Task<LoanService.Services.FormSchemaResponse?> GetFormSchemaAsync(string formType)
+        => Task.FromResult<LoanService.Services.FormSchemaResponse?>(null);
 }
 
 file class FakeFormsWithSchema : IDynamicFormsClient
@@ -690,11 +692,15 @@ file class FakeFormsWithSchema : IDynamicFormsClient
     private readonly List<DynamicField> _schema;
     public FakeFormsWithSchema(List<DynamicField> schema) { _schema = schema; }
     public Task<List<DynamicField>> GetLoanFormSchemaAsync(string productType) => Task.FromResult(_schema);
+    public Task<LoanService.Services.FormSchemaResponse?> GetFormSchemaAsync(string formType)
+        => Task.FromResult<LoanService.Services.FormSchemaResponse?>(null);
 }
 
 file class FakeFormsThrow : IDynamicFormsClient
 {
     public Task<List<DynamicField>> GetLoanFormSchemaAsync(string productType) => throw new Exception("forms service down");
+    public Task<LoanService.Services.FormSchemaResponse?> GetFormSchemaAsync(string formType)
+        => Task.FromResult<LoanService.Services.FormSchemaResponse?>(null);
 }
 
 file class ErrorsEnvelope

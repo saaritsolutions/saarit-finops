@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using LoanService.Models;
+using LoanService.Models.Gold;
 using LoanService.Services;
 using System.Text.Json;
 
@@ -30,6 +31,11 @@ namespace LoanService.Data
         public DbSet<LoanDocument> LoanDocuments { get; set; }
         public DbSet<LoanApprovalAction> LoanApprovalActions { get; set; }
 
+        // ── Gold Loan ──────────────────────────────────────────────────────────
+        public DbSet<GoldLoanDetails> GoldLoanDetails { get; set; }
+        public DbSet<GoldPledgeItem> GoldPledgeItems { get; set; }
+        public DbSet<GoldRateMaster> GoldRateMasters { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -57,6 +63,33 @@ namespace LoanService.Data
             modelBuilder.Entity<LoanProduct>(e =>
             {
                 e.HasIndex(p => p.ProductCode).IsUnique();
+            });
+
+            // ── GoldLoanDetails ↔ LoanApplication (1:1) ──────────────────────
+            modelBuilder.Entity<GoldLoanDetails>(e =>
+            {
+                e.HasOne(g => g.LoanApplication)
+                 .WithOne()
+                 .HasForeignKey<GoldLoanDetails>(g => g.LoanApplicationId)
+                 .OnDelete(DeleteBehavior.Cascade);
+
+                e.HasIndex(g => g.LoanApplicationId).IsUnique();
+                e.HasIndex(g => g.GoldLoanStatus);
+            });
+
+            // ── GoldPledgeItem ↔ GoldLoanDetails (1:N) ───────────────────────
+            modelBuilder.Entity<GoldPledgeItem>(e =>
+            {
+                e.HasOne(p => p.GoldLoanDetails)
+                 .WithMany(g => g.PledgeItems)
+                 .HasForeignKey(p => p.GoldLoanDetailsId)
+                 .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // ── GoldRateMaster: unique RateDate per tenant schema ────────────
+            modelBuilder.Entity<GoldRateMaster>(e =>
+            {
+                e.HasIndex(r => r.RateDate).IsUnique();
             });
         }
 

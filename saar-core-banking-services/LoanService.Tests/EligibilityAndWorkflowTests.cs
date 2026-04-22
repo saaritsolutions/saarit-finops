@@ -28,6 +28,14 @@ file sealed class NoOpTransactionService : ITransactionServiceClient
         string applicationNumber, string productType, decimal amount,
         string glDebitAccount, string glCreditAccount, CancellationToken ct = default) =>
         Task.FromResult(new DisbursalJournalResult(false, null, "Test stub"));
+
+    public Task<DisbursalJournalResult> PostGoldLoanDisbursalJournalAsync(
+        string applicationNumber, decimal amount, CancellationToken ct = default) =>
+        Task.FromResult(new DisbursalJournalResult(false, null, "Test stub"));
+
+    public Task<DisbursalJournalResult> PostGoldLoanClosureJournalAsync(
+        string applicationNumber, decimal principal, decimal interest, CancellationToken ct = default) =>
+        Task.FromResult(new DisbursalJournalResult(false, null, "Test stub"));
 }
 
 // ── Fake workflow client (no-op) ───────────────────────────────────────────────

@@ -38,6 +38,8 @@ import {
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
   DynamicForm as DynamicFormIcon,
+  Diamond as DiamondIcon,
+  MonetizationOn as GoldRateIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
@@ -125,6 +127,15 @@ const menuSections: MenuSection[] = [
           { id: 'loan-create', title: 'New Loan',     icon: <LoansIcon fontSize="small" />, path: '/loans/create', permission: 'loans.create' },
         ],
       },
+      {
+        id:    'gold-loans',
+        title: 'Gold Loans',
+        icon:  <DiamondIcon fontSize="small" />,
+        children: [
+          { id: 'gold-loan-list',   title: 'Applications', icon: <DiamondIcon fontSize="small" />, path: '/gold-loans',     permission: BANKING_PERMISSIONS.LOAN_VIEW   },
+          { id: 'gold-loan-create', title: 'New Gold Loan', icon: <DiamondIcon fontSize="small" />, path: '/gold-loans/new', permission: BANKING_PERMISSIONS.LOAN_CREATE },
+        ],
+      },
     ],
   },
   {
@@ -164,6 +175,7 @@ const menuSections: MenuSection[] = [
           { id: 'expression-builder',title: 'Expression Builder',   icon: <ExpressionBuilderIcon fontSize="small" />,path: '/expressions',    permission: BANKING_PERMISSIONS.EXPRESSION_BUILDER },
           { id: 'end-to-end-demo',   title: 'End-to-End Demo',      icon: <TrendingUpIcon fontSize="small" />,        path: '/demo',           permission: BANKING_PERMISSIONS.EXPRESSION_BUILDER },
           { id: 'form-builder',      title: 'Form Builder',         icon: <DynamicFormIcon fontSize="small" />,       path: '/admin/form-builder', permission: BANKING_PERMISSIONS.SYSTEM_CONFIG },
+          { id: 'gold-rate-admin',   title: 'Gold Rate',            icon: <GoldRateIcon fontSize="small" />,          path: '/admin/gold-rate',    permission: BANKING_PERMISSIONS.SYSTEM_CONFIG },
         ],
       },
     ],

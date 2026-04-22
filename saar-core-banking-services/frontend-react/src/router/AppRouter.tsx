@@ -24,6 +24,10 @@ const WorldClassExpressionBuilder = lazy(() => import('../pages/WorldClassExpres
 const EndToEndDemo = lazy(() => import('../pages/EndToEndDemo'));
 const AIDynamicFormDesigner = lazy(() => import('../pages/AIDynamicFormDesigner'));
 const FormBuilder = lazy(() => import('../pages/FormBuilder'));
+const GoldRateAdmin      = lazy(() => import('../pages/GoldRateAdmin'));
+const GoldLoanList       = lazy(() => import('../pages/GoldLoanList'));
+const GoldLoanOrigination = lazy(() => import('../pages/GoldLoanOrigination'));
+const GoldLoanDetail     = lazy(() => import('../pages/GoldLoanDetail'));
 const Unauthorized = lazy(() => import('../components/common/Unauthorized'));
 const NotFound = lazy(() => import('../components/common/NotFound'));
 
@@ -178,6 +182,12 @@ export const AppRouter: React.FC = () => {
           <Route
             path="admin/form-builder"
             element={<ProtectedRoute requiredPermission={BANKING_PERMISSIONS.SYSTEM_CONFIG}><FormBuilder /></ProtectedRoute>} />
+
+          {/* Gold Loans */}
+          <Route path="gold-loans" element={<ProtectedRoute requiredPermission={BANKING_PERMISSIONS.LOAN_VIEW}><GoldLoanList /></ProtectedRoute>} />
+          <Route path="gold-loans/new" element={<ProtectedRoute requiredPermission={BANKING_PERMISSIONS.LOAN_CREATE}><GoldLoanOrigination /></ProtectedRoute>} />
+          <Route path="gold-loans/:id" element={<ProtectedRoute requiredPermission={BANKING_PERMISSIONS.LOAN_VIEW}><GoldLoanDetail /></ProtectedRoute>} />
+          <Route path="admin/gold-rate" element={<ProtectedRoute requiredPermission={BANKING_PERMISSIONS.SYSTEM_CONFIG}><GoldRateAdmin /></ProtectedRoute>} />
           
           {/* Reports */}
           <Route

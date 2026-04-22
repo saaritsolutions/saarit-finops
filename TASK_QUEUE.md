@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-21 (session 39 — SAAR-GL-001 prioritized as next feature)
+**Last Updated:** 2026-04-22 (session 40 — SAAR-GL-001 Gold Loan Phase 1 complete, 82/82 tests green)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,22 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **SAAR-GL-001 — Gold Loan Phase 1**: Requirement doc exists (`GOLD_LOAN_REQUIREMENTS.md`), ADR-013 written, HIGH priority, APPROVED. Next feature to build. | Core product differentiator for UCB market; all prerequisite work (DFS, Workflow, Loan state machine) is done |
-| 2 | **Hetzner deploy SAAR-DFS-003**: `docker compose up --build -d frontend` on Hetzner → rebuild frontend with DFS-wired LoanOrigination | Get custom fields live on demobank |
-| 3 | **E2E live smoke**: log in → disburse loan → click GL Journal # chip → verify JournalDetailDialog | Last unverified piece — confirm journal drill-down works on live site |
+| 1 | **Hetzner deploy SAAR-GL-001 + DFS-003**: `docker compose up --build -d loanservice frontend` | Get gold loan backend (migration + controllers) + updated frontend (4 new pages, DFS wiring) live on demobank |
+| 2 | **E2E live smoke**: log in → disburse loan → click GL Journal # chip → verify JournalDetailDialog | Last unverified piece — confirm journal drill-down works on live site |
+| 3 | **SAAR-WF-001 — Multi-Level Approval Routing** | Loan state machine now stable with GL-001; next core feature |
+
+### Recently Completed (session 40 — 2026-04-22)
+- [x] **SAAR-GL-001 complete — Gold Loan Phase 1 (core origination + bullet repayment)** — 82/82 tests green:
+  - `GoldRateMaster`, `GoldPledgeItem`, `GoldLoanDetails` entities + `AddGoldLoanTables` EF migration (schema qualifiers stripped)
+  - 4 new GL accounts in `LedgerSeedService` (1030, 2020, 4010, 5020)
+  - `ITransactionServiceClient` extended: `PostGoldLoanDisbursalJournalAsync` + `PostGoldLoanClosureJournalAsync`
+  - `IGoldRateService` / `GoldRateService` / `GoldRateController` (`/api/gold-rate`)
+  - `GoldLoanController` (`/api/gold-loan`): full CRUD + state machine (SUBMIT/APPRAISE/SANCTION/DISBURSE/CLOSE)
+  - `goldLoanService.ts` frontend API client (10 functions)
+  - 4 React pages: `GoldRateAdmin`, `GoldLoanList`, `GoldLoanOrigination` (5-step wizard), `GoldLoanDetail`
+  - Routes/Sidebar/Dashboard updated; all lazy-loaded + permission-gated
+  - `GoldLoanTests.cs` (4 NUnit tests); `10-gold-loan.cy.ts` (17 Cypress tests)
+  - Stub fixes: `NoOpTransactionService` + `FakeForms` × 3 stubs updated (pre-existing DFS-001 gap fixed)
 
 ### Recently Completed (session 38 — 2026-04-21)
 - [x] **SAAR-DFS-003 complete — DFS wired into LoanOrigination (additive)**:
