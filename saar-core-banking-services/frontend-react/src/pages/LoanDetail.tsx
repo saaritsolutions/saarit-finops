@@ -54,6 +54,18 @@ const fmtDateOnly = (iso?: string | null) => {
 
 const n2s = (v: any) => (v !== null && v !== undefined && v !== '') ? String(v) : '—';
 
+// ── Approval Chain ─────────────────────────────────────────────────────────────
+interface ChainStep {
+  id: string;
+  sequence: number;
+  label: string;
+  requiredRole: string;
+  status: string;   // PENDING | APPROVED | REJECTED | SKIPPED
+  performedBy?: string;
+  comments?: string;
+  actionedAt?: string;
+}
+
 // ── Amortization ───────────────────────────────────────────────────────────────
 type AmortRow = { month: number; opening: number; emi: number; principal: number; interest: number; closing: number };
 
@@ -213,6 +225,7 @@ const LoanDetail: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [showSchedule, setShowSchedule] = useState(false);
   const [journalDialogOpen, setJournalDialogOpen] = useState(false);
+  const [approvalChain, setApprovalChain]         = useState<ChainStep[] | null>(null);
 
   const app = detail?.application ?? null;
 
@@ -231,6 +244,21 @@ const LoanDetail: React.FC = () => {
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Fetch approval chain after each load/action — silent fail if WorkflowOrchestrationService is down
+  useEffect(() => {
+    const appNo = (detail?.application as any)?.applicationNumber
+               ?? (detail?.application as any)?.ApplicationNumber;
+    if (!appNo) { setApprovalChain(null); return; }
+    const base = (process.env.REACT_APP_WORKFLOW_BASE_URL ?? 'http://localhost:5012').replace(/\/$/, '');
+    fetch(`${base}/api/approval/chain?entityId=${encodeURIComponent(appNo)}&entityType=LOAN`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const steps = data?.steps ?? data?.Steps;
+        setApprovalChain(Array.isArray(steps) && steps.length > 0 ? steps : null);
+      })
+      .catch(() => setApprovalChain(null));
+  }, [detail]);
 
   const handleAction = async (comments: string) => {
     if (!id || !actionDef) return;
@@ -573,6 +601,62 @@ const LoanDetail: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
+
+      {/* Approval Chain */}
+      {approvalChain && approvalChain.length > 0 && (
+        <Box mt={2}>
+          <Card sx={{ border: `1px solid ${SLATE_200}`, boxShadow: 'none', borderRadius: 2 }}>
+            <CardContent sx={{ p: 2.5 }}>
+              <Stack direction="row" spacing={1} alignItems="center" mb={1.5}>
+                <Box sx={{ color: BLUE_600, display: 'flex' }}><GavelIcon /></Box>
+                <Typography variant="subtitle2" fontWeight={700} color={SLATE_900}>
+                  Approval Chain
+                </Typography>
+              </Stack>
+              <Divider sx={{ mb: 1.5 }} />
+              <Stack direction="row" spacing={2} flexWrap="wrap">
+                {approvalChain.map((step) => {
+                  const chipColor = step.status === 'APPROVED' ? 'success'
+                    : step.status === 'REJECTED' ? 'error'
+                    : step.status === 'PENDING'  ? 'warning'
+                    : 'default';
+                  return (
+                    <Box key={step.id ?? step.sequence} sx={{
+                      flex: '1 1 180px', minWidth: 160,
+                      p: 1.5, borderRadius: 1.5,
+                      border: `1px solid ${SLATE_200}`,
+                      bgcolor: step.status === 'APPROVED' ? '#F0FDF4'
+                        : step.status === 'REJECTED' ? '#FEF2F2'
+                        : step.status === 'PENDING'  ? '#FFFBEB'
+                        : SLATE_50,
+                    }}>
+                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={0.5}>
+                        <Typography variant="caption" fontWeight={700} color={SLATE_500}>
+                          Level {step.sequence}
+                        </Typography>
+                        <Chip label={step.status} color={chipColor as any} size="small"
+                          sx={{ fontWeight: 700, fontSize: '0.65rem', height: 18 }} />
+                      </Stack>
+                      <Typography variant="body2" fontWeight={600}>{step.label}</Typography>
+                      <Typography variant="caption" color={SLATE_500}>{step.requiredRole}</Typography>
+                      {step.performedBy && (
+                        <Typography variant="caption" display="block" color={SLATE_500} mt={0.5}>
+                          by {step.performedBy}{step.actionedAt ? ` · ${fmtDate(step.actionedAt)}` : ''}
+                        </Typography>
+                      )}
+                      {step.comments && (
+                        <Typography variant="caption" display="block" color="text.secondary" mt={0.3} fontStyle="italic">
+                          "{step.comments}"
+                        </Typography>
+                      )}
+                    </Box>
+                  );
+                })}
+              </Stack>
+            </CardContent>
+          </Card>
+        </Box>
+      )}
 
       {/* Repayment Schedule */}
       {(() => {

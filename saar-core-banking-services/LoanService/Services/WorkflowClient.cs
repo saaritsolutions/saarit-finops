@@ -4,8 +4,17 @@ namespace LoanService.Services
 {
     public interface IWorkflowClient
     {
-    Task<WorkflowInstance> StartLoanOriginationAsync(Guid entityId, Dictionary<string, object> context, CancellationToken ct = default);
-    Task<WorkflowStepResult> ProcessStepAsync(Guid instanceId, string action, Dictionary<string, object> context, CancellationToken ct = default);
+        Task<WorkflowInstance> StartLoanOriginationAsync(Guid entityId, Dictionary<string, object> context, CancellationToken ct = default);
+        Task<WorkflowStepResult> ProcessStepAsync(Guid instanceId, string action, Dictionary<string, object> context, CancellationToken ct = default);
+
+        /// <summary>Initialise the approval chain for a loan (amount-band lookup). Fire-and-forget safe.</summary>
+        Task InitApprovalChainAsync(string applicationId, decimal amount, string workflowType = "LOAN_ORIGINATION", CancellationToken ct = default);
+
+        /// <summary>Get current approval chain steps. Returns null on error (fail-open).</summary>
+        Task<ApprovalChainDto?> GetApprovalChainAsync(string applicationId, CancellationToken ct = default);
+
+        /// <summary>Submit APPROVE or REJECT at the current pending chain step. Fire-and-forget safe.</summary>
+        Task SubmitChainStepActionAsync(string applicationId, string action, string? performedBy, string? comments, CancellationToken ct = default);
     }
 
     public class WorkflowClient : IWorkflowClient
@@ -58,6 +67,58 @@ namespace LoanService.Services
             return result;
         }
 
+        public async Task InitApprovalChainAsync(string applicationId, decimal amount, string workflowType = "LOAN_ORIGINATION", CancellationToken ct = default)
+        {
+            var body = new { entityId = applicationId, entityType = "LOAN", workflowType, amount };
+            var url  = BuildUrl("/api/approval/chain/init");
+            using var response = await _httpClient.PostAsJsonAsync(url, body, cancellationToken: ct);
+            if (!response.IsSuccessStatusCode)
+                _logger.LogWarning("InitApprovalChain failed for {AppId}: {Status}", applicationId, (int)response.StatusCode);
+        }
+
+        public async Task<ApprovalChainDto?> GetApprovalChainAsync(string applicationId, CancellationToken ct = default)
+        {
+            try
+            {
+                var url = BuildUrl($"/api/approval/chain?entityId={Uri.EscapeDataString(applicationId)}&entityType=LOAN");
+                using var response = await _httpClient.GetAsync(url, ct);
+                if (!response.IsSuccessStatusCode) return null;
+                return await response.Content.ReadFromJsonAsync<ApprovalChainDto>(cancellationToken: ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "GetApprovalChain failed for {AppId} — returning null (fail-open)", applicationId);
+                return null;
+            }
+        }
+
+        public async Task SubmitChainStepActionAsync(string applicationId, string action, string? performedBy, string? comments, CancellationToken ct = default)
+        {
+            try
+            {
+                // Get current pending step
+                var chain = await GetApprovalChainAsync(applicationId, ct);
+                if (chain == null || !chain.Steps.Any()) return;
+
+                var pendingStep = chain.Steps
+                    .Where(s => s.Status == "PENDING")
+                    .OrderBy(s => s.Sequence)
+                    .FirstOrDefault();
+
+                if (pendingStep == null) return;
+
+                var body = new { action, performedBy, comments };
+                var url  = BuildUrl($"/api/approval/chain/steps/{pendingStep.Id}/action");
+                using var response = await _httpClient.PostAsJsonAsync(url, body, cancellationToken: ct);
+                if (!response.IsSuccessStatusCode)
+                    _logger.LogWarning("SubmitChainStepAction {Action} failed for {AppId}: {Status}", action, applicationId, (int)response.StatusCode);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "SubmitChainStepAction failed for {AppId} — continuing (fail-open)", applicationId);
+            }
+        }
+
         private string BuildUrl(string relativePath)
         {
             if (_httpClient.BaseAddress != null)
@@ -102,7 +163,27 @@ namespace LoanService.Services
         public string? NextStep { get; set; }
         public string? WorkflowStatus { get; set; }
         public string Message { get; set; } = string.Empty;
-    // Optional list of actions the UI should render for the current step
-    public List<string>? RequiredActions { get; set; }
+        // Optional list of actions the UI should render for the current step
+        public List<string>? RequiredActions { get; set; }
+    }
+
+    /// <summary>Minimal DTO mirroring WorkflowOrchestrationService ApprovalChainResponse.</summary>
+    public class ApprovalChainDto
+    {
+        public string                   EntityId   { get; set; } = string.Empty;
+        public string                   EntityType { get; set; } = string.Empty;
+        public List<ApprovalChainStepDto> Steps    { get; set; } = new();
+    }
+
+    public class ApprovalChainStepDto
+    {
+        public Guid     Id           { get; set; }
+        public int      Sequence     { get; set; }
+        public string   Label        { get; set; } = string.Empty;
+        public string   RequiredRole { get; set; } = string.Empty;
+        public string   Status       { get; set; } = string.Empty;  // PENDING|APPROVED|REJECTED|SKIPPED
+        public string?  PerformedBy  { get; set; }
+        public string?  Comments     { get; set; }
+        public DateTime? ActionedAt  { get; set; }
     }
 }

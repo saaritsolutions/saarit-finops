@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-22 (session 40 — SAAR-GL-001 Gold Loan Phase 1 complete)
+**Last Updated:** 2026-04-22 (session 41 — SAAR-WF-001 Multi-Level Approval Routing complete)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -147,6 +147,19 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 41 — 2026-04-22 (SAAR-WF-001 — Multi-Level Sequential Approval Routing complete)
+- **ADR-014**: Approval chain data lives in WorkflowOrchestrationService (correct domain boundary). LoanService calls via HTTP (fail-open — if WorkflowOrchestrationService is unreachable, loan state still advances with a warning log).
+- **2 new EF entities** in WorkflowOrchestrationService: `ApprovalLevel` (config rows — workflowType, amountBand, sequence, label, requiredRole) + `ApprovalChainStep` (instance rows per loan — entityId, status, performedBy, comments, actionedAt). EF migration `AddApprovalTables` (schema qualifiers stripped for multi-tenancy).
+- **ApprovalLevelSeedService** (IHostedService): idempotently seeds 3 levels for LOAN_ORIGINATION — Branch Manager (seq 1, all amounts ≥ ₹0), Credit Committee (seq 2, ≥ ₹5L), Board Approval (seq 3, ≥ ₹25L). Skip if already seeded for workflowType.
+- **ApprovalController** (`/api/approval`): GET levels, POST chain/init (amount-band lookup → create steps), GET chain (by entityId+entityType=LOAN), POST chain/steps/{id}/action (APPROVE/REJECT — sequential enforcement: blocks if prior step not APPROVED; REJECT marks remaining steps SKIPPED).
+- **IWorkflowClient + WorkflowClient**: 3 new methods — `InitApprovalChainAsync`, `GetApprovalChainAsync`, `SubmitChainStepActionAsync`. `ApprovalChainDto` + `ApprovalChainStepDto` DTOs added to LoanService.
+- **LoanApplicationsController**: approval chain wired into all 4 state transitions — SEND_TO_REVIEW (init), CREDIT_APPROVE (step 1 approve), SANCTION (sequential check + step 2 approve), REJECT (chain reject). SANCTION is the only awaited call (for enforcement); all others are fire-and-forget.
+- **LoanDetail.tsx**: `ChainStep` interface, `approvalChain` state, silent-fail useEffect fetch, approval chain card with MUI chips per step status (PENDING=amber/#FFFBEB, APPROVED=green/#F0FDF4, REJECTED=red/#FEF2F2, SKIPPED=grey). Card only rendered when chain has steps.
+- **WorkflowOrchestrationService.Tests** (new project): 4/4 NUnit tests pass — `AmountBand_Under5L_Gets1Level`, `AmountBand_5Lto25L_Gets2Levels`, `Sequential_BlocksLevel2_WhenLevel1Pending` (BadRequest), `Rejection_MarksRemainingSteps_Skipped`.
+- **11-approval-routing.cy.ts**: 15 Cypress regression tests (3 describe blocks) — chain display, status chips, chain transitions.
+- **Stub fixes (IWorkflowClient)**: All 5 fake/stub IWorkflowClient implementations across 3 test files updated with 3 no-op methods: `UnitTest1.cs` (FakeWorkflow, FakeWorkflowEngineOk, FakeWorkflowEngineFail), `EligibilityAndWorkflowTests.cs` (NoOpWorkflowClient), `ExpressionIntegrationDemo.cs` (FakeWorkflow).
+- **Test result: 82/82 LoanService.Tests + 4/4 WorkflowOrchestrationService.Tests** — all pass; no regressions.
 
 ### Session 40 — 2026-04-22 (SAAR-GL-001 — Gold Loan Phase 1 complete)
 - **ADR-013 Option C**: Gold/ subfolder inside LoanService (port 5130, LoanDbContext, LoanServiceDb). No new microservice.
@@ -419,9 +432,9 @@ Per `EXECUTION_ROADMAP.md`:
 
 ## 7. Next Recommended Steps (Ordered by Impact)
 
-1. **Hetzner deploy SAAR-GL-001** — `docker compose up --build -d loanservice frontend` — rebuild loanservice (new gold loan migration + controllers) and frontend (4 new pages + sidebar/dashboard updates).
-2. **Hetzner deploy SAAR-DFS-003** — `docker compose up --build -d frontend` (can combine with GL-001 deploy above).
-3. **SAAR-WF-001 (Multi-Level Approval Routing)** — HIGH priority; loan state machine now stable with Gold Loan added.
+1. **Hetzner deploy SAAR-GL-001 + WF-001** — `docker compose up --build -d loanservice workfloworchestration frontend` — rebuild loanservice (gold loan migration + approval chain client), workfloworchestration (AddApprovalTables migration + seed), and frontend (gold loan pages + approval chain UI).
+2. **Hetzner deploy SAAR-DFS-003** — `docker compose up --build -d frontend` (can combine with step 1 above).
+3. **E2E smoke**: disburse loan → click GL Journal # → verify JournalDetailDialog on demobank.saaritsolutions.com.
 4. **SAAR-CFG-001 (Bank Configuration + Feature Toggles)** — MEDIUM priority.
 5. **APIGateway: JWT auth + routing** — required for any real service-to-service flow.
 

@@ -23,7 +23,9 @@ namespace WorkflowOrchestrationService.Data
             TenantSchema = "public";
         }
 
-        public DbSet<WorkflowInstanceEntity> WorkflowInstances { get; set; }
+        public DbSet<WorkflowInstanceEntity> WorkflowInstances  { get; set; }
+        public DbSet<ApprovalLevel>          ApprovalLevels     { get; set; }
+        public DbSet<ApprovalChainStep>      ApprovalChainSteps { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -34,6 +36,19 @@ namespace WorkflowOrchestrationService.Data
             {
                 e.HasIndex(w => w.EntityId);
                 e.HasIndex(w => w.Status);
+            });
+
+            modelBuilder.Entity<ApprovalLevel>(e =>
+            {
+                e.HasIndex(l => new { l.WorkflowType, l.Sequence });
+                e.Property(l => l.AmountMin).HasColumnType("numeric(18,2)");
+                e.Property(l => l.AmountMax).HasColumnType("numeric(18,2)");
+            });
+
+            modelBuilder.Entity<ApprovalChainStep>(e =>
+            {
+                e.HasIndex(s => new { s.EntityId, s.EntityType });
+                e.HasIndex(s => s.Status);
             });
         }
 

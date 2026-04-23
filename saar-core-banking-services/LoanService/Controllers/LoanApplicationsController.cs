@@ -179,25 +179,91 @@ namespace LoanService.Controllers
             {
                 case "SEND_TO_REVIEW":
                     toStatus = "IN_REVIEW";
+                    // Fire-and-forget approval chain init — non-fatal
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _workflowClient.InitApprovalChainAsync(
+                                app.ApplicationNumber ?? id.ToString(),
+                                app.RequestedAmount,
+                                "LOAN_ORIGINATION");
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "InitApprovalChain failed for {AppId} — continuing", id);
+                        }
+                    });
                     break;
 
                 case "CREDIT_APPROVE":
                     if (app.Status != "SUBMITTED" && app.Status != "IN_REVIEW")
                         return BadRequest(new { error = "Application must be SUBMITTED or IN_REVIEW to credit-approve" });
                     toStatus = "CREDIT_APPROVED";
+                    // Advance chain step 1 to APPROVED — fire-and-forget, non-fatal
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _workflowClient.SubmitChainStepActionAsync(
+                                app.ApplicationNumber ?? id.ToString(), "APPROVE", req.ActionBy, req.Comments);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "SubmitChainStep APPROVE (credit) failed for {AppId} — continuing", id);
+                        }
+                    });
                     break;
 
                 case "SANCTION":
                     if (app.Status != "CREDIT_APPROVED")
                         return BadRequest(new { error = "Application must be CREDIT_APPROVED to sanction" });
+                    // Sequential enforcement: check prior approval levels are all APPROVED
+                    {
+                        var chain = await _workflowClient.GetApprovalChainAsync(app.ApplicationNumber ?? id.ToString());
+                        if (chain != null && chain.Steps.Any())
+                        {
+                            var maxSeq         = chain.Steps.Max(s => s.Sequence);
+                            var priorNotApproved = chain.Steps
+                                .Any(s => s.Sequence < maxSeq && s.Status != "APPROVED");
+                            if (priorNotApproved)
+                                return BadRequest(new { error = "Previous approval level must be completed first" });
+                        }
+                    }
                     toStatus = "APPROVED";
                     app.SanctionedAmount = req.SanctionedAmount ?? app.RequestedAmount;
                     app.SanctionRemarks  = req.Comments;
+                    // Advance final chain step to APPROVED — fire-and-forget, non-fatal
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _workflowClient.SubmitChainStepActionAsync(
+                                app.ApplicationNumber ?? id.ToString(), "APPROVE", req.ActionBy, req.Comments);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "SubmitChainStep APPROVE (sanction) failed for {AppId} — continuing", id);
+                        }
+                    });
                     break;
 
                 case "REJECT":
                     toStatus = "REJECTED";
                     app.RejectionReason = req.Comments;
+                    // Terminate chain — fire-and-forget, non-fatal
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _workflowClient.SubmitChainStepActionAsync(
+                                app.ApplicationNumber ?? id.ToString(), "REJECT", req.ActionBy, req.Comments);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "SubmitChainStep REJECT failed for {AppId} — continuing", id);
+                        }
+                    });
                     break;
 
                 case "REQUEST_INFO":

@@ -44,6 +44,9 @@ builder.Services.AddDbContext<WorkflowDbContext>(options =>
 // ── Workflow rule service (scoped — shares DbContext lifetime) ────────────────
 builder.Services.AddScoped<IWorkflowRuleService, WorkflowRuleService>();
 
+// ── Approval level seed (runs at startup for all known tenant schemas) ────────
+builder.Services.AddHostedService<WorkflowOrchestrationService.Data.ApprovalLevelSeedService>();
+
 // ── HttpClient for ExpressionBuilderService ───────────────────────────────────
 var exprBaseUrl = builder.Configuration.GetSection("Services").GetValue<string>("ExpressionBaseUrl") ?? "http://localhost:5004";
 builder.Services.AddHttpClient("ExpressionBuilder", client =>
