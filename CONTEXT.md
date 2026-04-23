@@ -375,12 +375,24 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - **Stub fixes**: Added gold journal methods to `NoOpTransactionService`; added `GetFormSchemaAsync` to all 4 `FakeForms` stubs (pre-existing DFS-001 gap surfaced during build)
   - **Test result**: 82/82 LoanService.Tests green (78 existing + 4 new gold loan tests)
 
+## Completed (continued)
+- SAAR-WF-001 — Multi-Level Sequential Approval Routing (session 41, 2026-04-22):
+  - **ADR-014**: approval chain data lives in WorkflowOrchestrationService (correct domain boundary); LoanService calls via HTTP (fail-open pattern)
+  - **2 new EF entities**: `ApprovalLevel` (config: workflowType, amountMin/Max, sequence, label, requiredRole) + `ApprovalChainStep` (instance: entityId, entityType, sequence, label, status, performedBy, comments, actionedAt). EF migration `AddApprovalTables` (schema qualifiers stripped)
+  - **ApprovalLevelSeedService** (IHostedService): seeds 3 levels for `LOAN_ORIGINATION` at startup — Branch Manager (seq 1, all amounts), Credit Committee (seq 2, ≥₹5L), Board Approval (seq 3, ≥₹25L). Idempotent.
+  - **ApprovalController** (`/api/approval`): 4 endpoints — GET levels, POST chain/init (amount-band lookup → creates steps), GET chain (by entityId+entityType), POST chain/steps/{id}/action (APPROVE/REJECT with sequential enforcement)
+  - **IWorkflowClient** extended: 3 new methods — `InitApprovalChainAsync`, `GetApprovalChainAsync`, `SubmitChainStepActionAsync`. All 5 fake client stubs in test files updated (UnitTest1.cs × 3, EligibilityAndWorkflowTests.cs × 1, ExpressionIntegrationDemo.cs × 1)
+  - **LoanApplicationsController** wired: SEND_TO_REVIEW → InitApprovalChain (fire-and-forget); CREDIT_APPROVE → SubmitChainStep APPROVE (fire-and-forget); SANCTION → GetApprovalChain + sequential check (awaited, fail-open) + SubmitChainStep APPROVE; REJECT → SubmitChainStep REJECT (fire-and-forget)
+  - **LoanDetail.tsx** updated: `ChainStep` interface + `approvalChain` state + `useEffect` fetch (silent fail) + approval chain card UI (PENDING=amber, APPROVED=green, REJECTED=red, SKIPPED=grey chips) shown when chain has steps
+  - **WorkflowOrchestrationService.Tests** (new project): 4/4 NUnit tests — amount-band under ₹5L (1 level), ₹5L–₹25L (2 levels), sequential block (BadRequest), rejection marks remaining SKIPPED
+  - **11-approval-routing.cy.ts**: 15 Cypress regression tests (3 describe blocks: chain display, status chips, chain transitions)
+  - **Test result: 82/82 LoanService.Tests + 4/4 WorkflowOrchestrationService.Tests** — all pass, no regressions
+
 ## Pending Next
-- Hetzner deploy SAAR-GL-001: `docker compose up --build -d loanservice frontend` — deploy gold loan backend + updated frontend
+- Hetzner deploy SAAR-GL-001 + WF-001: `docker compose up --build -d loanservice workfloworchestration frontend` — deploy gold loan backend, new approval routing (migration + seed), and updated frontend
 - Hetzner deploy SAAR-DFS-003: `docker compose up --build -d frontend` — rebuild frontend with DFS-wired LoanOrigination
 - E2E smoke: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog shows debit/credit lines on demobank.saaritsolutions.com
 - Form Builder + DFS-003 manual smoke on demobank: add a custom field via Form Builder → reload New Loan Application → verify custom field appears in Step 0
-- SAAR-WF-001 (Multi-Level Approval Routing) — HIGH priority, after GL-001 deployed
 - SAAR-CFG-001 (Bank Configuration + Feature Toggles) — MEDIUM priority
 - SAAR-DFS-004 (future): wire DFS into GOLD_LOAN form; submit customFields to backend; conditional visibility
 

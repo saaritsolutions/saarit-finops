@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-22 (session 40 — SAAR-GL-001 Gold Loan Phase 1 complete, 82/82 tests green)
+**Last Updated:** 2026-04-22 (session 41 — SAAR-WF-001 Multi-Level Approval Routing complete, 82/82 + 4/4 tests green)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,21 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Hetzner deploy SAAR-GL-001 + DFS-003**: `docker compose up --build -d loanservice frontend` | Get gold loan backend (migration + controllers) + updated frontend (4 new pages, DFS wiring) live on demobank |
+| 1 | **Hetzner deploy SAAR-GL-001 + WF-001 + DFS-003**: `docker compose up --build -d loanservice workfloworchestration frontend` | Get gold loan backend, approval chain (new migration + seed), and updated frontend all live on demobank |
 | 2 | **E2E live smoke**: log in → disburse loan → click GL Journal # chip → verify JournalDetailDialog | Last unverified piece — confirm journal drill-down works on live site |
-| 3 | **SAAR-WF-001 — Multi-Level Approval Routing** | Loan state machine now stable with GL-001; next core feature |
+| 3 | **SAAR-CFG-001 — Bank Configuration + Feature Toggles** | Next core feature after WF-001 |
+
+### Recently Completed (session 41 — 2026-04-22)
+- [x] **SAAR-WF-001 complete — Multi-Level Sequential Approval Routing** — 82/82 + 4/4 tests green:
+  - `ApprovalLevel` + `ApprovalChainStep` entities + `AddApprovalTables` EF migration (schema qualifiers stripped)
+  - `ApprovalLevelSeedService` (IHostedService): 3 levels seeded for LOAN_ORIGINATION (Branch Manager, Credit Committee, Board Approval)
+  - `ApprovalController` (`/api/approval`): 4 endpoints — GET levels, POST chain/init, GET chain, POST chain/steps/{id}/action (sequential enforcement + rejection cascade)
+  - `IWorkflowClient` extended with 3 methods; `WorkflowClient` implementations added; `ApprovalChainDto`/`ApprovalChainStepDto` DTOs
+  - `LoanApplicationsController` wired: SEND_TO_REVIEW (init), CREDIT_APPROVE (step APPROVE), SANCTION (chain check + step APPROVE), REJECT (chain REJECT) — all fail-open
+  - `LoanDetail.tsx`: approval chain card with step status chips (PENDING/APPROVED/REJECTED/SKIPPED)
+  - `WorkflowOrchestrationService.Tests` (new project, 4/4 NUnit tests): amount-band routing, sequential block, rejection cascade
+  - `11-approval-routing.cy.ts`: 15 Cypress regression tests
+  - All 5 IWorkflowClient stubs in test files updated with 3 no-op stub methods
 
 ### Recently Completed (session 40 — 2026-04-22)
 - [x] **SAAR-GL-001 complete — Gold Loan Phase 1 (core origination + bullet repayment)** — 82/82 tests green:

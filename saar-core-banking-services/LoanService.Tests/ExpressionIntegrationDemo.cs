@@ -190,6 +190,9 @@ file class FakeWorkflow : IWorkflowClient
         => Task.FromResult(new WorkflowInstance { Id = Guid.NewGuid(), EntityId = entityId, WorkflowType = "LOAN_ORIGINATION", Status = "IN_REVIEW" });
     public Task<WorkflowStepResult> ProcessStepAsync(Guid instanceId, string action, Dictionary<string, object> context, CancellationToken ct = default)
         => Task.FromResult(new WorkflowStepResult { InstanceId = instanceId, Success = true, WorkflowStatus = "IN_REVIEW" });
+    public Task InitApprovalChainAsync(string applicationId, decimal amount, string workflowType = "LOAN_ORIGINATION", CancellationToken ct = default) => Task.CompletedTask;
+    public Task<ApprovalChainDto?> GetApprovalChainAsync(string applicationId, CancellationToken ct = default) => Task.FromResult<ApprovalChainDto?>(null);
+    public Task SubmitChainStepActionAsync(string applicationId, string action, string? performedBy, string? comments, CancellationToken ct = default) => Task.CompletedTask;
 }
 
 file class FakeForms : IDynamicFormsClient

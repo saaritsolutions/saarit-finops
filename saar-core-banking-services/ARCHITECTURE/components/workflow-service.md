@@ -87,6 +87,35 @@ WorkflowService orchestrates EOD:
   5. Sets system back to ONLINE_MODE after BOD
 ```
 
+## Multi-Level Approval Routing (SAAR-WF-001, session 40)
+
+New entities added to WorkflowOrchestrationService DB (per tenant schema):
+
+### ApprovalLevel (config)
+Defines the approval bands for a workflow type. Seeded at startup for `LOAN_ORIGINATION`:
+| Sequence | AmountMin | AmountMax | Label | Role |
+|---|---|---|---|---|
+| 1 | 0 | MaxValue | Branch Manager | CHECKER |
+| 2 | 5,00,000 | MaxValue | Credit Committee | MANAGER |
+| 3 | 25,00,000 | MaxValue | Board Approval | BOARD |
+
+### ApprovalChainStep (instance)
+One row per required level per loan application. Created when `POST /api/approval/chain/init` is called.
+Fields: EntityId (ApplicationNumber), EntityType, Sequence, Label, RequiredRole, Status (PENDING→APPROVED/REJECTED/SKIPPED), PerformedBy, Comments, ActionedAt.
+
+### New Endpoints (ApprovalController)
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/approval/levels?workflowType=LOAN_ORIGINATION` | List configured levels |
+| POST | `/api/approval/chain/init` | Create chain steps (amount-band lookup) |
+| GET | `/api/approval/chain?entityId={}&entityType=LOAN` | Get current chain |
+| POST | `/api/approval/chain/steps/{id}/action` | APPROVE or REJECT a step |
+
+### Sequential Enforcement
+- Level N+1 action is blocked until Level N is APPROVED
+- REJECT at any level marks remaining PENDING steps as SKIPPED
+- All LoanService calls to ApprovalController are fail-open (non-fatal)
+
 ## IDRBT Requirements Met
 - Section 15: Maker-Checker (IDRBT mandatory for all financial transactions)
 - Section 10: Standing Instructions

@@ -45,6 +45,9 @@ file sealed class NoOpWorkflowClient : IWorkflowClient
         Task.FromResult(new WorkflowInstance());
     public Task<WorkflowStepResult> ProcessStepAsync(Guid instanceId, string action, Dictionary<string, object> ctx, CancellationToken ct = default) =>
         Task.FromResult(new WorkflowStepResult());
+    public Task InitApprovalChainAsync(string applicationId, decimal amount, string workflowType = "LOAN_ORIGINATION", CancellationToken ct = default) => Task.CompletedTask;
+    public Task<ApprovalChainDto?> GetApprovalChainAsync(string applicationId, CancellationToken ct = default) => Task.FromResult<ApprovalChainDto?>(null);
+    public Task SubmitChainStepActionAsync(string applicationId, string action, string? performedBy, string? comments, CancellationToken ct = default) => Task.CompletedTask;
 }
 
 // ── DB factory ────────────────────────────────────────────────────────────────
