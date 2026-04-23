@@ -28,6 +28,7 @@ const GoldRateAdmin      = lazy(() => import('../pages/GoldRateAdmin'));
 const GoldLoanList       = lazy(() => import('../pages/GoldLoanList'));
 const GoldLoanOrigination = lazy(() => import('../pages/GoldLoanOrigination'));
 const GoldLoanDetail     = lazy(() => import('../pages/GoldLoanDetail'));
+const BankConfig         = lazy(() => import('../pages/BankConfig'));
 const Unauthorized = lazy(() => import('../components/common/Unauthorized'));
 const NotFound = lazy(() => import('../components/common/NotFound'));
 
@@ -188,7 +189,8 @@ export const AppRouter: React.FC = () => {
           <Route path="gold-loans/new" element={<ProtectedRoute requiredPermission={BANKING_PERMISSIONS.LOAN_CREATE}><GoldLoanOrigination /></ProtectedRoute>} />
           <Route path="gold-loans/:id" element={<ProtectedRoute requiredPermission={BANKING_PERMISSIONS.LOAN_VIEW}><GoldLoanDetail /></ProtectedRoute>} />
           <Route path="admin/gold-rate" element={<ProtectedRoute requiredPermission={BANKING_PERMISSIONS.SYSTEM_CONFIG}><GoldRateAdmin /></ProtectedRoute>} />
-          
+          <Route path="admin/bank-config" element={<ProtectedRoute requiredPermission={BANKING_PERMISSIONS.SYSTEM_CONFIG}><BankConfig /></ProtectedRoute>} />
+
           {/* Reports */}
           <Route
             path="reports/*"

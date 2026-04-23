@@ -9,6 +9,25 @@ namespace UserAccessManagementService.Models
         public string? ThemeColor { get; set; }              // e.g. "#1565C0"
         public string? LogoUrl { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        // ── Bank Profile (SAAR-CFG-001) ──────────────────────────────────────
+        public string? BankAddress       { get; set; }
+        public string? BankPhone         { get; set; }
+        public string? BankEmail         { get; set; }
+        public string? RbiLicenseNumber  { get; set; }
+        public string? WebsiteUrl        { get; set; }
+
+        // ── Feature Toggles (SAAR-CFG-001) ───────────────────────────────────
+        public bool FeatureGoldLoan         { get; set; } = true;
+        public bool FeatureDynamicForms     { get; set; } = true;
+        public bool FeatureExpressions      { get; set; } = true;
+        public bool FeatureApprovalChain    { get; set; } = true;
+        public bool FeatureComplianceAlerts { get; set; } = false;
+        public bool FeatureFdRd             { get; set; } = true;
+
+        // ── Audit ─────────────────────────────────────────────────────────────
+        public DateTime? ConfigUpdatedAt { get; set; }
+        public string?   ConfigUpdatedBy { get; set; }
     }
 
     public class User

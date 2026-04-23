@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-22 (session 41 — SAAR-WF-001 Multi-Level Approval Routing complete, 82/82 + 4/4 tests green)
+**Last Updated:** 2026-04-23 (session 42 — SAAR-CFG-001 Bank Configuration + Feature Toggles complete, 5/5 + 82/82 tests green)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,28 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Hetzner deploy SAAR-GL-001 + WF-001 + DFS-003**: `docker compose up --build -d loanservice workfloworchestration frontend` | Get gold loan backend, approval chain (new migration + seed), and updated frontend all live on demobank |
+| 1 | **Hetzner deploy all pending features**: `docker compose up --build -d useraccessmanagement loanservice workfloworchestration frontend nginx` | Get SAAR-CFG-001 (Tenant migration + TenantConfigController + BankConfig UI), SAAR-GL-001 (gold loan migration), SAAR-WF-001 (approval chain), SAAR-DFS-003 (DFS LoanOrigination) all live on demobank. Also add `REACT_APP_UAM_BASE_URL` build arg to Dockerfile + docker-compose |
 | 2 | **E2E live smoke**: log in → disburse loan → click GL Journal # chip → verify JournalDetailDialog | Last unverified piece — confirm journal drill-down works on live site |
-| 3 | **SAAR-CFG-001 — Bank Configuration + Feature Toggles** | Next core feature after WF-001 |
+| 3 | **Form Builder + DFS-003 manual smoke**: add custom field via Form Builder → reload New Loan Application → verify it appears in Step 0 | Validate DFS-003 additive wiring works end-to-end on demobank |
+
+### Recently Completed (session 42 — 2026-04-23)
+- [x] **SAAR-CFG-001 complete — Bank Configuration + Per-Tenant Feature Toggles** — UAMService.Tests 5/5 + LoanService.Tests 82/82:
+  - `SAAR_CFG_001_REQUIREMENTS.md`: JIRA-format requirement doc (8 FRs, NFRs, test plan)
+  - `ADR-015-feature-flags-jwt.md`: JWT-embedded flags (fail-open, re-login activation) — chosen over per-request lookup or shared cache
+  - `UserAccessModels.cs`: 13 new Tenant columns (5 bank profile + 6 feature flags + 2 audit). EF migration `AddTenantConfig` (bool defaults: `true` for all features except FeatureComplianceAlerts)
+  - `AuthController.cs`: `GenerateJwtAsync` embeds 6 feature claims + `bank_theme_color` + `bank_logo_url`
+  - `TenantConfigController.cs` (new): `GET /api/tenant-config` (any role) + `PUT /api/tenant-config` (Admin only)
+  - `nginx/nginx.conf`: `/api/tenant-config` → `useraccessmanagement:5033` proxy added
+  - `scripts/start-all.sh`: UAMService on port 5033 added
+  - `LoanService/Extensions/ClaimsPrincipalExtensions.cs` (new): `HasFeature()` fail-open helper
+  - `GoldLoanController.cs` + `GoldRateController.cs`: 403 guard on all 9 endpoints
+  - `frontend-react/src/services/bankConfigService.ts` (new): typed API client, `REACT_APP_UAM_BASE_URL ?? http://localhost:5033`
+  - `authSlice.ts`: `FeatureFlags` interface + `DEFAULT_FLAGS` + `decodeFlags()` (atob, `!= 'false'`) + `featureFlags` in state + `selectFeatureFlags` selector
+  - `BankConfig.tsx` (new): 2-tab page — Bank Profile (8 fields, MUI v7 Grid v2) + Feature Toggles (6 switches)
+  - `AppRouter.tsx`: lazy `/admin/bank-config` route
+  - `Sidebar.tsx`: `featureFlag` on 5 items + `renderMenuItem` gating + Bank Configuration entry
+  - `TenantConfigTests.cs` (new, 4 NUnit tests): JWT claims, GET fields, PUT + reflect, 403 non-Admin
+  - `12-bank-config.cy.ts` (new, 15 Cypress tests): Bank Profile tab, Feature Toggles tab, Sidebar feature gating with `makeFakeJwt()`
 
 ### Recently Completed (session 41 — 2026-04-22)
 - [x] **SAAR-WF-001 complete — Multi-Level Sequential Approval Routing** — 82/82 + 4/4 tests green:

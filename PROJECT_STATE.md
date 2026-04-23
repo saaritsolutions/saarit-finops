@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-22 (session 41 — SAAR-WF-001 Multi-Level Approval Routing complete)
+**Last Updated:** 2026-04-23 (session 42 — SAAR-CFG-001 Bank Configuration + Feature Toggles complete)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -147,6 +147,23 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 42 — 2026-04-23 (SAAR-CFG-001 — Bank Configuration + Per-Tenant Feature Toggles complete)
+- **ADR-015 decision**: Feature flags embedded in JWT at login — no per-request UAMService lookup; fail-open (missing claim = feature enabled); re-login required for flag changes to take effect.
+- **UAMService Tenant model extended** (13 new columns): BankAddress, BankPhone, BankEmail, RbiLicenseNumber, WebsiteUrl, FeatureGoldLoan, FeatureDynamicForms, FeatureExpressions, FeatureApprovalChain, FeatureComplianceAlerts (default false), FeatureFdRd, ConfigUpdatedAt, ConfigUpdatedBy. EF migration `AddTenantConfig` (bool defaults correctly set — `true` for all features except ComplianceAlerts which stays `false`).
+- **AuthController** (UAMService): `GenerateJwtAsync` now loads Tenant from DB, embeds `feature_gold_loan`, `feature_dynamic_forms`, `feature_expressions`, `feature_approval_chain`, `feature_compliance_alerts`, `feature_fd_rd` as `"true"/"false"` string claims, plus `bank_theme_color` + `bank_logo_url`.
+- **TenantConfigController** (new, UAMService): `GET /api/tenant-config` (any role, reads from JWT `tenant_id`) + `PUT /api/tenant-config` (Admin only). Full bank profile + feature toggle CRUD. Sets `ConfigUpdatedAt`/`ConfigUpdatedBy` on save.
+- **nginx.conf**: `/api/tenant-config` → `useraccessmanagement:5033` proxy block added (same pattern as all other UAM routes).
+- **start-all.sh**: UAMService launched on port 5033 with correct `ASPNETCORE_URLS` + `ASPNETCORE_ENVIRONMENT=Development`.
+- **LoanService backend enforcement**: `ClaimsPrincipalExtensions.HasFeature(featureName)` helper — fail-open: `val == null || val != "false"`. Added 403 guard to all 6 `GoldLoanController` action methods + all 3 `GoldRateController` action methods.
+- **Frontend bankConfigService.ts** (new): `TenantConfig` interface, `getTenantConfig()` → `GET /api/tenant-config`, `saveTenantConfig()` → `PUT /api/tenant-config`. Base URL: `REACT_APP_UAM_BASE_URL ?? http://localhost:5033`.
+- **authSlice.ts updated**: `FeatureFlags` interface (exported, 8 fields including `themeColor`/`logoUrl`), `DEFAULT_FLAGS` (all features enabled except `complianceAlerts`), `decodeFlags(token)` (atob JWT payload decode, `!= 'false'` fail-open pattern). `featureFlags` added to `AuthState`, decoded on `loginUser.fulfilled` and on hydration from localStorage. `selectFeatureFlags` selector exported.
+- **BankConfig.tsx** (new page): 2-tab admin page using TabPanel + MUI v7 Grid v2 API (`size={{ xs, md }}`). Tab 0 (Bank Profile): 8 TextFields (Bank Name, RBI License, Theme Color, Logo URL, Address, Phone, Email, Website). Tab 1 (Feature Toggles): 6 `FormControlLabel`+`Switch` rows with `inputProps={{ 'aria-label' }}`. Save button calls `saveTenantConfig()`. Success/error Alerts. CircularProgress on initial load.
+- **AppRouter.tsx**: `const BankConfig = lazy(() => import('../pages/BankConfig'))` + route `admin/bank-config` gated by `BANKING_PERMISSIONS.SYSTEM_CONFIG`.
+- **Sidebar.tsx**: `featureFlag?: keyof FeatureFlags` added to `MenuItem` interface. Tagged items: Gold Loans section (`goldLoan`), Expression Builder + End-to-End Demo (`expressions`), Form Builder (`dynamicForms`), Gold Rate Admin (`goldLoan`). `Bank Configuration` entry added to Administration children. `renderMenuItem` checks `featureFlags?.[item.featureFlag] === false` → returns null. `selectFeatureFlags` imported + used via `useSelector`.
+- **TenantConfigTests.cs** (new, UAMService.Tests): 4 NUnit tests — `Login_JWT_IncludesFeatureFlagClaims`, `GetTenantConfig_Returns_CorrectFields`, `PutTenantConfig_Updates_AndReflectsOnGet`, `PutTenantConfig_Returns403_ForNonAdminUser`. UAMService.Tests: 5/5 green (4 new + 1 existing placeholder).
+- **12-bank-config.cy.ts** (new Cypress spec): 15 tests across 3 describe blocks — Bank Profile Tab (5), Feature Toggles Tab (5), Sidebar Feature Gating (5). `makeFakeJwt(overrides)` helper uses `btoa()` to create a real 3-part JWT; tests visit dashboard with `onBeforeLoad` → `localStorage.setItem('auth-token', token)` to inject custom feature flags.
+- **Test result: UAMService.Tests 5/5 + LoanService.Tests 82/82 — all pass**.
 
 ### Session 41 — 2026-04-22 (SAAR-WF-001 — Multi-Level Sequential Approval Routing complete)
 - **ADR-014**: Approval chain data lives in WorkflowOrchestrationService (correct domain boundary). LoanService calls via HTTP (fail-open — if WorkflowOrchestrationService is unreachable, loan state still advances with a warning log).
@@ -397,9 +414,10 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ## 6. Pending Work
 
 ### In Progress
-- **Hetzner deploy (SAAR-DFS-003)**: `docker compose up --build -d frontend` — rebuild React frontend with DFS-wired LoanOrigination
+- **Hetzner deploy SAAR-CFG-001 + GL-001 + WF-001 + DFS-003**: rebuild all — `docker compose up --build -d useraccessmanagement loanservice workfloworchestration frontend nginx`
 
 ### Recently Completed
+- **SAAR-CFG-001 (Bank Configuration + Feature Toggles)** — Tenant model extended (13 cols), JWT claims, TenantConfigController, BankConfig.tsx (2-tab admin page), Sidebar feature gating, 5/5 UAMService.Tests + 82/82 LoanService.Tests.
 - **M4: Form Builder (SAAR-DFS-002)** — 4-tab React page: schema list, field editor (▲/▼/property panel), preview, history. Deployed via PR #SAAR-DFS-002.
 
 ### Milestone Backlog (from CONTEXT.md)
@@ -432,10 +450,11 @@ Per `EXECUTION_ROADMAP.md`:
 
 ## 7. Next Recommended Steps (Ordered by Impact)
 
-1. **Hetzner deploy SAAR-GL-001 + WF-001** — `docker compose up --build -d loanservice workfloworchestration frontend` — rebuild loanservice (gold loan migration + approval chain client), workfloworchestration (AddApprovalTables migration + seed), and frontend (gold loan pages + approval chain UI).
-2. **Hetzner deploy SAAR-DFS-003** — `docker compose up --build -d frontend` (can combine with step 1 above).
-3. **E2E smoke**: disburse loan → click GL Journal # → verify JournalDetailDialog on demobank.saaritsolutions.com.
-4. **SAAR-CFG-001 (Bank Configuration + Feature Toggles)** — MEDIUM priority.
+1. **Hetzner deploy SAAR-CFG-001 + GL-001 + WF-001 + DFS-003**: `docker compose up --build -d useraccessmanagement loanservice workfloworchestration frontend nginx` — includes: AddTenantConfig migration + TenantConfigController, gold loan migration + approval chain, DFS-wired LoanOrigination, BankConfig UI.
+   - Also add `REACT_APP_UAM_BASE_URL` build arg to frontend Dockerfile + docker-compose so bankConfigService.ts works in production.
+2. **E2E smoke**: disburse loan → click GL Journal # → verify JournalDetailDialog on demobank.saaritsolutions.com.
+3. **Form Builder + DFS-003 manual smoke**: add a custom field via Form Builder → reload New Loan Application → verify it appears in Step 0.
+4. **SAAR-DFS-004** (future): wire DFS into GOLD_LOAN form; submit customFields to backend; conditional field visibility.
 5. **APIGateway: JWT auth + routing** — required for any real service-to-service flow.
 
 ---

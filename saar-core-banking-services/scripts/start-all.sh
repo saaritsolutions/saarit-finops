@@ -7,6 +7,7 @@
 # - DynamicFieldsSchemaService: 5013
 # - AccountService: 5217
 # - LoanService: 5130
+# - UserAccessManagementService: 5033
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")"/.. && pwd)"
@@ -24,8 +25,10 @@ DFS_PID=$!
 ACC_PID=$!
 "$ROOT_DIR/scripts/run-fixed-port.sh" "$(SVC_DIR LoanService)" 5130 --watch &
 LOAN_PID=$!
+"$ROOT_DIR/scripts/run-fixed-port.sh" "$(SVC_DIR UserAccessManagementService)" 5033 --watch &
+UAM_PID=$!
 
-trap 'echo "Stopping services..."; kill $EXP_PID $TXN_PID $WF_PID $DFS_PID $ACC_PID $LOAN_PID 2>/dev/null || true; wait' INT TERM
+trap 'echo "Stopping services..."; kill $EXP_PID $TXN_PID $WF_PID $DFS_PID $ACC_PID $LOAN_PID $UAM_PID 2>/dev/null || true; wait' INT TERM
 
-echo "Services started: EXP($EXP_PID) TXN($TXN_PID) WF($WF_PID) DFS($DFS_PID) ACC($ACC_PID) LOAN($LOAN_PID)"
+echo "Services started: EXP($EXP_PID) TXN($TXN_PID) WF($WF_PID) DFS($DFS_PID) ACC($ACC_PID) LOAN($LOAN_PID) UAM($UAM_PID)"
 wait

@@ -40,10 +40,12 @@ import {
   DynamicForm as DynamicFormIcon,
   Diamond as DiamondIcon,
   MonetizationOn as GoldRateIcon,
+  Tune as BankConfigIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { selectSidebarOpen, setSidebarOpen } from '../../store/slices/uiSlice';
+import { selectFeatureFlags, type FeatureFlags } from '../../store/slices/authSlice';
 import { DRAWER_WIDTH, DRAWER_WIDTH_COLLAPSED, HEADER_HEIGHT } from './Layout';
 import VersionDisplay from '../VersionDisplay';
 
@@ -56,6 +58,7 @@ interface MenuItem {
   path?:       string;
   children?:   MenuItem[];
   permission?: string;
+  featureFlag?: keyof FeatureFlags;
 }
 
 interface MenuSection {
@@ -128,9 +131,10 @@ const menuSections: MenuSection[] = [
         ],
       },
       {
-        id:    'gold-loans',
-        title: 'Gold Loans',
-        icon:  <DiamondIcon fontSize="small" />,
+        id:          'gold-loans',
+        title:       'Gold Loans',
+        icon:        <DiamondIcon fontSize="small" />,
+        featureFlag: 'goldLoan',
         children: [
           { id: 'gold-loan-list',   title: 'Applications', icon: <DiamondIcon fontSize="small" />, path: '/gold-loans',     permission: BANKING_PERMISSIONS.LOAN_VIEW   },
           { id: 'gold-loan-create', title: 'New Gold Loan', icon: <DiamondIcon fontSize="small" />, path: '/gold-loans/new', permission: BANKING_PERMISSIONS.LOAN_CREATE },
@@ -169,13 +173,14 @@ const menuSections: MenuSection[] = [
         title: 'Administration',
         icon:  <SettingsIcon fontSize="small" />,
         children: [
-          { id: 'user-management',   title: 'User Management',       icon: <PersonIcon fontSize="small" />,           path: '/admin/users',    permission: 'admin.users'    },
-          { id: 'product-config',    title: 'Product Configuration', icon: <SettingsIcon fontSize="small" />,         path: '/admin/products', permission: 'admin.products' },
-          { id: 'workflow',          title: 'Workflow Management',   icon: <WorkflowIcon fontSize="small" />,         path: '/admin/workflow', permission: 'admin.workflow' },
-          { id: 'expression-builder',title: 'Expression Builder',   icon: <ExpressionBuilderIcon fontSize="small" />,path: '/expressions',    permission: BANKING_PERMISSIONS.EXPRESSION_BUILDER },
-          { id: 'end-to-end-demo',   title: 'End-to-End Demo',      icon: <TrendingUpIcon fontSize="small" />,        path: '/demo',           permission: BANKING_PERMISSIONS.EXPRESSION_BUILDER },
-          { id: 'form-builder',      title: 'Form Builder',         icon: <DynamicFormIcon fontSize="small" />,       path: '/admin/form-builder', permission: BANKING_PERMISSIONS.SYSTEM_CONFIG },
-          { id: 'gold-rate-admin',   title: 'Gold Rate',            icon: <GoldRateIcon fontSize="small" />,          path: '/admin/gold-rate',    permission: BANKING_PERMISSIONS.SYSTEM_CONFIG },
+          { id: 'user-management',   title: 'User Management',       icon: <PersonIcon fontSize="small" />,           path: '/admin/users',        permission: 'admin.users'    },
+          { id: 'product-config',    title: 'Product Configuration', icon: <SettingsIcon fontSize="small" />,         path: '/admin/products',     permission: 'admin.products' },
+          { id: 'workflow',          title: 'Workflow Management',   icon: <WorkflowIcon fontSize="small" />,         path: '/admin/workflow',     permission: 'admin.workflow' },
+          { id: 'bank-config',       title: 'Bank Configuration',   icon: <BankConfigIcon fontSize="small" />,        path: '/admin/bank-config',  permission: BANKING_PERMISSIONS.SYSTEM_CONFIG },
+          { id: 'expression-builder',title: 'Expression Builder',   icon: <ExpressionBuilderIcon fontSize="small" />,path: '/expressions',        permission: BANKING_PERMISSIONS.EXPRESSION_BUILDER, featureFlag: 'expressions' },
+          { id: 'end-to-end-demo',   title: 'End-to-End Demo',      icon: <TrendingUpIcon fontSize="small" />,        path: '/demo',               permission: BANKING_PERMISSIONS.EXPRESSION_BUILDER, featureFlag: 'expressions' },
+          { id: 'form-builder',      title: 'Form Builder',         icon: <DynamicFormIcon fontSize="small" />,       path: '/admin/form-builder', permission: BANKING_PERMISSIONS.SYSTEM_CONFIG, featureFlag: 'dynamicForms' },
+          { id: 'gold-rate-admin',   title: 'Gold Rate',            icon: <GoldRateIcon fontSize="small" />,          path: '/admin/gold-rate',    permission: BANKING_PERMISSIONS.SYSTEM_CONFIG, featureFlag: 'goldLoan' },
         ],
       },
     ],
@@ -202,7 +207,8 @@ const Sidebar: React.FC = () => {
   const isMobile  = useMediaQuery(theme.breakpoints.down('md'));
   const isDark    = theme.palette.mode === 'dark';
 
-  const sidebarOpen = useSelector(selectSidebarOpen);
+  const sidebarOpen   = useSelector(selectSidebarOpen);
+  const featureFlags  = useSelector(selectFeatureFlags);
   const [expandedMenus, setExpandedMenus] = React.useState<string[]>(['dashboard']);
 
   const handleDrawerClose = () => dispatch(setSidebarOpen(false));
@@ -240,7 +246,10 @@ const Sidebar: React.FC = () => {
   };
 
   // ── Render a single nav item ───────────────────────────────────────────────
-  const renderMenuItem = (item: MenuItem, depth = 0) => {
+  const renderMenuItem = (item: MenuItem, depth = 0): React.ReactNode => {
+    // Feature-flag gate: hide item when the feature is explicitly disabled
+    if (item.featureFlag && featureFlags?.[item.featureFlag] === false) return null;
+
     const hasChildren  = (item.children?.length ?? 0) > 0;
     const isExpanded   = expandedMenus.includes(item.id);
     const active       = isActive(item.path);
