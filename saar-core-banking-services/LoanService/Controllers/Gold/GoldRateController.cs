@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using LoanService.Extensions;
 using LoanService.Services.Gold;
 
 namespace LoanService.Controllers.Gold
@@ -22,6 +23,9 @@ namespace LoanService.Controllers.Gold
         [HttpGet("today")]
         public async Task<IActionResult> GetTodayRate(CancellationToken ct)
         {
+            if (!User.HasFeature("gold_loan"))
+                return StatusCode(403, new { error = "Gold Loan module is not enabled for this tenant." });
+
             var (rate, isLatest) = await _goldRateService.GetTodayRateAsync(ct);
             if (rate == null)
                 return NotFound(new { error = "No gold rate has been entered yet." });
@@ -42,6 +46,9 @@ namespace LoanService.Controllers.Gold
         [HttpGet]
         public async Task<IActionResult> GetHistory([FromQuery] int days = 30, CancellationToken ct = default)
         {
+            if (!User.HasFeature("gold_loan"))
+                return StatusCode(403, new { error = "Gold Loan module is not enabled for this tenant." });
+
             var history = await _goldRateService.GetHistoryAsync(days, ct);
             return Ok(history);
         }

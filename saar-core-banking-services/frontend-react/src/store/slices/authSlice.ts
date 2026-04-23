@@ -1,6 +1,49 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { User, UserStatus } from '../../types';
 
+// Feature flags decoded from JWT at login
+export interface FeatureFlags {
+  goldLoan: boolean;
+  dynamicForms: boolean;
+  expressions: boolean;
+  approvalChain: boolean;
+  complianceAlerts: boolean;
+  fdRd: boolean;
+  themeColor: string;
+  logoUrl: string;
+}
+
+const DEFAULT_FLAGS: FeatureFlags = {
+  goldLoan: true,
+  dynamicForms: true,
+  expressions: true,
+  approvalChain: true,
+  complianceAlerts: false,
+  fdRd: true,
+  themeColor: '#2563EB',
+  logoUrl: '',
+};
+
+function decodeFlags(token: string): FeatureFlags {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return DEFAULT_FLAGS;
+    const payload = JSON.parse(atob(parts[1]));
+    return {
+      goldLoan:         payload['feature_gold_loan']         !== 'false',
+      dynamicForms:     payload['feature_dynamic_forms']      !== 'false',
+      expressions:      payload['feature_expressions']        !== 'false',
+      approvalChain:    payload['feature_approval_chain']     !== 'false',
+      complianceAlerts: payload['feature_compliance_alerts']  === 'true',
+      fdRd:             payload['feature_fd_rd']              !== 'false',
+      themeColor:       payload['bank_theme_color'] ?? '#2563EB',
+      logoUrl:          payload['bank_logo_url'] ?? '',
+    };
+  } catch {
+    return DEFAULT_FLAGS;
+  }
+}
+
 // Authentication state interface
 interface AuthState {
   user: User | null;
@@ -10,6 +53,7 @@ interface AuthState {
   error: string | null;
   permissions: string[];
   sessionExpiry: Date | null;
+  featureFlags: FeatureFlags;
 }
 
 // Get stored token and check if it's valid (or auto-authenticate in development)
@@ -108,6 +152,7 @@ const initialState: AuthState = {
     'admin.expressions',
   ] : [],
   sessionExpiry: isValidToken ? new Date(Date.now() + 8 * 60 * 60 * 1000) : null,
+  featureFlags: (isRealJwt && storedToken) ? decodeFlags(storedToken) : DEFAULT_FLAGS,
 };
 
 // Async thunks for authentication
@@ -354,6 +399,7 @@ const authSlice = createSlice({
         state.isAuthenticated = true;
         state.permissions = action.payload.permissions;
         state.sessionExpiry = action.payload.sessionExpiry;
+        state.featureFlags = decodeFlags(action.payload.token);
         state.error = null;
       })
       .addCase(loginUser.rejected, (state, action) => {
@@ -373,6 +419,7 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
         state.permissions = [];
         state.sessionExpiry = null;
+        state.featureFlags = DEFAULT_FLAGS;
         state.error = null;
       })
       .addCase(logoutUser.rejected, (state, action) => {
@@ -425,6 +472,7 @@ export const selectIsAuthenticated = (state: { auth: AuthState }) => state.auth.
 export const selectAuthLoading = (state: { auth: AuthState }) => state.auth.isLoading;
 export const selectAuthError = (state: { auth: AuthState }) => state.auth.error;
 export const selectUserPermissions = (state: { auth: AuthState }) => state.auth.permissions;
+export const selectFeatureFlags = (state: { auth: AuthState }) => state.auth.featureFlags;
 
 // Permission checker
 export const hasPermission = (permissions: string[], requiredPermission: string): boolean => {

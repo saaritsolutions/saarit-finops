@@ -41,7 +41,7 @@ namespace UserAccessManagementService.Controllers
             }
 
             var roles = user.UserRoles.Select(ur => ur.Role.Name).ToArray();
-            var token = GenerateJwt(user, roles);
+            var token = await GenerateJwtAsync(user, roles);
 
             // Derive a friendly first name from the email prefix (e.g. "admin" from "admin@…")
             var firstName = user.Email.Split('@')[0];
@@ -68,7 +68,7 @@ namespace UserAccessManagementService.Controllers
 
         // ── JWT helper ────────────────────────────────────────────────────────
 
-        private string GenerateJwt(User user, string[] roles)
+        private async Task<string> GenerateJwtAsync(User user, string[] roles)
         {
             var secret   = _config["Jwt:Secret"]   ?? "SaarCoreBankingJwtSecret2026DemoKeyLongEnoughForHS256";
             var issuer   = _config["Jwt:Issuer"]   ?? "saar-banking";
@@ -87,6 +87,22 @@ namespace UserAccessManagementService.Controllers
             };
             foreach (var role in roles)
                 claims.Add(new Claim(ClaimTypes.Role, role));
+
+            // Embed feature flag claims from tenant config (SAAR-CFG-001)
+            var tenant = await _context.Tenants.FindAsync(user.TenantId);
+            if (tenant != null)
+            {
+                claims.Add(new Claim("feature_gold_loan",         tenant.FeatureGoldLoan.ToString().ToLower()));
+                claims.Add(new Claim("feature_dynamic_forms",     tenant.FeatureDynamicForms.ToString().ToLower()));
+                claims.Add(new Claim("feature_expressions",       tenant.FeatureExpressions.ToString().ToLower()));
+                claims.Add(new Claim("feature_approval_chain",    tenant.FeatureApprovalChain.ToString().ToLower()));
+                claims.Add(new Claim("feature_compliance_alerts", tenant.FeatureComplianceAlerts.ToString().ToLower()));
+                claims.Add(new Claim("feature_fd_rd",             tenant.FeatureFdRd.ToString().ToLower()));
+                if (!string.IsNullOrEmpty(tenant.ThemeColor))
+                    claims.Add(new Claim("bank_theme_color", tenant.ThemeColor));
+                if (!string.IsNullOrEmpty(tenant.LogoUrl))
+                    claims.Add(new Claim("bank_logo_url", tenant.LogoUrl));
+            }
 
             var token = new JwtSecurityToken(
                 issuer:             issuer,

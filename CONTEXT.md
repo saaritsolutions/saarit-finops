@@ -388,12 +388,31 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - **11-approval-routing.cy.ts**: 15 Cypress regression tests (3 describe blocks: chain display, status chips, chain transitions)
   - **Test result: 82/82 LoanService.Tests + 4/4 WorkflowOrchestrationService.Tests** — all pass, no regressions
 
+## Completed (continued)
+- SAAR-CFG-001 — Bank Configuration + Per-Tenant Feature Toggles (session 42, 2026-04-23):
+  - **ADR-015**: Feature flags embedded in JWT at login (fail-open: missing claim = enabled). Re-login required for flag changes — acceptable for demo.
+  - **UAMService Tenant model extended**: 13 new columns — BankAddress, BankPhone, BankEmail, RbiLicenseNumber, WebsiteUrl, FeatureGoldLoan, FeatureDynamicForms, FeatureExpressions, FeatureApprovalChain, FeatureComplianceAlerts, FeatureFdRd, ConfigUpdatedAt, ConfigUpdatedBy. EF migration `AddTenantConfig` (shared DB — no schema qualifier stripping needed).
+  - **AuthController**: `GenerateJwtAsync` (async) loads Tenant from DB, embeds 6 feature flag claims (`feature_gold_loan`, `feature_dynamic_forms`, etc.) + `bank_theme_color` + `bank_logo_url`.
+  - **TenantConfigController** (`/api/tenant-config`): `GET` (any role) + `PUT` (Admin only) — full bank profile + feature toggle CRUD. Sets `ConfigUpdatedAt`/`ConfigUpdatedBy` on save.
+  - **nginx.conf**: `/api/tenant-config` → `useraccessmanagement:5033` proxy added.
+  - **start-all.sh**: UAMService added on port 5033.
+  - **LoanService backend enforcement**: `ClaimsPrincipalExtensions.HasFeature()` (fail-open) + 403 guard in `GoldLoanController` (6 endpoints) and `GoldRateController` (3 endpoints).
+  - **Frontend bankConfigService.ts**: typed API client for GET/PUT `/api/tenant-config`. Uses `REACT_APP_UAM_BASE_URL ?? http://localhost:5033`.
+  - **authSlice.ts**: `FeatureFlags` interface (exported), `DEFAULT_FLAGS`, `decodeFlags(token)` (atob JWT decode, fail-open `!= 'false'`), `featureFlags` in `AuthState`, `selectFeatureFlags` selector. Decoded on login + hydration from localStorage.
+  - **BankConfig.tsx**: 2-tab admin page — Tab 0 Bank Profile (8 TextFields, MUI v7 Grid v2 `size={{}}` API), Tab 1 Feature Toggles (6 Switch + FormControlLabel). Save → `saveTenantConfig()`. Success/error alerts.
+  - **AppRouter.tsx**: lazy `/admin/bank-config` route gated by `BANKING_PERMISSIONS.SYSTEM_CONFIG`.
+  - **Sidebar.tsx**: Gold Loans section + Expression Builder + End-to-End Demo + Form Builder + Gold Rate admin all gated by `featureFlag` keys; Bank Configuration entry added to Administration; `renderMenuItem` checks `featureFlags?.[item.featureFlag] === false → null`.
+  - **UAMService.Tests TenantConfigTests.cs**: 4 NUnit tests — JWT includes feature flag claims, GET returns correct fields, PUT updates + reflects on GET, 403 for non-Admin user. UAMService.Tests 5/5 green.
+  - **Cypress 12-bank-config.cy.ts**: 15 tests (3 describe blocks — Bank Profile tab, Feature Toggles tab, Sidebar feature gating). `makeFakeJwt()` helper creates a real 3-part JWT via `btoa()` for gating tests. All 15 green.
+  - **Test result: UAMService.Tests 5/5 + LoanService.Tests 82/82 — all pass**.
+
 ## Pending Next
-- Hetzner deploy SAAR-GL-001 + WF-001: `docker compose up --build -d loanservice workfloworchestration frontend` — deploy gold loan backend, new approval routing (migration + seed), and updated frontend
-- Hetzner deploy SAAR-DFS-003: `docker compose up --build -d frontend` — rebuild frontend with DFS-wired LoanOrigination
+- Hetzner deploy SAAR-CFG-001: `docker compose up --build -d useraccessmanagement frontend nginx` — apply Tenant migration, TenantConfigController, BankConfig UI, nginx proxy
+- Hetzner deploy SAAR-GL-001 + WF-001: `docker compose up --build -d loanservice workfloworchestration frontend` — deploy gold loan backend + approval routing
+- Hetzner deploy SAAR-DFS-003: `docker compose up --build -d frontend` — rebuild frontend with DFS-wired LoanOrigination (combine with above frontend rebuild)
 - E2E smoke: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog shows debit/credit lines on demobank.saaritsolutions.com
 - Form Builder + DFS-003 manual smoke on demobank: add a custom field via Form Builder → reload New Loan Application → verify custom field appears in Step 0
-- SAAR-CFG-001 (Bank Configuration + Feature Toggles) — MEDIUM priority
+- Add `REACT_APP_UAM_BASE_URL` build arg to frontend Dockerfile + docker-compose for bankConfigService.ts to work in production
 - SAAR-DFS-004 (future): wire DFS into GOLD_LOAN form; submit customFields to backend; conditional visibility
 
 ## Notes

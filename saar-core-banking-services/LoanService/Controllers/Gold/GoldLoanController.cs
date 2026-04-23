@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LoanService.Data;
+using LoanService.Extensions;
 using LoanService.Models;
 using LoanService.Models.Gold;
 using LoanService.Services;
@@ -43,6 +44,9 @@ namespace LoanService.Controllers.Gold
             [FromBody] CreateGoldLoanRequest req,
             CancellationToken ct)
         {
+            if (!User.HasFeature("gold_loan"))
+                return StatusCode(403, new { error = "Gold Loan module is not enabled for this tenant." });
+
             // Generate GL-{year}-{seq:D6} application number
             var year  = DateTime.UtcNow.Year;
             var count = await _db.LoanApplications
@@ -122,6 +126,9 @@ namespace LoanService.Controllers.Gold
             [FromQuery] int pageSize = 20,
             CancellationToken ct = default)
         {
+            if (!User.HasFeature("gold_loan"))
+                return StatusCode(403, new { error = "Gold Loan module is not enabled for this tenant." });
+
             var query = _db.LoanApplications
                 .Where(a => a.ProductType == "GOLD_LOAN")
                 .Join(_db.GoldLoanDetails,
@@ -175,6 +182,9 @@ namespace LoanService.Controllers.Gold
         [HttpGet("applications/{id:guid}")]
         public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
         {
+            if (!User.HasFeature("gold_loan"))
+                return StatusCode(403, new { error = "Gold Loan module is not enabled for this tenant." });
+
             var app = await _db.LoanApplications.FindAsync(new object[] { id }, ct);
             if (app == null || app.ProductType != "GOLD_LOAN")
                 return NotFound();
@@ -275,6 +285,9 @@ namespace LoanService.Controllers.Gold
             [FromBody] AddPledgeItemRequest req,
             CancellationToken ct)
         {
+            if (!User.HasFeature("gold_loan"))
+                return StatusCode(403, new { error = "Gold Loan module is not enabled for this tenant." });
+
             var gold = await _db.GoldLoanDetails
                 .Include(g => g.PledgeItems)
                 .FirstOrDefaultAsync(g => g.LoanApplicationId == id, ct);
@@ -328,6 +341,9 @@ namespace LoanService.Controllers.Gold
             Guid itemId,
             CancellationToken ct)
         {
+            if (!User.HasFeature("gold_loan"))
+                return StatusCode(403, new { error = "Gold Loan module is not enabled for this tenant." });
+
             var gold = await _db.GoldLoanDetails
                 .FirstOrDefaultAsync(g => g.LoanApplicationId == id, ct);
 
@@ -357,6 +373,9 @@ namespace LoanService.Controllers.Gold
             [FromBody] GoldLoanActionRequest req,
             CancellationToken ct)
         {
+            if (!User.HasFeature("gold_loan"))
+                return StatusCode(403, new { error = "Gold Loan module is not enabled for this tenant." });
+
             var app = await _db.LoanApplications.FindAsync(new object[] { id }, ct);
             if (app == null || app.ProductType != "GOLD_LOAN")
                 return NotFound();
