@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
+  Accordion, AccordionDetails, AccordionSummary,
   Alert, Box, Button, Card, CardContent, Chip, CircularProgress,
   Divider, FormControlLabel, Checkbox, IconButton, Stack, Step,
   StepLabel, Stepper, Table, TableBody, TableCell, TableContainer,
@@ -17,8 +18,12 @@ import ArrowBackIcon     from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon  from '@mui/icons-material/ArrowForward';
 import SendIcon          from '@mui/icons-material/Send';
 import CheckCircleIcon   from '@mui/icons-material/CheckCircle';
+import ExpandMoreIcon    from '@mui/icons-material/ExpandMore';
 import { useNavigate }   from 'react-router-dom';
 import PageHeader        from '../components/common/PageHeader';
+import SchemaForm        from '../components/forms/SchemaForm';
+import { dynamicFormsService } from '../services/dynamicFormsService';
+import type { DFSFormSchema }   from '../services/dynamicFormsService';
 import {
   getTodayGoldRate, createGoldLoanApplication, addPledgeItem,
   type GoldRateEntry, type AddPledgeItemRequest,
@@ -49,6 +54,19 @@ const PURITY_OPTIONS = [18, 20, 22, 24];
 const ITEM_TYPES = ['NECKLACE', 'BANGLE', 'RING', 'COIN', 'BAR', 'ANKLET', 'EARRING', 'OTHER'];
 const TENURE_OPTIONS = [3, 6, 9, 12];
 const INTEREST_RATE = 7.00; // Gold loan product base rate
+
+// ── DFS integration constants ───────────────────────────────────────────────────
+// Fields already collected in the hardcoded form — exclude from DFS accordion
+const HARDCODED_GOLD_FIELDS = new Set([
+  'fullName', 'mobileNumber', 'panNumber',
+  'loanAmount', 'tenureMonths', 'purposeOfLoan',
+]);
+// Map DFS GOLD_LOAN schema section keys to wizard step indices
+const GOLD_DFS_SECTION_TO_STEP: Record<string, number> = {
+  applicant: 0,
+  pledge:    1,
+  loan:      2,
+};
 
 interface PledgeRow extends AddPledgeItemRequest {
   _key: number;
@@ -87,9 +105,20 @@ export default function GoldLoanOrigination() {
   // Step 3: Documents (placeholder)
   const [declaration, setDeclaration] = useState(false);
 
+  // DFS — bank-configured fields
+  const [dfsSchema,    setDfsSchema]    = useState<DFSFormSchema | null>(null);
+  const [customFields, setCustomFields] = useState<Record<string, any>>({});
+
   // Load today's gold rate
   useEffect(() => {
     getTodayGoldRate().then(setTodayRate).catch(() => setTodayRate(null));
+  }, []);
+
+  // Load GOLD_LOAN DFS schema (fail-silent if DFS offline)
+  useEffect(() => {
+    dynamicFormsService.getSchema('GOLD_LOAN')
+      .then(res => setDfsSchema(JSON.parse(res.schema) as DFSFormSchema))
+      .catch(() => { /* DFS offline — accordion not shown */ });
   }, []);
 
   // ── Computed values ──────────────────────────────────────────────────────────
@@ -164,6 +193,9 @@ export default function GoldLoanOrigination() {
         requestedAmount:     parseFloat(requestedAmount),
         tenureMonths,
         interestRatePercent: INTEREST_RATE,
+        customFieldsJson:    Object.keys(customFields).length > 0
+          ? JSON.stringify(customFields)
+          : undefined,
       });
 
       // 2. Add pledge items
@@ -196,6 +228,34 @@ export default function GoldLoanOrigination() {
   const addRow    = () => {
     setPledgeRows(rows => [...rows, newPledgeRow(nextKey)]);
     setNextKey(k => k + 1);
+  };
+
+  // ── DFS Bank-Configured Fields accordion ────────────────────────────────────
+  const BankConfiguredFields = ({ stepIndex }: { stepIndex: number }) => {
+    if (!dfsSchema) return null;
+    const fields = dfsSchema.fields.filter(f =>
+      !HARDCODED_GOLD_FIELDS.has(f.name) &&
+      GOLD_DFS_SECTION_TO_STEP[f.section ?? ''] === stepIndex
+    );
+    if (fields.length === 0) return null;
+    return (
+      <Accordion sx={{ mt: 2, border: '1px dashed', borderColor: 'divider' }}>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography variant="subtitle2" color="text.secondary">
+            Bank-Configured Fields ({fields.length})
+          </Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <SchemaForm
+            schema={{ ...dfsSchema, fields, sections: [] }}
+            values={customFields}
+            onChange={(name, value) =>
+              setCustomFields(prev => ({ ...prev, [name]: value }))
+            }
+          />
+        </AccordionDetails>
+      </Accordion>
+    );
   };
 
   // ── Success screen ───────────────────────────────────────────────────────────
@@ -290,6 +350,7 @@ export default function GoldLoanOrigination() {
                     onChange={e => setForm(f => ({ ...f, pinCode: e.target.value.replace(/\D/g,'').slice(0,6) }))} />
                 </Stack>
               </Stack>
+              <BankConfiguredFields stepIndex={0} />
             </Box>
           )}
 
@@ -393,6 +454,7 @@ export default function GoldLoanOrigination() {
                   </Box>
                 </Stack>
               </Box>
+              <BankConfiguredFields stepIndex={1} />
             </Box>
           )}
 
@@ -463,6 +525,7 @@ export default function GoldLoanOrigination() {
                   </Box>
                 )}
               </Stack>
+              <BankConfiguredFields stepIndex={2} />
             </Box>
           )}
 
@@ -559,6 +622,23 @@ export default function GoldLoanOrigination() {
                     </Stack>
                   </CardContent>
                 </Card>
+
+                {/* Bank-Configured Fields summary */}
+                {Object.keys(customFields).filter(k => customFields[k] !== '' && customFields[k] !== undefined).length > 0 && (
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography variant="subtitle2" color="text.secondary" mb={1}>BANK-CONFIGURED FIELDS</Typography>
+                      {dfsSchema?.fields
+                        .filter(f => customFields[f.name] !== undefined && customFields[f.name] !== '')
+                        .map(f => (
+                          <Box key={f.name} sx={{ display: 'flex', justifyContent: 'space-between', py: 0.5 }}>
+                            <Typography variant="body2" color="text.secondary">{f.label}</Typography>
+                            <Typography variant="body2" fontWeight={500}>{String(customFields[f.name])}</Typography>
+                          </Box>
+                        ))}
+                    </CardContent>
+                  </Card>
+                )}
 
                 <FormControlLabel
                   control={<Checkbox checked={declaration} onChange={e => setDeclaration(e.target.checked)} />}

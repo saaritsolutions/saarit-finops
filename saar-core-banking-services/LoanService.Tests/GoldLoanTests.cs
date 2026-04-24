@@ -281,6 +281,62 @@ public class GoldLoanTests
             "Should reject SUBMIT when application has no pledge items.");
     }
 
+    // ── Test 5: CustomFieldsJson is stored in FormDataJson and round-trips ─────
+
+    [Test]
+    public async Task CustomFieldsJson_IsStoredAndRoundTrips()
+    {
+        var db   = GoldTestDb.Create();
+        var ctrl = GoldTestDb.MakeController(db);
+
+        const string customJson = "{\"loanScheme\":\"EMI\",\"goldPurity\":\"22K\"}";
+
+        // Create a gold loan application with custom fields
+        var createResult = await ctrl.Create(
+            new GoldLoanController.CreateGoldLoanRequest(
+                ApplicantName:      "Test Applicant",
+                MobileNumber:       "9876543210",
+                Email:              null,
+                PanNumber:          null,
+                AadhaarLast4:       null,
+                AddressLine1:       null,
+                City:               null,
+                State:              null,
+                PinCode:            null,
+                PurposeOfLoan:      null,
+                RequestedAmount:    50_000m,
+                TenureMonths:       6,
+                InterestRatePercent: 7.00m,
+                CustomFieldsJson:   customJson),
+            CancellationToken.None) as CreatedAtActionResult;
+
+        Assert.That(createResult, Is.Not.Null, "Create should return CreatedAtActionResult.");
+
+        // Extract the created application ID
+        var createdBody = createResult!.Value;
+        Assert.That(createdBody, Is.Not.Null);
+        var idProp = createdBody!.GetType().GetProperty("Id");
+        Assert.That(idProp, Is.Not.Null, "Response body should have Id property.");
+        var appId = (Guid)idProp!.GetValue(createdBody)!;
+
+        // GET detail
+        var getResult = await ctrl.GetById(appId, CancellationToken.None) as OkObjectResult;
+        Assert.That(getResult, Is.Not.Null, "GetById should return OkObjectResult.");
+
+        var body = getResult!.Value;
+        Assert.That(body, Is.Not.Null);
+        var fdProp = body!.GetType().GetProperty("FormDataJson");
+        Assert.That(fdProp, Is.Not.Null, "GET response body should have FormDataJson property.");
+        var formDataJson = fdProp!.GetValue(body) as string;
+
+        Assert.That(formDataJson, Is.Not.Null.And.Not.Empty,
+            "FormDataJson should be present in the GET detail response.");
+        Assert.That(formDataJson, Does.Contain("loanScheme"),
+            "FormDataJson should contain the submitted custom fields.");
+        Assert.That(formDataJson, Does.Contain("EMI"),
+            "FormDataJson should round-trip the loanScheme value.");
+    }
+
     // ── Test 4: GoldRateService returns latest rate when no today entry ────────
 
     [Test]

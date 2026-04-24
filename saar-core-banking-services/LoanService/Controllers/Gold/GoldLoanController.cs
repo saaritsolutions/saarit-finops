@@ -73,6 +73,7 @@ namespace LoanService.Controllers.Gold
                 CurrentState         = req.State,
                 CurrentPinCode       = req.PinCode,
                 CollateralType       = "GOLD",
+                FormDataJson         = req.CustomFieldsJson,
                 CreatedBy            = User.Identity?.Name ?? "system",
                 CreatedAt            = DateTime.UtcNow,
                 UpdatedAt            = DateTime.UtcNow,
@@ -218,6 +219,7 @@ namespace LoanService.Controllers.Gold
                 app.RequestedAmount,
                 app.Status,
                 app.DisbursalJournalNumber,
+                app.FormDataJson,
                 app.CreatedBy,
                 app.CreatedAt,
                 app.UpdatedAt,
@@ -636,7 +638,8 @@ namespace LoanService.Controllers.Gold
             string?  PurposeOfLoan,
             decimal  RequestedAmount,
             int      TenureMonths,
-            decimal  InterestRatePercent);
+            decimal  InterestRatePercent,
+            string?  CustomFieldsJson);
 
         public record AddPledgeItemRequest(
             string   ItemType,
