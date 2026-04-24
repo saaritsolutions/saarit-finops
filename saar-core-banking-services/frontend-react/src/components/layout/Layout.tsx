@@ -54,7 +54,6 @@ const Layout: React.FC = () => {
             p:               { xs: 2, sm: 2.5, md: 3 },
             backgroundColor: 'background.default',
             minHeight:       `calc(100vh - ${HEADER_HEIGHT}px - ${FOOTER_HEIGHT}px)`,
-            overflow:        'auto',
           }}
         >
           <Outlet />
