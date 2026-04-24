@@ -28,20 +28,19 @@ const Layout: React.FC = () => {
   const sidebarWidth = isMobile ? 0 : (sidebarOpen ? DRAWER_WIDTH : DRAWER_WIDTH_COLLAPSED);
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: 'background.default' }}>
+    <Box sx={{ backgroundColor: 'background.default' }}>
       <Header />
       <Sidebar />
 
-      {/* Main content — shifts right of the permanent sidebar on desktop */}
+      {/* Main content — sidebar Paper is position:fixed; marginLeft avoids overlap */}
       <Box
         sx={{
           display:        'flex',
           flexDirection:  'column',
-          flex:           1,
-          minWidth:       0,
+          minHeight:      '100vh',
           marginLeft:     { md: `${sidebarWidth}px` },
-          transition:     'margin-left 200ms cubic-bezier(0.4,0,0.2,1)',
           width:          { xs: '100%', md: `calc(100% - ${sidebarWidth}px)` },
+          transition:     'margin-left 200ms cubic-bezier(0.4,0,0.2,1), width 200ms cubic-bezier(0.4,0,0.2,1)',
         }}
       >
         {/* Spacer for fixed header */}
@@ -50,10 +49,8 @@ const Layout: React.FC = () => {
         {/* Page Content */}
         <Box
           sx={{
-            flexGrow:        1,
-            p:               { xs: 2, sm: 2.5, md: 3 },
-            backgroundColor: 'background.default',
-            minHeight:       `calc(100vh - ${HEADER_HEIGHT}px - ${FOOTER_HEIGHT}px)`,
+            flexGrow: 1,
+            p:        { xs: 2, sm: 2.5, md: 3 },
           }}
         >
           <Outlet />
