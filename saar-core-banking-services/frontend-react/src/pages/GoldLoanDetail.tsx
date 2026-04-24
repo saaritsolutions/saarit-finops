@@ -447,6 +447,27 @@ export default function GoldLoanDetail() {
                 </Stack>
               )}
             </Stack>
+            {/* Bank-Configured Fields from DFS */}
+            {detail.formDataJson && (() => {
+              try {
+                const cf = JSON.parse(detail.formDataJson) as Record<string, any>;
+                const entries = Object.entries(cf).filter(([, v]) => v !== '' && v !== null && v !== undefined);
+                if (entries.length === 0) return null;
+                return (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      Bank-Configured Fields
+                    </Typography>
+                    {entries.map(([key, val]) => (
+                      <Stack key={key} direction="row" spacing={2} sx={{ py: 0.75, borderBottom: `1px solid ${SLATE_200}` }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ minWidth: 180 }}>{key}</Typography>
+                        <Typography variant="body2" fontWeight={500}>{String(val)}</Typography>
+                      </Stack>
+                    ))}
+                  </Box>
+                );
+              } catch { return null; }
+            })()}
           </CardContent>
         </Card>
       )}

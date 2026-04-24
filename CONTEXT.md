@@ -293,6 +293,20 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
 - (none)
 
 ## Completed (continued)
+- SAAR-DFS-004 — Wire DFS into Gold Loan wizard + persist custom fields (session 43, 2026-04-24):
+  - **`SAAR_DFS_004_REQUIREMENTS.md`**: JIRA-format requirement doc (8 FRs, 4 NFRs, offline-resilience test plan — mirrors SAAR-DFS-003 structure)
+  - **`GoldLoanController.cs`**: `CreateGoldLoanRequest` extended with `string? CustomFieldsJson`; POST handler sets `FormDataJson = req.CustomFieldsJson`; GET detail response includes `formDataJson`
+  - **`goldLoanService.ts`**: `CreateGoldLoanApplicationRequest` extended with `customFieldsJson?`; `GoldLoanApplication` extended with `formDataJson?`
+  - **`GoldLoanOrigination.tsx`**: DFS wired with `HARDCODED_GOLD_FIELDS` exclusion set + `GOLD_DFS_SECTION_TO_STEP` mapping (applicant→0, pledge→1, loan→2); `dfsSchema`/`customFields` state; `useEffect` fetches `GOLD_LOAN` schema (fail-silent if offline); `BankConfiguredFields` accordion per step; Review step summary card shows entered custom fields. Import fixed: `{ dynamicFormsService }` (named import, not `* as`).
+  - **`GoldLoanDetail.tsx`**: Loan Terms tab shows "Bank-Configured Fields" section when `formDataJson` is present — parses JSON, renders key/value rows
+  - **`GoldLoanTests.cs`**: New test `CustomFieldsJson_IsStoredAndRoundTrips` — creates application with custom JSON, retrieves via GET, asserts `FormDataJson` is present and contains expected keys
+  - **`10-gold-loan.cy.ts`**: 3 new DFS tests added (describe block `[REGRESSION] DFS Bank-Configured Fields`):
+    1. Accordion renders on origination wizard when DFS schema is available
+    2. Detail page shows bank-configured fields section when formDataJson is present
+    3. DFS offline (503) — no accordion shown, origination wizard still loads
+  - **LoanService.Tests blocker**: Windows Code Integrity policy (`{0283ac0f-fff1-49ae-ada1-8a933130cad6}`) blocks freshly compiled `LoanService.dll` from being loaded by NUnit's testhost.exe — error `0x800711C7` (Enterprise signing level requirements). 82/82 existing tests were green before; the 83rd test (new) is code-complete but cannot be verified via `dotnet test` until the CI policy is resolved.
+
+## Completed (continued)
 - SAAR-DFS-001 — Dynamic Forms Service rebuilt (session 35, 2026-04-19):
   - **DynamicFieldsSchemaService** upgraded from a 7-field demo stub to a production-quality DB-backed service
   - **Full multi-tenancy**: TenantResolutionMiddleware, TenantModelCacheKeyFactory, HasDefaultSchema, TenantSchemaProvisioner (mirrors AccountService pattern)
@@ -371,7 +385,7 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - **GoldLoanController** (`/api/gold-loan`): POST applications, GET list, GET detail, add/remove pledge items, POST action (state machine: SUBMIT → APPRAISE → SANCTION → DISBURSE → CLOSE). LTV cap 75% at sanction, PledgeReceiptNumber `PR-{year}-{seq:D6}`, ApplicationNumber `GL-{year}-{seq:D6}`, GL journals on DISBURSE + CLOSE
   - **Frontend**: `goldLoanService.ts` (typed API client), `GoldRateAdmin.tsx` (rate entry + history), `GoldLoanList.tsx` (status tabs + LTV color coding), `GoldLoanOrigination.tsx` (5-step wizard, live LTV preview, bullet repayment estimate), `GoldLoanDetail.tsx` (pledge tab, loan terms tab, timeline, action dialog per status, JournalDetailDialog reuse)
   - **Routes**: `/gold-loans`, `/gold-loans/new`, `/gold-loans/:id`, `/admin/gold-rate` (all lazy-loaded, permission-gated)
-  - **Tests**: `GoldLoanTests.cs` (4 NUnit tests — LTV, over-LTV rejection, no-items submit, GoldRateService fallback); `10-gold-loan.cy.ts` (17 Cypress regression tests across 3 suites)
+  - **Tests**: `GoldLoanTests.cs` (4 NUnit tests — LTV, over-LTV rejection, no-items submit, GoldRateService fallback); `10-gold-loan.cy.ts` (17 Cypress regression tests across 3 suites + 3 DFS tests added by SAAR-DFS-004)
   - **Stub fixes**: Added gold journal methods to `NoOpTransactionService`; added `GetFormSchemaAsync` to all 4 `FakeForms` stubs (pre-existing DFS-001 gap surfaced during build)
   - **Test result**: 82/82 LoanService.Tests green (78 existing + 4 new gold loan tests)
 
@@ -407,13 +421,12 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - **Test result: UAMService.Tests 5/5 + LoanService.Tests 82/82 — all pass**.
 
 ## Pending Next
-- Hetzner deploy SAAR-CFG-001: `docker compose up --build -d useraccessmanagement frontend nginx` — apply Tenant migration, TenantConfigController, BankConfig UI, nginx proxy
-- Hetzner deploy SAAR-GL-001 + WF-001: `docker compose up --build -d loanservice workfloworchestration frontend` — deploy gold loan backend + approval routing
-- Hetzner deploy SAAR-DFS-003: `docker compose up --build -d frontend` — rebuild frontend with DFS-wired LoanOrigination (combine with above frontend rebuild)
+- Hetzner deploy all pending features: `docker compose up --build -d useraccessmanagement loanservice workfloworchestration frontend nginx`
+  - Includes: SAAR-CFG-001 (AddTenantConfig migration + TenantConfigController + BankConfig UI), SAAR-GL-001 (AddGoldLoanTables migration), SAAR-WF-001 (approval chain), SAAR-DFS-003 + SAAR-DFS-004 (DFS-wired LoanOrigination + GoldLoanOrigination)
+  - Also add `REACT_APP_UAM_BASE_URL` build arg to frontend Dockerfile + docker-compose for bankConfigService.ts
+- Fix Windows Code Integrity policy blocking `dotnet test` for LoanService.Tests — policy `{0283ac0f-fff1-49ae-ada1-8a933130cad6}` blocks freshly compiled LoanService.dll. Run as admin: `Add-MpPreference -ExclusionPath "C:\Users\LENOVO YOGA\SAARIT\saarit-finops"` — then re-run tests to verify 83/83 green.
 - E2E smoke: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog shows debit/credit lines on demobank.saaritsolutions.com
-- Form Builder + DFS-003 manual smoke on demobank: add a custom field via Form Builder → reload New Loan Application → verify custom field appears in Step 0
-- Add `REACT_APP_UAM_BASE_URL` build arg to frontend Dockerfile + docker-compose for bankConfigService.ts to work in production
-- SAAR-DFS-004 (future): wire DFS into GOLD_LOAN form; submit customFields to backend; conditional visibility
+- Form Builder + DFS-003/004 manual smoke on demobank: add custom fields to GOLD_LOAN schema via Form Builder → reload New Gold Loan Application → verify fields appear
 
 ## Notes
 - Eligibility expression ID currently in use: EXPR_1755237353842.

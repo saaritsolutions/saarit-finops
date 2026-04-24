@@ -61,6 +61,7 @@ export interface GoldLoanDetail {
   requestedAmount:         number;
   status:                  string;
   disbursalJournalNumber?: string;
+  formDataJson?:           string;
   createdBy?:              string;
   createdAt:               string;
   updatedAt:               string;
@@ -130,6 +131,7 @@ export interface CreateGoldLoanRequest {
   requestedAmount:    number;
   tenureMonths:       number;
   interestRatePercent: number;
+  customFieldsJson?:  string;
 }
 
 export interface AddPledgeItemRequest {

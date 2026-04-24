@@ -2,14 +2,16 @@
 export {};
 
 /**
- * REGRESSION — Gold Loan Module (SAAR-GL-001 Phase 1)
- * Covers: gold rate admin page, gold loan list, gold loan detail.
+ * REGRESSION — Gold Loan Module (SAAR-GL-001 Phase 1 + SAAR-DFS-004)
+ * Covers: gold rate admin page, gold loan list, gold loan detail,
+ *         DFS bank-configured fields in origination wizard + detail page.
  *
  * API routes:
  *   GET  /api/gold-rate/today        → GoldRateEntry (with isLatest)
  *   GET  /api/gold-rate              → GoldRateEntry[]
  *   GET  /api/gold-loan/applications → { total, page, pageSize, items: GoldLoanListItem[] }
- *   GET  /api/gold-loan/applications/:id → GoldLoanDetail
+ *   GET  /api/gold-loan/applications/:id → GoldLoanDetail (formDataJson optional)
+ *   GET  /api/forms/GOLD_LOAN        → FormSchemaResponse (DFSFormSchema as JSON string)
  */
 
 // ── Mock Data ──────────────────────────────────────────────────────────────────
@@ -120,6 +122,67 @@ const GOLD_APPS_LIST = [
 
 const listBody = (items: typeof GOLD_APPS_LIST) => ({
   total: items.length, page: 1, pageSize: 50, items,
+});
+
+// ── DFS mock data ──────────────────────────────────────────────────────────────
+
+const DFS_SCHEMA_OBJ = {
+  title: 'Gold Loan Bank Fields',
+  fields: [
+    { name: 'loanScheme', label: 'Loan Scheme', type: 'text', section: 'applicant' },
+  ],
+  sections: [],
+};
+
+const DFS_SCHEMA_RESPONSE = {
+  formType:  'GOLD_LOAN',
+  tenantId:  'ucb_demo',
+  version:   1,
+  isDefault: false,
+  updatedAt: '2026-04-22T00:00:00Z',
+  schema:    JSON.stringify(DFS_SCHEMA_OBJ),
+};
+
+// ── DFS Bank-Configured Fields ─────────────────────────────────────────────────
+
+describe('[REGRESSION] DFS Bank-Configured Fields', () => {
+  it('renders accordion on origination wizard when DFS schema is available', () => {
+    cy.loginAsDemo();
+    cy.intercept('GET', '**/api/forms/GOLD_LOAN*', { body: DFS_SCHEMA_RESPONSE }).as('dfsSchema');
+    cy.intercept('GET', '**/api/gold-rate/today*', { body: GOLD_RATE }).as('goldRate');
+
+    cy.visit('/gold-loans/new');
+    cy.wait('@dfsSchema', { timeout: 15000 });
+    cy.contains(/bank-configured fields/i).should('exist');
+  });
+
+  it('detail page shows bank-configured fields section when formDataJson is present', () => {
+    cy.loginAsDemo();
+    const detailWithDfs = {
+      ...GOLD_APP_DETAIL,
+      formDataJson: '{"loanScheme":"EMI","goldPurity":"22K"}',
+    };
+    cy.intercept('GET', '**/api/gold-loan/applications/gl-1*', { body: detailWithDfs }).as('detail');
+    cy.intercept('GET', '**/api/gold-rate/today*', { body: GOLD_RATE }).as('goldRate');
+
+    cy.visit('/gold-loans/gl-1');
+    cy.wait('@detail', { timeout: 15000 });
+    cy.contains(/bank-configured fields/i).should('exist');
+    cy.contains('loanScheme').should('exist');
+    cy.contains('EMI').should('exist');
+  });
+
+  it('DFS offline (503) — no accordion shown, origination wizard still loads', () => {
+    cy.loginAsDemo();
+    cy.intercept('GET', '**/api/forms/GOLD_LOAN*', { statusCode: 503 }).as('dfsOffline');
+    cy.intercept('GET', '**/api/gold-rate/today*', { body: GOLD_RATE }).as('goldRate');
+
+    cy.visit('/gold-loans/new');
+    cy.wait('@dfsOffline', { timeout: 15000 });
+    cy.contains(/bank-configured fields/i).should('not.exist');
+    // Wizard still functional — stepper and applicant step visible
+    cy.contains(/new gold loan application/i).should('exist');
+  });
 });
 
 // ── Gold Rate Admin ────────────────────────────────────────────────────────────
