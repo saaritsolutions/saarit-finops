@@ -22,7 +22,7 @@ namespace WorkflowOrchestrationService.Data
             {
                 WorkflowType = "LOAN_ORIGINATION",
                 AmountMin    = 0m,
-                AmountMax    = decimal.MaxValue,
+                AmountMax    = 9_999_999_999_999_999m,  // practical "unbounded" sentinel — fits numeric(18,2)
                 Sequence     = 1,
                 Label        = "Branch Manager",
                 RequiredRole = "CHECKER",
@@ -32,7 +32,7 @@ namespace WorkflowOrchestrationService.Data
             {
                 WorkflowType = "LOAN_ORIGINATION",
                 AmountMin    = 500_000m,
-                AmountMax    = decimal.MaxValue,
+                AmountMax    = 9_999_999_999_999_999m,  // practical "unbounded" sentinel — fits numeric(18,2)
                 Sequence     = 2,
                 Label        = "Credit Committee",
                 RequiredRole = "MANAGER",
@@ -42,7 +42,7 @@ namespace WorkflowOrchestrationService.Data
             {
                 WorkflowType = "LOAN_ORIGINATION",
                 AmountMin    = 2_500_000m,
-                AmountMax    = decimal.MaxValue,
+                AmountMax    = 9_999_999_999_999_999m,  // practical "unbounded" sentinel — fits numeric(18,2)
                 Sequence     = 3,
                 Label        = "Board Approval",
                 RequiredRole = "BOARD",
