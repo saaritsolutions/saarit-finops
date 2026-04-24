@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-24 (session 43 — SAAR-DFS-004 Wire DFS into Gold Loan wizard + persist custom fields)
+**Last Updated:** 2026-04-24 (session 44 — Hetzner deploy all features + Dockerfile infra fix)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -147,6 +147,15 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 44 — 2026-04-24 (Hetzner deploy sessions 40–43 + decimal.MaxValue bugfix)
+- **Commits deployed**: `cba5445` (SAAR-DFS-004), `6726b80` (Dockerfile infra), `ddfb617` (decimal overflow fix).
+- **`frontend-react/Dockerfile`**: Added `ARG REACT_APP_UAM_BASE_URL` + `ENV REACT_APP_UAM_BASE_URL` — bakes prod UAMService URL into the React bundle at build time. Fixes `bankConfigService.ts` defaulting to `localhost:5033` in the Docker image.
+- **`docker-compose.yml`**: Added `REACT_APP_UAM_BASE_URL: https://demobank.saaritsolutions.com` under `frontend.build.args`.
+- **Bug fix — `ApprovalLevelSeedService.cs`**: `AmountMax = decimal.MaxValue` (7.9×10^28) overflows `numeric(18,2)` Postgres column → Postgres error 22003 on every startup → approval levels not seeded. Fixed: replaced 3 occurrences with `9_999_999_999_999_999m` (practical "unbounded" sentinel that fits `numeric(18,2)`). All 3 tenants now seed 3 approval levels cleanly.
+- **Deploy**: `git pull` on Hetzner (78 files from c734bf5 to 6726b80) + `docker compose up --build -d useraccessmanagement loanservice workfloworchestration frontend nginx`. All 11 containers healthy.
+- **Migrations ran**: `AddTenantConfig` (UAMService), `AddGoldLoanTables` (LoanService), `AddApprovalTables` (WorkflowOrchestrationService) — all 3 tenants provisioned.
+- **Smoke tests**: `/api/gold-rate/today` ✅ `/api/gold-loan/applications` ✅ `/api/forms/GOLD_LOAN` ✅ `/api/tenant-config` ✅ Frontend `/` ✅
 
 ### Session 43 — 2026-04-24 (SAAR-DFS-004 — Wire DFS into Gold Loan wizard + persist custom fields)
 - **`SAAR_DFS_004_REQUIREMENTS.md`**: JIRA-format requirement doc (8 FRs, 4 NFRs, offline-resilience test plan — mirrors SAAR-DFS-003 structure).
@@ -461,11 +470,10 @@ Per `EXECUTION_ROADMAP.md`:
 
 ## 7. Next Recommended Steps (Ordered by Impact)
 
-1. **Fix Windows CI policy** (admin action required): `Add-MpPreference -ExclusionPath "C:\Users\LENOVO YOGA\SAARIT\saarit-finops"` in elevated PowerShell — then re-run `dotnet test LoanService.Tests` to verify 83/83 green.
-2. **Hetzner deploy all pending features**: `docker compose up --build -d useraccessmanagement loanservice workfloworchestration frontend nginx` — includes: AddTenantConfig migration, AddGoldLoanTables migration, AddApprovalTables migration, DFS-wired LoanOrigination + GoldLoanOrigination, BankConfig UI, nginx tenant-config proxy. Also add `REACT_APP_UAM_BASE_URL` build arg to frontend Dockerfile.
-3. **E2E smoke**: disburse loan → click GL Journal # → verify JournalDetailDialog on demobank.saaritsolutions.com.
-4. **DFS-004 manual smoke**: Add custom field to GOLD_LOAN schema via Form Builder → reload New Gold Loan Application → verify accordion appears in wizard steps.
-5. **APIGateway: JWT auth + routing** — required for any real service-to-service flow.
+1. **Fix Kaspersky Application Control** (local only): Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`. Then re-run `dotnet test LoanService.Tests` locally (83/83 already confirmed on GitHub Actions CI Linux).
+2. **E2E smoke on demobank**: disburse loan → click GL Journal # chip → verify JournalDetailDialog on demobank.saaritsolutions.com.
+3. **DFS-004 manual smoke**: Add custom field to GOLD_LOAN schema via Form Builder → reload New Gold Loan Application → verify accordion appears in wizard steps.
+4. **APIGateway: JWT auth + routing** — required for any real service-to-service flow.
 
 ---
 
