@@ -420,13 +420,21 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - **Cypress 12-bank-config.cy.ts**: 15 tests (3 describe blocks — Bank Profile tab, Feature Toggles tab, Sidebar feature gating). `makeFakeJwt()` helper creates a real 3-part JWT via `btoa()` for gating tests. All 15 green.
   - **Test result: UAMService.Tests 5/5 + LoanService.Tests 82/82 — all pass**.
 
+## Completed (continued)
+- Hetzner deploy — sessions 40–43 (2026-04-24, commits 6726b80 + ddfb617):
+  - **SAAR-DFS-004**: GoldLoanOrigination DFS accordion + custom fields persisted — deployed to LoanService, frontend, nginx.
+  - **SAAR-CFG-001**: Bank config + per-tenant feature toggles — deployed. AddTenantConfig migration ran on all 3 schemas.
+  - **SAAR-GL-001**: Gold Loan phase 1 — deployed. AddGoldLoanTables migration ran on all 3 schemas.
+  - **SAAR-WF-001**: Multi-level approval routing — deployed. AddApprovalTables migration ran.
+  - **SAAR-DFS-003**: DFS wired into Personal Loan wizard — deployed.
+  - **Infra**: `REACT_APP_UAM_BASE_URL` build arg added to Dockerfile + docker-compose (bankConfigService.ts now uses correct prod URL).
+  - **Bug fix**: `ApprovalLevelSeedService` used `decimal.MaxValue` for `AmountMax` — overflows `numeric(18,2)` → Postgres 22003. Fixed: replaced with `9_999_999_999_999_999m` sentinel (commit ddfb617). All 3 tenants now seed 3 approval levels cleanly.
+  - All 11 containers healthy. Key smoke tests: `/api/gold-rate/today` ✅ `/api/gold-loan/applications` ✅ `/api/forms/GOLD_LOAN` ✅ `/api/tenant-config` ✅ Frontend `/` ✅
+
 ## Pending Next
-- Hetzner deploy all pending features: `docker compose up --build -d useraccessmanagement loanservice workfloworchestration frontend nginx`
-  - Includes: SAAR-CFG-001 (AddTenantConfig migration + TenantConfigController + BankConfig UI), SAAR-GL-001 (AddGoldLoanTables migration), SAAR-WF-001 (approval chain), SAAR-DFS-003 + SAAR-DFS-004 (DFS-wired LoanOrigination + GoldLoanOrigination)
-  - Also add `REACT_APP_UAM_BASE_URL` build arg to frontend Dockerfile + docker-compose for bankConfigService.ts
-- Fix Windows Code Integrity policy blocking `dotnet test` for LoanService.Tests — policy `{0283ac0f-fff1-49ae-ada1-8a933130cad6}` blocks freshly compiled LoanService.dll. Run as admin: `Add-MpPreference -ExclusionPath "C:\Users\LENOVO YOGA\SAARIT\saarit-finops"` — then re-run tests to verify 83/83 green.
-- E2E smoke: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog shows debit/credit lines on demobank.saaritsolutions.com
-- Form Builder + DFS-003/004 manual smoke on demobank: add custom fields to GOLD_LOAN schema via Form Builder → reload New Gold Loan Application → verify fields appear
+- Fix Kaspersky Application Control blocking `dotnet test` locally: Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`. Then re-run `dotnet test` to verify 83/83 green locally (already verified on GitHub Actions CI Linux).
+- E2E smoke on demobank: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog shows debit/credit lines.
+- DFS-003/004 manual smoke on demobank: add custom fields to GOLD_LOAN schema via Form Builder → reload New Gold Loan Application → verify accordion appears with fields.
 
 ## Notes
 - Eligibility expression ID currently in use: EXPR_1755237353842.

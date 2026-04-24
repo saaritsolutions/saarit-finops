@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-24 (session 43 — SAAR-DFS-004 Wire DFS into Gold Loan wizard + persist custom fields)
+**Last Updated:** 2026-04-24 (session 44 — Hetzner deploy + decimal.MaxValue bugfix)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,17 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Fix Windows CI policy** (admin action): `Add-MpPreference -ExclusionPath "C:\Users\LENOVO YOGA\SAARIT\saarit-finops"` in elevated PowerShell, then re-run `dotnet test LoanService.Tests` | Policy `{0283ac0f-fff1-49ae-ada1-8a933130cad6}` blocks `LoanService.dll` in testhost.exe — 83rd test (SAAR-DFS-004) can't be verified until resolved |
-| 2 | **Hetzner deploy all pending features**: `docker compose up --build -d useraccessmanagement loanservice workfloworchestration frontend nginx` | Get SAAR-CFG-001 + SAAR-GL-001 + SAAR-WF-001 + SAAR-DFS-003 + SAAR-DFS-004 all live on demobank. Add `REACT_APP_UAM_BASE_URL` build arg to Dockerfile + docker-compose |
-| 3 | **E2E live smoke**: log in → disburse loan → click GL Journal # chip → verify JournalDetailDialog | Last unverified piece — confirm journal drill-down works on live site |
+| 1 | **Fix Kaspersky Application Control** (local): Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`, then re-run `dotnet test LoanService.Tests` | `LoanService.Tests.dll` blocked by Kaspersky kernel-level DLL load intercept — 83/83 already confirmed on GitHub Actions CI Linux |
+| 2 | **E2E live smoke**: log in → disburse loan → click GL Journal # chip → verify JournalDetailDialog | Confirm journal drill-down works on live demobank.saaritsolutions.com after deploy |
+| 3 | **DFS manual smoke on demobank**: Add custom field to GOLD_LOAN schema via Form Builder → reload `/gold-loans/new` → verify accordion appears | End-to-end DFS-004 live verification |
+
+### Recently Completed (session 44 — 2026-04-24)
+- [x] **Hetzner deploy — sessions 40–43 all live** (commits 6726b80 + ddfb617):
+  - `REACT_APP_UAM_BASE_URL` build arg added to frontend Dockerfile + docker-compose
+  - `ApprovalLevelSeedService` bugfix: `decimal.MaxValue` overflows `numeric(18,2)` → Postgres 22003 → no approval levels. Fixed to `9_999_999_999_999_999m` sentinel
+  - `docker compose up --build -d useraccessmanagement loanservice workfloworchestration frontend nginx` — all 11 containers healthy
+  - AddTenantConfig ✅ AddGoldLoanTables ✅ AddApprovalTables ✅ — all 3 tenants, all 3 migrations applied
+  - Smoke: `/api/gold-rate/today` ✅ `/api/gold-loan/applications` ✅ `/api/forms/GOLD_LOAN` ✅ `/api/tenant-config` ✅ Frontend ✅
 
 ### Recently Completed (session 43 — 2026-04-24)
 - [x] **SAAR-DFS-004 complete — Wire DFS into Gold Loan wizard + persist custom fields**:
