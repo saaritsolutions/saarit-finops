@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-24 (session 44 — Hetzner deploy all features + Dockerfile infra fix)
+**Last Updated:** 2026-04-24 (session 44b — scroll fix deployed)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -147,6 +147,11 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 44b — 2026-04-24 (scroll fix — Layout.tsx flex height constraint root cause)
+- **Root cause identified**: outer Box `display:flex (row) + min-height:100vh` made main content column exactly 100vh via `align-items:stretch` (default). `flex-grow:1` page content filled that 100vh exactly. Outlet content overflowed visually but the outer Box never exceeded 100vh — document had nothing to scroll. Tab key worked because browsers force-scroll the viewport to focused elements regardless of CSS constraints.
+- **Fix**: outer Box changed from flex row to plain block container (`display:flex` and `minHeight:100vh` removed). Main content column given `minHeight:100vh` directly. Now when Outlet content is tall the column grows beyond 100vh, the body overflows, and the window scrolls normally. Also removed redundant `minHeight:calc(100vh-112px)` and `backgroundColor` from page content box.
+- **Commit**: `bf343b1`. Deployed to Hetzner: `docker compose up --build -d frontend` — 130s npm build, container recreated.
 
 ### Session 44 — 2026-04-24 (Hetzner deploy sessions 40–43 + decimal.MaxValue bugfix)
 - **Commits deployed**: `cba5445` (SAAR-DFS-004), `6726b80` (Dockerfile infra), `ddfb617` (decimal overflow fix).
