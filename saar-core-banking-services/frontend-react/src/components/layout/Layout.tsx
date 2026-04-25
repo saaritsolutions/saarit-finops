@@ -32,25 +32,22 @@ const Layout: React.FC = () => {
       <Header />
       <Sidebar />
 
-      {/* Main content — sidebar Paper is position:fixed; marginLeft avoids overlap */}
+      {/* Main content — pure block layout so body grows with content → window scrolls */}
       <Box
         sx={{
-          display:        'flex',
-          flexDirection:  'column',
-          minHeight:      '100vh',
-          marginLeft:     { md: `${sidebarWidth}px` },
-          width:          { xs: '100%', md: `calc(100% - ${sidebarWidth}px)` },
-          transition:     'margin-left 200ms cubic-bezier(0.4,0,0.2,1), width 200ms cubic-bezier(0.4,0,0.2,1)',
+          marginLeft: { md: `${sidebarWidth}px` },
+          width:      { xs: '100%', md: `calc(100% - ${sidebarWidth}px)` },
+          transition: 'margin-left 200ms cubic-bezier(0.4,0,0.2,1), width 200ms cubic-bezier(0.4,0,0.2,1)',
         }}
       >
         {/* Spacer for fixed header */}
-        <Box sx={{ height: HEADER_HEIGHT, flexShrink: 0 }} />
+        <Box sx={{ height: HEADER_HEIGHT }} />
 
-        {/* Page Content */}
+        {/* Page Content — minHeight keeps footer below viewport on short pages */}
         <Box
           sx={{
-            flexGrow: 1,
-            p:        { xs: 2, sm: 2.5, md: 3 },
+            minHeight: `calc(100vh - ${HEADER_HEIGHT}px - ${FOOTER_HEIGHT}px)`,
+            p:         { xs: 2, sm: 2.5, md: 3 },
           }}
         >
           <Outlet />
