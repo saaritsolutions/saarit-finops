@@ -81,5 +81,26 @@ namespace TransactionService.Controllers
             var journals = await _engine.GetRecentAsync(page, pageSize, ct);
             return Ok(journals);
         }
+
+        /// <summary>Daily transaction summary grouped by posting date. Default range: last 30 days.</summary>
+        [HttpGet("daily-summary")]
+        [ProducesResponseType(typeof(DailySummaryReport), 200)]
+        [ProducesResponseType(typeof(ProblemDetails), 400)]
+        public async Task<IActionResult> DailySummary(
+            [FromQuery] DateTime? from = null,
+            [FromQuery] DateTime? to   = null,
+            CancellationToken ct       = default)
+        {
+            var toDate   = (to   ?? DateTime.UtcNow).Date;
+            var fromDate = (from ?? toDate.AddDays(-29)).Date;   // default: last 30 days
+
+            if (fromDate > toDate)
+                return BadRequest(new { error = "from must be <= to." });
+            if ((toDate - fromDate).TotalDays > 366)
+                return BadRequest(new { error = "Date range cannot exceed 366 days." });
+
+            var report = await _engine.GetDailySummaryAsync(fromDate, toDate, ct);
+            return Ok(report);
+        }
     }
 }
