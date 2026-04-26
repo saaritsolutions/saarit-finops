@@ -13,6 +13,7 @@ namespace TransactionService.Services
         Task<Journal?> GetByIdAsync(long journalId, CancellationToken ct = default);
         Task<Journal?> GetByJournalNumberAsync(string journalNumber, CancellationToken ct = default);
         Task<IReadOnlyList<Journal>> GetRecentAsync(int page, int pageSize, CancellationToken ct = default);
+        Task<DailySummaryReport> GetDailySummaryAsync(DateTime from, DateTime to, CancellationToken ct = default);
     }
 
     // ── Request DTOs ────────────────────────────────────────────────────────
@@ -298,6 +299,61 @@ namespace TransactionService.Services
                      .Skip((page - 1) * pageSize)
                      .Take(pageSize)
                      .ToListAsync(ct);
+
+        public async Task<DailySummaryReport> GetDailySummaryAsync(
+            DateTime from, DateTime to, CancellationToken ct = default)
+        {
+            var fromUtc = from.Date.ToUniversalTime();
+            var toUtc   = to.Date.AddDays(1).ToUniversalTime();   // exclusive upper bound
+
+            // Fetch journals in range then group in-memory to avoid EF GroupBy SQL translation issues
+            var journals = await _db.Journals
+                .Include(j => j.Entries)
+                .Where(j => j.PostedAt >= fromUtc && j.PostedAt < toUtc)
+                .OrderBy(j => j.PostedAt)
+                .ToListAsync(ct);
+
+            var days = journals
+                .GroupBy(j => j.PostedAt.ToLocalTime().Date)
+                .Select(g => new DailySummaryDay
+                {
+                    Date         = g.Key,
+                    JournalCount = g.Count(),
+                    TotalDebit   = g.Sum(j => j.Entries.Sum(e => e.DebitAmount)),
+                    TotalCredit  = g.Sum(j => j.Entries.Sum(e => e.CreditAmount)),
+                })
+                .ToList();
+
+            return new DailySummaryReport
+            {
+                From             = from.Date,
+                To               = to.Date,
+                Days             = days,
+                GrandTotalCount  = days.Sum(d => d.JournalCount),
+                GrandTotalDebit  = days.Sum(d => d.TotalDebit),
+                GrandTotalCredit = days.Sum(d => d.TotalCredit),
+            };
+        }
+    }
+
+    // ── DTOs for MIS daily summary report ────────────────────────────────────────
+
+    public class DailySummaryReport
+    {
+        public DateTime From             { get; set; }
+        public DateTime To               { get; set; }
+        public List<DailySummaryDay> Days { get; set; } = new();
+        public int     GrandTotalCount   { get; set; }
+        public decimal GrandTotalDebit   { get; set; }
+        public decimal GrandTotalCredit  { get; set; }
+    }
+
+    public class DailySummaryDay
+    {
+        public DateTime Date         { get; set; }
+        public int      JournalCount { get; set; }
+        public decimal  TotalDebit   { get; set; }
+        public decimal  TotalCredit  { get; set; }
     }
 
     // ── DTO for ExpressionBuilderService /api/expression-engine/execute response ──

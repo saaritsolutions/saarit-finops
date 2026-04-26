@@ -329,6 +329,70 @@ public class PostingEngineTests
                     Is.EqualTo(journal.Entries.Sum(e => e.CreditAmount)));
         Assert.That(journal.Entries, Has.Count.EqualTo(3));
     }
+
+    // ── Daily Summary tests (SAAR-RPT-001) ────────────────────────────────────
+
+    [Test]
+    public async Task DailySummary_EmptyDatabase_ReturnsZeroCounts()
+    {
+        using var db = MakeDb(nameof(DailySummary_EmptyDatabase_ReturnsZeroCounts));
+        var engine = MakeEngine(db);
+
+        var today = DateTime.UtcNow.Date;
+        var report = await engine.GetDailySummaryAsync(today.AddDays(-7), today);
+
+        Assert.That(report.Days,            Is.Empty);
+        Assert.That(report.GrandTotalCount, Is.EqualTo(0));
+        Assert.That(report.GrandTotalDebit, Is.EqualTo(0m));
+    }
+
+    [Test]
+    public async Task DailySummary_TwoDistinctDates_GroupsCorrectlyAndTotalsMatch()
+    {
+        using var db = MakeDb(nameof(DailySummary_TwoDistinctDates_GroupsCorrectlyAndTotalsMatch));
+
+        // Insert journals directly at specific dates (bypassing PostAsync clock)
+        var yesterday = DateTime.UtcNow.Date.AddDays(-1);
+        var today     = DateTime.UtcNow.Date;
+
+        var makeJournal = (string key, DateTime postedAt, decimal amount) =>
+            new TransactionService.Models.Journal
+            {
+                IdempotencyKey = key,
+                JournalNumber  = $"JNL-TEST-{key}",
+                Description    = "Test journal",
+                ReferenceType  = "Test",
+                PostedBy       = "unit-test",
+                PostedAt       = postedAt,
+                Status         = "Posted",
+                Entries        = new List<TransactionService.Models.JournalEntry>
+                {
+                    new() { AccountCode = "1020", DebitAmount  = amount, CreditAmount = 0m,     EntryDate = postedAt },
+                    new() { AccountCode = "2010", DebitAmount  = 0m,     CreditAmount = amount, EntryDate = postedAt },
+                }
+            };
+
+        db.Journals.AddRange(
+            makeJournal("DS-Y1", yesterday, 50_000m),
+            makeJournal("DS-Y2", yesterday, 30_000m),
+            makeJournal("DS-T1", today,     20_000m)
+        );
+        await db.SaveChangesAsync();
+
+        var engine = MakeEngine(db);
+        var report = await engine.GetDailySummaryAsync(yesterday, today);
+
+        Assert.That(report.GrandTotalCount, Is.EqualTo(3));
+        Assert.That(report.Days,            Has.Count.EqualTo(2));
+
+        var yd = report.Days.Single(d => d.Date.Date == yesterday);
+        Assert.That(yd.JournalCount, Is.EqualTo(2));
+        Assert.That(yd.TotalDebit,   Is.EqualTo(80_000m));
+
+        var td = report.Days.Single(d => d.Date.Date == today);
+        Assert.That(td.JournalCount, Is.EqualTo(1));
+        Assert.That(td.TotalDebit,   Is.EqualTo(20_000m));
+    }
 }
 
 // ── Expression trigger tests (SAAR-EXPR-001) ──────────────────────────────────
