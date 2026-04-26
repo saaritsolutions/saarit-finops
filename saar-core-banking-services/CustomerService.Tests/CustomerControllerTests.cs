@@ -42,9 +42,11 @@ namespace CustomerService.Tests
             var controller = GetController(context);
 
             var result = await controller.GetCustomers();
-            var customers = result.Value as List<Customer>;
-            Assert.That(customers, Is.Not.Null);
-            Assert.That(customers.Count, Is.EqualTo(2));
+            var ok = result.Result as Microsoft.AspNetCore.Mvc.OkObjectResult;
+            var response = ok!.Value as CustomerListResponse;
+            Assert.That(response, Is.Not.Null);
+            Assert.That(response!.Items.Count, Is.EqualTo(2));
+            Assert.That(response.Total, Is.EqualTo(2));
         }
 
         [Test]
@@ -259,6 +261,98 @@ namespace CustomerService.Tests
 
             var result = await controller.KycVerify(customer.CustomerId, new KycVerifyRequest("Officer"));
             Assert.That(result, Is.InstanceOf<UnprocessableEntityObjectResult>());
+        }
+
+        // ── Pagination + Search Tests ──────────────────────────────────────────
+
+        [Test]
+        public async Task GetCustomers_ReturnsAllWhenNoFilter()
+        {
+            var context = GetDbContext(nameof(GetCustomers_ReturnsAllWhenNoFilter));
+            context.Customers.AddRange(new List<Customer>
+            {
+                new Customer { FirstName = "Alice", LastName = "Alpha" },
+                new Customer { FirstName = "Bob",   LastName = "Beta" },
+                new Customer { FirstName = "Carol",  LastName = "Gamma" },
+            });
+            context.SaveChanges();
+            var controller = GetController(context);
+
+            var result = await controller.GetCustomers();
+            var ok = result.Result as Microsoft.AspNetCore.Mvc.OkObjectResult;
+            var response = ok!.Value as CustomerListResponse;
+            Assert.That(response, Is.Not.Null);
+            Assert.That(response!.Total, Is.EqualTo(3));
+            Assert.That(response.Items.Count, Is.EqualTo(3));
+        }
+
+        [Test]
+        public async Task GetCustomers_FiltersBy_Search_Name()
+        {
+            var context = GetDbContext(nameof(GetCustomers_FiltersBy_Search_Name));
+            context.Customers.AddRange(new List<Customer>
+            {
+                new Customer { FirstName = "John",  LastName = "Doe"   },
+                new Customer { FirstName = "Jane",  LastName = "Smith"  },
+                new Customer { FirstName = "Johnny", LastName = "Walker" },
+            });
+            context.SaveChanges();
+            var controller = GetController(context);
+
+            var result = await controller.GetCustomers(search: "john");
+            var ok = result.Result as Microsoft.AspNetCore.Mvc.OkObjectResult;
+            var response = ok!.Value as CustomerListResponse;
+            Assert.That(response, Is.Not.Null);
+            // "John" and "Johnny" match, "Jane" does not
+            Assert.That(response!.Total, Is.EqualTo(2));
+            Assert.That(response.Items.All(c => c.FirstName!.ToLower().Contains("john")), Is.True);
+        }
+
+        [Test]
+        public async Task GetCustomers_FiltersBy_KycStatus()
+        {
+            var context = GetDbContext(nameof(GetCustomers_FiltersBy_KycStatus));
+            context.Customers.AddRange(new List<Customer>
+            {
+                new Customer { FirstName = "Verified1", KycStatus = KycStatus.Verified   },
+                new Customer { FirstName = "Verified2", KycStatus = KycStatus.Verified   },
+                new Customer { FirstName = "Pending",   KycStatus = KycStatus.NotStarted },
+            });
+            context.SaveChanges();
+            var controller = GetController(context);
+
+            var result = await controller.GetCustomers(kycStatus: "3");  // Verified = 3
+            var ok = result.Result as Microsoft.AspNetCore.Mvc.OkObjectResult;
+            var response = ok!.Value as CustomerListResponse;
+            Assert.That(response, Is.Not.Null);
+            Assert.That(response!.Total, Is.EqualTo(2));
+            Assert.That(response.Items.All(c => c.KycStatus == KycStatus.Verified), Is.True);
+        }
+
+        [Test]
+        public async Task GetCustomers_ReturnsCorrectPage()
+        {
+            var context = GetDbContext(nameof(GetCustomers_ReturnsCorrectPage));
+            // Add 5 customers with distinct CreatedAt so ordering is deterministic
+            var anchor = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            for (int i = 1; i <= 5; i++)
+                context.Customers.Add(new Customer
+                {
+                    FirstName = $"Customer{i}",
+                    CreatedAt = anchor.AddDays(i),
+                });
+            context.SaveChanges();
+            var controller = GetController(context);
+
+            // Page 2 of pageSize=2 should return items 3 and 4 (by desc CreatedAt)
+            var result = await controller.GetCustomers(page: 2, pageSize: 2);
+            var ok = result.Result as Microsoft.AspNetCore.Mvc.OkObjectResult;
+            var response = ok!.Value as CustomerListResponse;
+            Assert.That(response, Is.Not.Null);
+            Assert.That(response!.Total, Is.EqualTo(5));
+            Assert.That(response.Items.Count, Is.EqualTo(2));
+            Assert.That(response.Page, Is.EqualTo(2));
+            Assert.That(response.PageSize, Is.EqualTo(2));
         }
         // ... (all other test methods, adapted for CustomerService context) ...
     }

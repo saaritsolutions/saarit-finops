@@ -293,6 +293,17 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
 - (none)
 
 ## Completed (continued)
+- SAAR-CST-001 — CustomerService Pagination, Search & Demo Seeder (session 47, 2026-04-26):
+  - **`SAAR_CST_001_REQUIREMENTS.md`**: JIRA-format requirement doc (7 FRs, 3 NFRs, test plan — 4 NUnit + 3 new Cypress)
+  - **`CustomerController.cs`**: `GetCustomers()` now accepts `?search=&kycStatus=&customerType=&page=&pageSize=`. Returns `CustomerListResponse { Total, Items, Page, PageSize }`. Case-insensitive LINQ Contains search over FirstName/LastName/Mobile/Email/PAN. Filter by KycStatus int (0–5) or "ALL". Filter by CustomerType string or "ALL". `OrderByDescending(CreatedAt)` with Skip/Take pagination.
+  - **`CustomerDemoDataSeeder.cs`** (new): Static class, `SeedAsync(db, tenantId)` pattern (mirrors LoanDemoDataSeeder). 8 customers per tenant covering all KYC states + all customer types. Idempotent (check by Mobile before insert). Anchor date 2026-01-01 UTC.
+  - **`Program.cs`**: Seeder call added inside startup scope after `TenantSchemaProvisioner.ProvisionAllSchemasAsync`. Loops over `["public", "ucb_demo", "nbfc_demo"]` with per-tenant `CustomerDbContext` + `StaticTenantService`.
+  - **`customerService.ts`**: `CustomerListResponse` + `CustomerListParams` interfaces. `list(params?)` now builds query string and returns `CustomerListResponse` (no longer `CustomerRecord[]`).
+  - **`CustomerManagement.tsx`**: Added `Pagination` import. `appliedParams` state (committed filter values that drive API). `load()` uses `customerService.list(appliedParams)`. Filter bar (search TextField + KYC Status Select + Type Select + Search/Reset buttons). Pagination control below table (Showing X–Y of Z label + MUI Pagination). `handleSearch`, `handleReset`, `handleKycDropdown`, `handleTypeDropdown`, `handlePageChange` handlers.
+  - **`CustomerControllerTests.cs`**: Updated `GetCustomers_ReturnsAllCustomers` to unwrap `OkObjectResult → CustomerListResponse`. Added 4 new tests: `GetCustomers_ReturnsAllWhenNoFilter`, `GetCustomers_FiltersBy_Search_Name`, `GetCustomers_FiltersBy_KycStatus`, `GetCustomers_ReturnsCorrectPage`. **21/21 tests passing.**
+  - **`06-customers.cy.ts`**: All existing stubs updated from `{ body: CUSTOMERS }` → `{ body: { total, items, page, pageSize } }`. New `paged()` helper. 3 new Cypress tests in `[REGRESSION] Customer Pagination + Search` — search input visible, KYC Status dropdown exists, pagination shown when total > pageSize.
+
+## Completed (continued)
 - SAAR-KYC-001 — KYC Workflow for CustomerService (session 46, 2026-04-26):
   - **`SAAR_KYC_001_REQUIREMENTS.md`**: JIRA-format requirement doc (6 FRs, 3 NFRs, test plan — 6 unit + 5 Cypress)
   - **`CustomerController.cs`**: 5 new KYC action endpoints — `initiate` (NotStarted→InProgress), `submit-documents` (InProgress→DocumentsSubmitted), `verify` (DocumentsSubmitted→Verified, requires `verifiedBy`), `reject` (InProgress|DocumentsSubmitted→Rejected, requires `rejectionReason`), `expire` (Verified→Expired). Invalid transitions return 422. Audit fields set on verify/reject.
@@ -455,10 +466,11 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - All 11 containers healthy. Key smoke tests: `/api/gold-rate/today` ✅ `/api/gold-loan/applications` ✅ `/api/forms/GOLD_LOAN` ✅ `/api/tenant-config` ✅ Frontend `/` ✅
 
 ## Pending Next
-- Fix Kaspersky Application Control blocking `dotnet test` locally: Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`. Then re-run `dotnet test` to verify all test suites locally.
+- Deploy SAAR-CST-001 + SAAR-KYC-001 to Hetzner: `docker compose up --build -d customerservice frontend` — CustomerService seeder (8 demo customers per tenant) + pagination endpoint + KYC action buttons now live.
 - Deploy SAAR-RPT-001 to Hetzner: `docker compose up --build -d transactionservice frontend` (new daily-summary endpoint + Reports page). Add `nginx.conf` `/api/compliance` block if not yet live.
+- Fix Kaspersky Application Control blocking `dotnet test` locally: Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`. Then re-run `dotnet test` to verify all test suites locally.
+- E2E smoke on demobank: log in → visit `/customers` → verify 8 seeded customers visible + search/filter work.
 - E2E smoke on demobank: log in → visit `/reports` → verify GL balance table + bar chart loads.
-- DFS-003/004 manual smoke on demobank: add custom fields to GOLD_LOAN schema via Form Builder → reload New Gold Loan Application → verify accordion appears with fields.
 
 ## Notes
 - Eligibility expression ID currently in use: EXPR_1755237353842.

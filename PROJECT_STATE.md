@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-26 (session 46 — SAAR-KYC-001 KYC Workflow for CustomerService)
+**Last Updated:** 2026-04-26 (session 47 — SAAR-CST-001 CustomerService Pagination + Search + Demo Seeder)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -147,6 +147,16 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 47 — 2026-04-26 (SAAR-CST-001 — CustomerService Pagination + Search + Demo Seeder)
+- **`SAAR_CST_001_REQUIREMENTS.md`**: JIRA-format requirement doc — 7 FRs (pagination, search, KYC filter, type filter, seeder, filter bar UI, pagination UI), 3 NFRs (no migration, idempotent, 21+ tests), acceptance criteria table, test plan.
+- **`CustomerController.cs`** (CustomerService): `GetCustomers()` updated to accept `?search=&kycStatus=&customerType=&page=&pageSize=` query params. Response changed from `IEnumerable<Customer>` to `CustomerListResponse { Total, Items, Page, PageSize }`. EF LINQ: case-insensitive `.Contains()` search across FirstName/LastName/Mobile/Email/PAN; KycStatus/CustomerType filter; `OrderByDescending(c => c.CreatedAt).Skip().Take()` pagination. `[FromQuery] string? search = null` default values required (CS7036 fix).
+- **`CustomerDemoDataSeeder.cs`** (new, CustomerService/Data/): Static class mirroring `LoanDemoDataSeeder` pattern. `SeedAsync(CustomerDbContext db, string tenantId)` inserts 8 customers per tenant (idempotent by Mobile). Covers all 6 KYC states + Individual/NRI/Corporate customer types.
+- **`Program.cs`** (CustomerService): Loop over `["public", "ucb_demo", "nbfc_demo"]` after schema provisioning → instantiate `CustomerDbContext` with `StaticTenantService(tenantId)` → `await CustomerDemoDataSeeder.SeedAsync(seedDb, tenantId)`.
+- **`customerService.ts`**: Added `CustomerListResponse` + `CustomerListParams` interfaces (already present from previous session prep). Updated `list()` to build query string from params and return `CustomerListResponse`.
+- **`CustomerManagement.tsx`**: Added filter bar (search TextField with `aria-label="search customers"`, KYC Status Select, Customer Type Select, Search + Reset buttons). Added MUI `Pagination` below table. State: `search`, `kycFilter`, `typeFilter`, `page`, `totalCount`, `appliedParams`. `appliedParams` committed-state pattern prevents auto-search on every keystroke. "Showing X–Y of Z customers" label.
+- **`CustomerControllerTests.cs`**: Fixed existing `GetCustomers_ReturnsAllCustomers` to unwrap `CustomerListResponse`. Added 4 new tests: `GetCustomers_ReturnsAllWhenNoFilter`, `GetCustomers_FiltersBy_Search_Name`, `GetCustomers_FiltersBy_KycStatus`, `GetCustomers_ReturnsCorrectPage`. **21/21 passing.**
+- **`06-customers.cy.ts`**: All existing stubs updated from `{ body: CUSTOMERS }` → `{ body: paged(CUSTOMERS) }` via `paged()` helper. Intercept pattern changed from `'**/api/customer'` to `'**/api/customer**'` to match query string URLs. Added 3 new tests in `[REGRESSION] Customer Pagination + Search`: search input visible, KYC dropdown exists, pagination shown when total=25.
 
 ### Session 46 — 2026-04-26 (SAAR-KYC-001 — KYC Workflow for CustomerService)
 - **`SAAR_KYC_001_REQUIREMENTS.md`**: 6 FRs, 3 NFRs, test plan. KYC state machine documented.
@@ -462,6 +472,7 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 - (none)
 
 ### Recently Completed
+- **SAAR-CST-001 (CustomerService Pagination + Search + Demo Seeder)** — `GET /api/customer` paginated + filtered; `CustomerDemoDataSeeder` seeds 8 customers per tenant (all KYC states); filter bar + MUI Pagination in CustomerManagement.tsx; 21/21 NUnit tests passing.
 - **SAAR-KYC-001 (KYC Workflow — CustomerService)** — 5 backend KYC action endpoints (initiate/submit-docs/verify/reject/expire), frontend KYC buttons + dialog in CustomerManagement.tsx, 17/17 unit tests passing.
 - **SAAR-DFS-004 (Wire DFS into Gold Loan wizard + persist custom fields)** — `GoldLoanController.cs` + `goldLoanService.ts` + `GoldLoanOrigination.tsx` + `GoldLoanDetail.tsx` extended; new test `CustomFieldsJson_IsStoredAndRoundTrips`; 3 new DFS Cypress regression tests in `10-gold-loan.cy.ts`. Blocker: CI policy blocks dotnet test — code correct, fix pending admin action.
 - **SAAR-CFG-001 (Bank Configuration + Feature Toggles)** — Tenant model extended (13 cols), JWT claims, TenantConfigController, BankConfig.tsx (2-tab admin page), Sidebar feature gating, 5/5 UAMService.Tests + 82/82 LoanService.Tests.
@@ -497,9 +508,9 @@ Per `EXECUTION_ROADMAP.md`:
 
 ## 7. Next Recommended Steps (Ordered by Impact)
 
-1. **Deploy SAAR-KYC-001 to Hetzner**: `docker compose up --build -d customerservice frontend` — CustomerService KYC endpoints + React KYC buttons now live.
-2. **CustomerService B-items next**: pagination + search (server-side `?search=&page=&pageSize=`) + demo data seeder for the customer table.
-3. **Deploy SAAR-RPT-001 to Hetzner**: `docker compose up --build -d transactionservice frontend` (daily-summary endpoint + Reports page). `/api/compliance` nginx block already in conf.
+1. **Deploy SAAR-CST-001 + SAAR-KYC-001 to Hetzner**: `docker compose up --build -d customerservice frontend` — CustomerService seeder + pagination + KYC endpoints + React filter bar, KYC buttons now live.
+2. **Deploy SAAR-RPT-001 to Hetzner**: `docker compose up --build -d transactionservice frontend` (daily-summary endpoint + Reports page). `/api/compliance` nginx block already in conf.
+3. **Fix Kaspersky Application Control** (local only): Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`. Then re-run `dotnet test LoanService.Tests` locally (83/83 already confirmed on GitHub Actions CI Linux).
 4. **Fix Kaspersky Application Control** (local only): Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`. Then re-run `dotnet test LoanService.Tests` locally (83/83 already confirmed on GitHub Actions CI Linux).
 5. **APIGateway: JWT auth + routing** — required for any real service-to-service flow.
 

@@ -50,6 +50,21 @@ export interface KycActionResult {
   message: string;
 }
 
+export interface CustomerListResponse {
+  total: number;
+  items: CustomerRecord[];
+  page: number;
+  pageSize: number;
+}
+
+export interface CustomerListParams {
+  search?: string;
+  kycStatus?: string;
+  customerType?: string;
+  page?: number;
+  pageSize?: number;
+}
+
 export const KYC_STATUS_LABELS: Record<number, string> = {
   0: 'Not Started',
   1: 'In Progress',
@@ -60,7 +75,16 @@ export const KYC_STATUS_LABELS: Record<number, string> = {
 };
 
 export const customerService = {
-  list: () => apiService.get<CustomerRecord[]>(BASE),
+  list: (params?: CustomerListParams) => {
+    const qs = new URLSearchParams();
+    if (params?.search)       qs.set('search', params.search);
+    if (params?.kycStatus)    qs.set('kycStatus', params.kycStatus);
+    if (params?.customerType) qs.set('customerType', params.customerType);
+    if (params?.page)         qs.set('page', String(params.page));
+    if (params?.pageSize)     qs.set('pageSize', String(params.pageSize));
+    const suffix = qs.toString() ? `?${qs}` : '';
+    return apiService.get<CustomerListResponse>(`${BASE}${suffix}`);
+  },
 
   get: (id: number) => apiService.get<CustomerRecord>(`${BASE}/${id}`),
 

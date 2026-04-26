@@ -54,10 +54,28 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// ── Startup: provision tenant schemas ────────────────────────────────────────
+// ── Startup: provision tenant schemas + seed demo data ───────────────────────
 using (var scope = app.Services.CreateScope())
 {
     await TenantSchemaProvisioner.ProvisionAllSchemasAsync(scope.ServiceProvider);
+
+    var connStr = app.Configuration.GetConnectionString("DefaultConnection")!;
+    foreach (var tenantId in new[] { "public", "ucb_demo", "nbfc_demo" })
+    {
+        try
+        {
+            var tenantOpts = new DbContextOptionsBuilder<CustomerDbContext>()
+                .UseNpgsql(connStr + $";SearchPath={tenantId}")
+                .Options;
+            await using var seedDb = new CustomerDbContext(tenantOpts, new StaticTenantService(tenantId));
+            await CustomerDemoDataSeeder.SeedAsync(seedDb, tenantId);
+            Console.WriteLine("[CustomerService] Demo customers seeded for tenant {0}", tenantId);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("[CustomerService] Demo seed skipped for tenant {0}: {1}", tenantId, ex.Message);
+        }
+    }
 }
 
 // Configure the HTTP request pipeline.
