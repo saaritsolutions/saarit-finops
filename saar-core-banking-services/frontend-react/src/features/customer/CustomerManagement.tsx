@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert, Box, Button, Chip, CircularProgress, Dialog, DialogActions,
   DialogContent, DialogTitle, FormControl, Grid, IconButton, InputLabel,
-  MenuItem, Paper, Select, Table, TableBody, TableCell, TableContainer,
+  MenuItem, Pagination, Paper, Select, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, TextField, Tooltip, Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -16,6 +16,7 @@ import BlockIcon from '@mui/icons-material/Block';
 import {
   customerService,
   CustomerRecord,
+  CustomerListParams,
   CreateCustomerDto,
   KYC_STATUS_LABELS,
 } from '../../services/customerService';
@@ -38,12 +39,26 @@ function kycColor(status: number): 'default' | 'success' | 'warning' | 'error' |
 
 // ── component ─────────────────────────────────────────────────────────────────
 
+const PAGE_SIZE = 20;
+
 const CustomerManagement: React.FC = () => {
   const [customers, setCustomers] = useState<CustomerRecord[]>([]);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState<string | null>(null);
 
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // filter bar — input values
+  const [search, setSearch]         = useState('');
+  const [kycFilter, setKycFilter]   = useState('ALL');
+  const [typeFilter, setTypeFilter] = useState('ALL');
+  // pagination
+  const [page, setPage]             = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  // committed filter values (only updated on Search button / dropdown change)
+  const [appliedParams, setAppliedParams] = useState<CustomerListParams>({
+    search: '', kycStatus: 'ALL', customerType: 'ALL', page: 1, pageSize: PAGE_SIZE,
+  });
 
   // create/edit dialog
   const [open, setOpen]                   = useState(false);
@@ -67,16 +82,44 @@ const CustomerManagement: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await customerService.list();
-      setCustomers(data);
+      const data = await customerService.list(appliedParams);
+      setCustomers(data.items);
+      setTotalCount(data.total);
     } catch (e: any) {
       setError(e?.response?.data || e?.message || 'Failed to load customers');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [appliedParams]);
 
   useEffect(() => { load(); }, [load]);
+
+  function handleSearch() {
+    setAppliedParams({ search, kycStatus: kycFilter, customerType: typeFilter, page: 1, pageSize: PAGE_SIZE });
+    setPage(1);
+  }
+
+  function handleReset() {
+    setSearch(''); setKycFilter('ALL'); setTypeFilter('ALL'); setPage(1);
+    setAppliedParams({ search: '', kycStatus: 'ALL', customerType: 'ALL', page: 1, pageSize: PAGE_SIZE });
+  }
+
+  function handleKycDropdown(val: string) {
+    setKycFilter(val);
+    setPage(1);
+    setAppliedParams(p => ({ ...p, kycStatus: val, page: 1 }));
+  }
+
+  function handleTypeDropdown(val: string) {
+    setTypeFilter(val);
+    setPage(1);
+    setAppliedParams(p => ({ ...p, customerType: val, page: 1 }));
+  }
+
+  function handlePageChange(_: React.ChangeEvent<unknown>, newPage: number) {
+    setPage(newPage);
+    setAppliedParams(p => ({ ...p, page: newPage }));
+  }
 
   // ── dialog helpers ────────────────────────────────────────────────────────
 
@@ -238,6 +281,56 @@ const CustomerManagement: React.FC = () => {
         </Alert>
       )}
 
+      {/* Filter bar */}
+      <Paper sx={{ p: 2, mb: 2 }} elevation={1}>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <TextField
+            size="small"
+            label="Search"
+            placeholder="Name, mobile, email, PAN..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }}
+            sx={{ minWidth: 240 }}
+            inputProps={{ 'aria-label': 'search customers' }}
+          />
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <InputLabel>KYC Status</InputLabel>
+            <Select
+              label="KYC Status"
+              value={kycFilter}
+              onChange={e => handleKycDropdown(e.target.value as string)}
+              inputProps={{ 'aria-label': 'kyc status filter' }}
+            >
+              <MenuItem value="ALL">All Statuses</MenuItem>
+              <MenuItem value="0">Not Started</MenuItem>
+              <MenuItem value="1">In Progress</MenuItem>
+              <MenuItem value="2">Docs Submitted</MenuItem>
+              <MenuItem value="3">Verified</MenuItem>
+              <MenuItem value="4">Rejected</MenuItem>
+              <MenuItem value="5">Expired</MenuItem>
+            </Select>
+          </FormControl>
+          <FormControl size="small" sx={{ minWidth: 140 }}>
+            <InputLabel>Type</InputLabel>
+            <Select
+              label="Type"
+              value={typeFilter}
+              onChange={e => handleTypeDropdown(e.target.value as string)}
+              inputProps={{ 'aria-label': 'customer type filter' }}
+            >
+              <MenuItem value="ALL">All Types</MenuItem>
+              <MenuItem value="Individual">Individual</MenuItem>
+              <MenuItem value="Corporate">Corporate</MenuItem>
+              <MenuItem value="NRI">NRI</MenuItem>
+              <MenuItem value="Government">Government</MenuItem>
+            </Select>
+          </FormControl>
+          <Button variant="outlined" onClick={handleSearch}>Search</Button>
+          <Button variant="text" onClick={handleReset}>Reset</Button>
+        </Box>
+      </Paper>
+
       {/* Table */}
       <TableContainer component={Paper}>
         <Table size="small">
@@ -258,7 +351,9 @@ const CustomerManagement: React.FC = () => {
             ) : customers.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                  No customers yet. Click "New Customer" to add the first one.
+                  {appliedParams.search || appliedParams.kycStatus !== 'ALL' || appliedParams.customerType !== 'ALL'
+                    ? 'No customers match the current filters.'
+                    : 'No customers yet. Click "New Customer" to add the first one.'}
                 </TableCell>
               </TableRow>
             ) : customers.map(c => (
@@ -329,6 +424,22 @@ const CustomerManagement: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* Pagination */}
+      {totalCount > 0 && (
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            Showing {Math.min((page - 1) * PAGE_SIZE + 1, totalCount)}–{Math.min(page * PAGE_SIZE, totalCount)} of {totalCount} customers
+          </Typography>
+          <Pagination
+            count={Math.ceil(totalCount / PAGE_SIZE)}
+            page={page}
+            onChange={handlePageChange}
+            color="primary"
+            size="small"
+          />
+        </Box>
+      )}
 
       {/* Create / Edit dialog */}
       <Dialog open={open} onClose={() => !saving && setOpen(false)} maxWidth="md" fullWidth>

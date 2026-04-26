@@ -1,0 +1,5 @@
+<RunSettings>
+  <NUnit>
+    <InternalTraceLevel>Verbose</InternalTraceLevel>
+  </NUnit>
+</RunSettings>

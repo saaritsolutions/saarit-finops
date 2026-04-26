@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-24 (session 44 — Hetzner deploy + decimal.MaxValue bugfix)
+**Last Updated:** 2026-04-26 (session 47 — SAAR-CST-001 CustomerService Pagination + Search + Demo Seeder)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,20 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Fix Kaspersky Application Control** (local): Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`, then re-run `dotnet test LoanService.Tests` | `LoanService.Tests.dll` blocked by Kaspersky kernel-level DLL load intercept — 83/83 already confirmed on GitHub Actions CI Linux |
-| 2 | **E2E live smoke**: log in → disburse loan → click GL Journal # chip → verify JournalDetailDialog | Confirm journal drill-down works on live demobank.saaritsolutions.com after deploy |
-| 3 | **DFS manual smoke on demobank**: Add custom field to GOLD_LOAN schema via Form Builder → reload `/gold-loans/new` → verify accordion appears | End-to-end DFS-004 live verification |
+| 1 | **Deploy SAAR-CST-001 + SAAR-KYC-001 to Hetzner**: `docker compose up --build -d customerservice frontend` | CustomerService seeder (8 customers/tenant) + pagination + KYC endpoints + React filter bar now built and tested — ready to ship |
+| 2 | **Deploy SAAR-RPT-001 to Hetzner**: `docker compose up --build -d transactionservice frontend` | Daily-summary endpoint + Reports page — `/api/compliance` nginx block already in conf |
+| 3 | **Fix Kaspersky Application Control** (local): Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops` | `LoanService.Tests.dll` blocked by Kaspersky kernel-level DLL load intercept — 83/83 already confirmed on GitHub Actions CI Linux |
+
+### Recently Completed (session 47 — 2026-04-26)
+- [x] **SAAR-CST-001 complete — CustomerService Pagination + Search + Demo Seeder** — 21/21 NUnit tests passing:
+  - `SAAR_CST_001_REQUIREMENTS.md`: JIRA-format requirement doc (7 FRs, 3 NFRs, test plan)
+  - `CustomerController.cs`: `GetCustomers()` now accepts `?search=&kycStatus=&customerType=&page=&pageSize=`; returns `CustomerListResponse { Total, Items, Page, PageSize }`. Case-insensitive search across FirstName/LastName/Mobile/Email/PAN; KycStatus/CustomerType enum/string filters; OrderByDescending(CreatedAt).Skip().Take() pagination. `= null` defaults on all `[FromQuery] string?` params (CS7036 fix).
+  - `CustomerDemoDataSeeder.cs` (new): static class — `SeedAsync(db, tenantId)` inserts 8 customers per tenant (idempotent by Mobile): Ramesh/Verified, Priya/InProgress, Anjali/DocsSubmitted, Vikram/Rejected, Sunita/NotStarted, Arun(NRI)/Verified, MegaCorp(Corporate)/Verified, Kavita/Expired.
+  - `Program.cs`: seeder loop over 3 tenants after `ProvisionAllSchemasAsync`.
+  - `customerService.ts`: `CustomerListResponse` + `CustomerListParams` interfaces; updated `list()` builds query string from params.
+  - `CustomerManagement.tsx`: filter bar (search TextField `aria-label="search customers"`, KYC Status Select, Customer Type Select, Search + Reset buttons); MUI `Pagination` below table; "Showing X–Y of Z customers" label; `appliedParams` committed-state pattern prevents keystroke auto-search.
+  - `CustomerControllerTests.cs`: fixed existing test (unwrap `CustomerListResponse`); 4 new tests (no-filter, search, KYC filter, page=2). **21/21 passing.**
+  - `06-customers.cy.ts`: all stubs updated to `paged()` format; intercept `'**/api/customer**'` (matches QS URLs); 3 new tests in `[REGRESSION] Customer Pagination + Search`.
 
 ### Recently Completed (session 44 — 2026-04-24)
 - [x] **Hetzner deploy — sessions 40–43 all live** (commits 6726b80 + ddfb617):

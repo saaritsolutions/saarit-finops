@@ -17,9 +17,41 @@ namespace CustomerService.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Customer>>> GetCustomers()
+        public async Task<ActionResult<CustomerListResponse>> GetCustomers(
+            [FromQuery] string? search = null,
+            [FromQuery] string? kycStatus = null,
+            [FromQuery] string? customerType = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
         {
-            return await _context.Customers.ToListAsync();
+            var query = _context.Customers.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.Trim().ToLower();
+                query = query.Where(c =>
+                    (c.FirstName  != null && c.FirstName.ToLower().Contains(s))  ||
+                    (c.LastName   != null && c.LastName.ToLower().Contains(s))   ||
+                    (c.Mobile     != null && c.Mobile.Contains(s))               ||
+                    (c.Email      != null && c.Email.ToLower().Contains(s))      ||
+                    (c.PAN        != null && c.PAN.ToLower().Contains(s)));
+            }
+
+            if (!string.IsNullOrWhiteSpace(kycStatus) && kycStatus != "ALL"
+                && int.TryParse(kycStatus, out var kycInt))
+                query = query.Where(c => (int)c.KycStatus == kycInt);
+
+            if (!string.IsNullOrWhiteSpace(customerType) && customerType != "ALL")
+                query = query.Where(c => c.CustomerType == customerType);
+
+            var total = await query.CountAsync();
+            var items = await query
+                .OrderByDescending(c => c.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return Ok(new CustomerListResponse(total, items, page, pageSize));
         }
 
         [HttpGet("{id}")]
@@ -185,4 +217,5 @@ namespace CustomerService.Controllers
     public record ValidateDocumentRequest(string? Value);
     public record KycVerifyRequest(string? VerifiedBy);
     public record KycRejectRequest(string? RejectionReason);
+    public record CustomerListResponse(int Total, List<Customer> Items, int Page, int PageSize);
 }

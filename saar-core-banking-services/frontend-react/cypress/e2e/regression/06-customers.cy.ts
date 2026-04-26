@@ -4,13 +4,14 @@ export {};
 /**
  * REGRESSION — Customer Management Module
  * Covers: customer list, search, create customer, KYC status fields,
- *         PAN/Aadhaar display.
+ *         PAN/Aadhaar display, filter bar, pagination.
  *
  * NOTE: customerService.list() → GET /api/customer (no /customers suffix)
+ *       Response is now paginated: { total, items, page, pageSize }
  *       kycStatus is numeric: 0=Not Started,1=In Progress,2=Docs Submitted,
  *                             3=Verified,4=Rejected,5=Expired
  *       Component renders name via fullName(c) = [firstName, middleName, lastName].join(' ')
- *       No search input in CustomerManagement.tsx
+ *       SAAR-CST-001: all stubs updated to { total, items, page, pageSize } format
  */
 
 const CUSTOMERS = [
@@ -49,11 +50,16 @@ const CUSTOMERS = [
   },
 ];
 
+// Paginated response helper
+function paged(items: any[], total?: number) {
+  return { total: total ?? items.length, items, page: 1, pageSize: 20 };
+}
+
 describe('[REGRESSION] Customer Management — List', () => {
   beforeEach(() => {
     cy.loginAsDemo();
-    // customerService.list() → GET /api/customer (no /customers suffix)
-    cy.intercept('GET', '**/api/customer', { body: CUSTOMERS }).as('customers');
+    // SAAR-CST-001: stub now returns paginated response
+    cy.intercept('GET', '**/api/customer**', { body: paged(CUSTOMERS) }).as('customers');
   });
 
   it('loads customer list page', () => {
@@ -103,7 +109,8 @@ describe('[REGRESSION] Customer Management — List', () => {
 describe('[REGRESSION] Customer Management — Create Customer', () => {
   beforeEach(() => {
     cy.loginAsDemo();
-    cy.intercept('GET', '**/api/customer', { body: [] }).as('customers');
+    // SAAR-CST-001: stub updated to paginated format
+    cy.intercept('GET', '**/api/customer**', { body: paged([]) }).as('customers');
   });
 
   it('New Customer button opens create form', () => {
@@ -131,7 +138,6 @@ describe('[REGRESSION] Customer Management — Create Customer', () => {
   });
 
   it('successful create shows confirmation and adds to list', () => {
-    // Note: SAAR-KYC-001 — this file also covers KYC workflow tests below
     cy.intercept('POST', '**/api/customer', {
       statusCode: 201,
       body: { customerId: 200, firstName: 'New Test', lastName: 'Customer', kycStatus: 0 },
@@ -166,7 +172,8 @@ const CUSTOMERS_KYC = [
 describe('[REGRESSION] Customer KYC Workflow — action buttons', () => {
   beforeEach(() => {
     cy.loginAsDemo();
-    cy.intercept('GET', '**/api/customer', { body: CUSTOMERS_KYC }).as('customers');
+    // SAAR-CST-001: stub updated to paginated format
+    cy.intercept('GET', '**/api/customer**', { body: paged(CUSTOMERS_KYC) }).as('customers');
   });
 
   it('shows Initiate KYC button for NotStarted customer', () => {
@@ -194,7 +201,7 @@ describe('[REGRESSION] Customer KYC Workflow — action buttons', () => {
       body: { kycStatus: 1, message: 'KYC initiated successfully.' },
     }).as('initiate');
     // Reload list after action returns InProgress
-    cy.intercept('GET', '**/api/customer', { body: CUSTOMERS_KYC.map(c => c.customerId === 201 ? { ...c, kycStatus: 1 } : c) }).as('reload');
+    cy.intercept('GET', '**/api/customer**', { body: paged(CUSTOMERS_KYC.map(c => c.customerId === 201 ? { ...c, kycStatus: 1 } : c)) }).as('reload');
 
     cy.visit('/customers');
     cy.wait('@customers', { timeout: 15000 });
@@ -208,7 +215,7 @@ describe('[REGRESSION] Customer KYC Workflow — action buttons', () => {
       statusCode: 200,
       body: { kycStatus: 3, message: 'KYC verified by Branch Manager.' },
     }).as('verify');
-    cy.intercept('GET', '**/api/customer', { body: CUSTOMERS_KYC.map(c => c.customerId === 203 ? { ...c, kycStatus: 3 } : c) }).as('reload');
+    cy.intercept('GET', '**/api/customer**', { body: paged(CUSTOMERS_KYC.map(c => c.customerId === 203 ? { ...c, kycStatus: 3 } : c)) }).as('reload');
 
     cy.visit('/customers');
     cy.wait('@customers', { timeout: 15000 });
@@ -222,5 +229,46 @@ describe('[REGRESSION] Customer KYC Workflow — action buttons', () => {
     cy.contains(/Confirm Verify/i).click();
     cy.wait('@verify', { timeout: 10000 });
     cy.contains(/verified/i, { timeout: 10000 }).should('exist');
+  });
+});
+
+/**
+ * SAAR-CST-001 — Pagination + Search regression tests
+ */
+describe('[REGRESSION] Customer Pagination + Search', () => {
+  beforeEach(() => {
+    cy.loginAsDemo();
+  });
+
+  it('search input is visible on the customers page', () => {
+    cy.intercept('GET', '**/api/customer**', { body: paged(CUSTOMERS) }).as('customers');
+    cy.visit('/customers');
+    cy.wait('@customers', { timeout: 15000 });
+    cy.get('[aria-label="search customers"]').should('exist');
+  });
+
+  it('KYC status filter dropdown exists', () => {
+    cy.intercept('GET', '**/api/customer**', { body: paged(CUSTOMERS) }).as('customers');
+    cy.visit('/customers');
+    cy.wait('@customers', { timeout: 15000 });
+    // KYC Status dropdown is visible
+    cy.contains(/KYC Status/i).should('exist');
+  });
+
+  it('pagination control is shown when total exceeds page size', () => {
+    // Stub: 25 total, 20 items on page 1 → pagination should appear
+    const manyItems = Array.from({ length: 20 }, (_, i) => ({
+      customerId: i + 1,
+      firstName: `Customer${i + 1}`,
+      lastName: 'Test',
+      kycStatus: 3,
+      dateOfBirth: '1990-01-01',
+      createdAt: '2026-01-01T00:00:00Z',
+    }));
+    cy.intercept('GET', '**/api/customer**', { body: { total: 25, items: manyItems, page: 1, pageSize: 20 } }).as('customers');
+    cy.visit('/customers');
+    cy.wait('@customers', { timeout: 15000 });
+    // Pagination component renders a nav with aria-label="pagination navigation"
+    cy.get('[aria-label="pagination navigation"]').should('exist');
   });
 });
