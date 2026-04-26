@@ -172,6 +172,94 @@ namespace CustomerService.Tests
             var result = await controller.UpdateCustomer(999, customer);
             Assert.That(result, Is.InstanceOf<NotFoundResult>());
         }
+        // ── KYC Workflow Tests ─────────────────────────────────────────────────
+
+        [Test]
+        public async Task KycInitiate_TransitionsToInProgress()
+        {
+            var context = GetDbContext(nameof(KycInitiate_TransitionsToInProgress));
+            var customer = new Customer { FirstName = "Test", KycStatus = KycStatus.NotStarted };
+            context.Customers.Add(customer);
+            context.SaveChanges();
+            var controller = GetController(context);
+
+            var result = await controller.KycInitiate(customer.CustomerId);
+            Assert.That(result, Is.InstanceOf<OkObjectResult>());
+            var updated = context.Customers.First();
+            Assert.That(updated.KycStatus, Is.EqualTo(KycStatus.InProgress));
+        }
+
+        [Test]
+        public async Task KycSubmitDocuments_TransitionsToDocumentsSubmitted()
+        {
+            var context = GetDbContext(nameof(KycSubmitDocuments_TransitionsToDocumentsSubmitted));
+            var customer = new Customer { FirstName = "Test", KycStatus = KycStatus.InProgress };
+            context.Customers.Add(customer);
+            context.SaveChanges();
+            var controller = GetController(context);
+
+            var result = await controller.KycSubmitDocuments(customer.CustomerId);
+            Assert.That(result, Is.InstanceOf<OkObjectResult>());
+            var updated = context.Customers.First();
+            Assert.That(updated.KycStatus, Is.EqualTo(KycStatus.DocumentsSubmitted));
+        }
+
+        [Test]
+        public async Task KycVerify_TransitionsToVerified_WithAuditFields()
+        {
+            var context = GetDbContext(nameof(KycVerify_TransitionsToVerified_WithAuditFields));
+            var customer = new Customer { FirstName = "Test", KycStatus = KycStatus.DocumentsSubmitted };
+            context.Customers.Add(customer);
+            context.SaveChanges();
+            var controller = GetController(context);
+
+            var result = await controller.KycVerify(customer.CustomerId, new KycVerifyRequest("Branch Manager"));
+            Assert.That(result, Is.InstanceOf<OkObjectResult>());
+            var updated = context.Customers.First();
+            Assert.That(updated.KycStatus, Is.EqualTo(KycStatus.Verified));
+            Assert.That(updated.KycVerifiedBy, Is.EqualTo("Branch Manager"));
+            Assert.That(updated.KycVerifiedAt, Is.Not.Null);
+        }
+
+        [Test]
+        public async Task KycReject_TransitionsToRejected_WithReason()
+        {
+            var context = GetDbContext(nameof(KycReject_TransitionsToRejected_WithReason));
+            var customer = new Customer { FirstName = "Test", KycStatus = KycStatus.DocumentsSubmitted };
+            context.Customers.Add(customer);
+            context.SaveChanges();
+            var controller = GetController(context);
+
+            var result = await controller.KycReject(customer.CustomerId, new KycRejectRequest("Documents unclear"));
+            Assert.That(result, Is.InstanceOf<OkObjectResult>());
+            var updated = context.Customers.First();
+            Assert.That(updated.KycStatus, Is.EqualTo(KycStatus.Rejected));
+            Assert.That(updated.KycRejectionReason, Is.EqualTo("Documents unclear"));
+        }
+
+        [Test]
+        public async Task KycInitiate_Returns404_WhenCustomerNotFound()
+        {
+            var context = GetDbContext(nameof(KycInitiate_Returns404_WhenCustomerNotFound));
+            var controller = GetController(context);
+
+            var result = await controller.KycInitiate(9999);
+            Assert.That(result, Is.InstanceOf<NotFoundResult>());
+        }
+
+        [Test]
+        public async Task KycVerify_Returns422_WhenInvalidTransition()
+        {
+            // Cannot verify from InProgress — must be DocumentsSubmitted first
+            var context = GetDbContext(nameof(KycVerify_Returns422_WhenInvalidTransition));
+            var customer = new Customer { FirstName = "Test", KycStatus = KycStatus.InProgress };
+            context.Customers.Add(customer);
+            context.SaveChanges();
+            var controller = GetController(context);
+
+            var result = await controller.KycVerify(customer.CustomerId, new KycVerifyRequest("Officer"));
+            Assert.That(result, Is.InstanceOf<UnprocessableEntityObjectResult>());
+        }
         // ... (all other test methods, adapted for CustomerService context) ...
     }
 }

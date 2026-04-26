@@ -45,6 +45,11 @@ export interface ValidationResult {
   message: string;
 }
 
+export interface KycActionResult {
+  kycStatus: number;
+  message: string;
+}
+
 export const KYC_STATUS_LABELS: Record<number, string> = {
   0: 'Not Started',
   1: 'In Progress',
@@ -71,4 +76,17 @@ export const customerService = {
 
   validateAadhaar: (value: string) =>
     apiService.post<ValidationResult>(`${BASE}/validate/aadhaar`, { value }),
+
+  // ── KYC Workflow ────────────────────────────────────────────────────────
+  initiateKyc: (id: number) =>
+    apiService.post<KycActionResult>(`${BASE}/${id}/kyc/initiate`, {}),
+
+  submitKycDocuments: (id: number) =>
+    apiService.post<KycActionResult>(`${BASE}/${id}/kyc/submit-documents`, {}),
+
+  verifyKyc: (id: number, verifiedBy: string) =>
+    apiService.post<KycActionResult>(`${BASE}/${id}/kyc/verify`, { verifiedBy }),
+
+  rejectKyc: (id: number, rejectionReason: string) =>
+    apiService.post<KycActionResult>(`${BASE}/${id}/kyc/reject`, { rejectionReason }),
 };

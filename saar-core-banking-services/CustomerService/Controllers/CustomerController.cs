@@ -107,7 +107,82 @@ namespace CustomerService.Controllers
                     : result.Error,
             });
         }
+
+        // ── KYC Workflow ──────────────────────────────────────────────────────────
+        // State machine: NotStarted(0)→InProgress(1)→DocumentsSubmitted(2)→Verified(3)
+        //                InProgress(1)|DocumentsSubmitted(2)→Rejected(4)
+        //                Verified(3)→Expired(5)
+
+        [HttpPost("{id}/kyc/initiate")]
+        public async Task<IActionResult> KycInitiate(int id)
+        {
+            var customer = await _context.Customers.FindAsync(id);
+            if (customer == null) return NotFound();
+            if (customer.KycStatus != KycStatus.NotStarted)
+                return UnprocessableEntity($"KYC can only be initiated from NotStarted state (current: {customer.KycStatus}).");
+            customer.KycStatus = KycStatus.InProgress;
+            await _context.SaveChangesAsync();
+            return Ok(new { kycStatus = (int)customer.KycStatus, message = "KYC initiated successfully." });
+        }
+
+        [HttpPost("{id}/kyc/submit-documents")]
+        public async Task<IActionResult> KycSubmitDocuments(int id)
+        {
+            var customer = await _context.Customers.FindAsync(id);
+            if (customer == null) return NotFound();
+            if (customer.KycStatus != KycStatus.InProgress)
+                return UnprocessableEntity($"KYC must be In Progress to submit documents (current: {customer.KycStatus}).");
+            customer.KycStatus = KycStatus.DocumentsSubmitted;
+            await _context.SaveChangesAsync();
+            return Ok(new { kycStatus = (int)customer.KycStatus, message = "Documents submitted for KYC review." });
+        }
+
+        [HttpPost("{id}/kyc/verify")]
+        public async Task<IActionResult> KycVerify(int id, [FromBody] KycVerifyRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request?.VerifiedBy))
+                return BadRequest("VerifiedBy is required.");
+            var customer = await _context.Customers.FindAsync(id);
+            if (customer == null) return NotFound();
+            if (customer.KycStatus != KycStatus.DocumentsSubmitted)
+                return UnprocessableEntity($"KYC must be in DocumentsSubmitted state to verify (current: {customer.KycStatus}).");
+            customer.KycStatus = KycStatus.Verified;
+            customer.KycVerifiedAt = DateTime.UtcNow;
+            customer.KycVerifiedBy = request.VerifiedBy;
+            customer.KycRejectionReason = null;
+            await _context.SaveChangesAsync();
+            return Ok(new { kycStatus = (int)customer.KycStatus, message = $"KYC verified by {request.VerifiedBy}." });
+        }
+
+        [HttpPost("{id}/kyc/reject")]
+        public async Task<IActionResult> KycReject(int id, [FromBody] KycRejectRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request?.RejectionReason))
+                return BadRequest("RejectionReason is required.");
+            var customer = await _context.Customers.FindAsync(id);
+            if (customer == null) return NotFound();
+            if (customer.KycStatus != KycStatus.InProgress && customer.KycStatus != KycStatus.DocumentsSubmitted)
+                return UnprocessableEntity($"KYC can only be rejected from InProgress or DocumentsSubmitted state (current: {customer.KycStatus}).");
+            customer.KycStatus = KycStatus.Rejected;
+            customer.KycRejectionReason = request.RejectionReason;
+            await _context.SaveChangesAsync();
+            return Ok(new { kycStatus = (int)customer.KycStatus, message = "KYC rejected." });
+        }
+
+        [HttpPost("{id}/kyc/expire")]
+        public async Task<IActionResult> KycExpire(int id)
+        {
+            var customer = await _context.Customers.FindAsync(id);
+            if (customer == null) return NotFound();
+            if (customer.KycStatus != KycStatus.Verified)
+                return UnprocessableEntity($"Only Verified KYC can be expired (current: {customer.KycStatus}).");
+            customer.KycStatus = KycStatus.Expired;
+            await _context.SaveChangesAsync();
+            return Ok(new { kycStatus = (int)customer.KycStatus, message = "KYC expired — re-KYC required." });
+        }
     }
 
     public record ValidateDocumentRequest(string? Value);
+    public record KycVerifyRequest(string? VerifiedBy);
+    public record KycRejectRequest(string? RejectionReason);
 }
