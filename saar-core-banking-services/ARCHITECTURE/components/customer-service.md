@@ -22,11 +22,13 @@ Customer Information File (CIF) management — the master record for all bank cu
 | POST | `/api/customer` | Create new customer (CIF) |
 | PUT | `/api/customer/{id}` | Update customer details |
 | DELETE | `/api/customer/{id}` | Soft-delete (deactivate) customer |
-| POST | `/api/customer/validate/pan` | Validate PAN format |
-| POST | `/api/customer/validate/aadhaar` | Validate Aadhaar format |
-| POST | `/api/customer/{id}/kyc` | Submit KYC documents |
-| GET | `/api/customer/{id}/accounts` | Get customer's accounts |
-| POST | `/api/customer/search` | Search by name, PAN, mobile, Aadhaar |
+| POST | `/api/customer/validate/pan` | Validate PAN format (always 200 OK) |
+| POST | `/api/customer/validate/aadhaar` | Validate Aadhaar format (always 200 OK) |
+| POST | `/api/customer/{id}/kyc/initiate` | NotStarted → InProgress |
+| POST | `/api/customer/{id}/kyc/submit-documents` | InProgress → DocumentsSubmitted |
+| POST | `/api/customer/{id}/kyc/verify` | DocumentsSubmitted → Verified (body: `{verifiedBy}`) |
+| POST | `/api/customer/{id}/kyc/reject` | InProgress\|DocumentsSubmitted → Rejected (body: `{rejectionReason}`) |
+| POST | `/api/customer/{id}/kyc/expire` | Verified → Expired (periodic re-KYC) |
 
 ## Data Model
 ```

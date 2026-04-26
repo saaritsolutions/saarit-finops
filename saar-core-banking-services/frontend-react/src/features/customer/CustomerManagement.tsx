@@ -9,6 +9,10 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
+import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
+import BlockIcon from '@mui/icons-material/Block';
 import {
   customerService,
   CustomerRecord,
@@ -39,7 +43,9 @@ const CustomerManagement: React.FC = () => {
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState<string | null>(null);
 
-  // dialog
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // create/edit dialog
   const [open, setOpen]                   = useState(false);
   const [editing, setEditing]             = useState<CustomerRecord | null>(null);
   const [form, setForm]                   = useState<CreateCustomerDto>(EMPTY_FORM);
@@ -47,6 +53,13 @@ const CustomerManagement: React.FC = () => {
   const [formError, setFormError]         = useState<string | null>(null);
   const [panValidating, setPanValidating] = useState(false);
   const [panStatus, setPanStatus]         = useState<string | null>(null);
+
+  // KYC workflow dialog (verify / reject)
+  const [kycAction, setKycAction]     = useState<'verify' | 'reject' | null>(null);
+  const [kycTargetId, setKycTargetId] = useState<number | null>(null);
+  const [kycInput, setKycInput]       = useState('');
+  const [kycLoading, setKycLoading]   = useState(false);
+  const [kycError, setKycError]       = useState<string | null>(null);
 
   // ── data ──────────────────────────────────────────────────────────────────
 
@@ -156,6 +169,52 @@ const CustomerManagement: React.FC = () => {
     }
   }
 
+  // ── KYC actions ───────────────────────────────────────────────────────────
+
+  async function handleKycSimple(id: number, action: 'initiate' | 'submit-documents') {
+    setSuccessMsg(null);
+    setError(null);
+    try {
+      const result = action === 'initiate'
+        ? await customerService.initiateKyc(id)
+        : await customerService.submitKycDocuments(id);
+      setSuccessMsg(result.message);
+      await load();
+    } catch (e: any) {
+      setError(e?.response?.data || e?.message || 'KYC action failed');
+    }
+  }
+
+  function openKycDialog(id: number, action: 'verify' | 'reject') {
+    setKycTargetId(id);
+    setKycAction(action);
+    setKycInput('');
+    setKycError(null);
+  }
+
+  async function handleKycConfirm() {
+    if (!kycTargetId || !kycAction) return;
+    if (!kycInput.trim()) {
+      setKycError(kycAction === 'verify' ? 'Verified By is required' : 'Rejection Reason is required');
+      return;
+    }
+    setKycLoading(true);
+    setKycError(null);
+    try {
+      const result = kycAction === 'verify'
+        ? await customerService.verifyKyc(kycTargetId, kycInput.trim())
+        : await customerService.rejectKyc(kycTargetId, kycInput.trim());
+      setKycAction(null);
+      setKycTargetId(null);
+      setSuccessMsg(result.message);
+      await load();
+    } catch (e: any) {
+      setKycError(e?.response?.data || e?.message || 'KYC action failed');
+    } finally {
+      setKycLoading(false);
+    }
+  }
+
   // ── render ────────────────────────────────────────────────────────────────
 
   return (
@@ -171,6 +230,11 @@ const CustomerManagement: React.FC = () => {
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}
+        </Alert>
+      )}
+      {successMsg && (
+        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccessMsg(null)}>
+          {successMsg}
         </Alert>
       )}
 
@@ -214,7 +278,41 @@ const CustomerManagement: React.FC = () => {
                 <TableCell>
                   {c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-IN') : '—'}
                 </TableCell>
-                <TableCell>
+                <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                  {/* KYC workflow buttons — shown based on current state */}
+                  {c.kycStatus === 0 && (
+                    <Tooltip title="Initiate KYC">
+                      <IconButton size="small" color="primary" aria-label="Initiate KYC"
+                        onClick={() => handleKycSimple(c.customerId, 'initiate')}>
+                        <PlayArrowIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                  {c.kycStatus === 1 && (
+                    <Tooltip title="Submit Documents">
+                      <IconButton size="small" color="info" aria-label="Submit Documents"
+                        onClick={() => handleKycSimple(c.customerId, 'submit-documents')}>
+                        <UploadFileIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                  {c.kycStatus === 2 && (
+                    <>
+                      <Tooltip title="Verify KYC">
+                        <IconButton size="small" color="success" aria-label="Verify KYC"
+                          onClick={() => openKycDialog(c.customerId, 'verify')}>
+                          <VerifiedUserIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Reject KYC">
+                        <IconButton size="small" color="error" aria-label="Reject KYC"
+                          onClick={() => openKycDialog(c.customerId, 'reject')}>
+                          <BlockIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </>
+                  )}
+                  {/* Standard CRUD buttons */}
                   <Tooltip title="Edit">
                     <IconButton size="small" onClick={() => openEdit(c)}>
                       <EditIcon fontSize="small" />
@@ -342,6 +440,38 @@ const CustomerManagement: React.FC = () => {
           <Button variant="contained" onClick={handleSave} disabled={saving}
             startIcon={saving ? <CircularProgress size={16} /> : undefined}>
             {editing ? 'Update Customer' : 'Create Customer'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      {/* KYC Verify / Reject dialog */}
+      <Dialog open={kycAction !== null} onClose={() => !kycLoading && setKycAction(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>
+          {kycAction === 'verify' ? 'Verify KYC' : 'Reject KYC'}
+        </DialogTitle>
+        <DialogContent dividers>
+          {kycError && <Alert severity="error" sx={{ mb: 2 }}>{kycError}</Alert>}
+          <TextField
+            fullWidth
+            size="small"
+            label={kycAction === 'verify' ? 'Verified By *' : 'Rejection Reason *'}
+            value={kycInput}
+            onChange={e => setKycInput(e.target.value)}
+            placeholder={kycAction === 'verify' ? 'Officer name or employee ID' : 'Reason for rejection'}
+            multiline={kycAction === 'reject'}
+            rows={kycAction === 'reject' ? 3 : 1}
+            autoFocus
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setKycAction(null)} disabled={kycLoading}>Cancel</Button>
+          <Button
+            variant="contained"
+            color={kycAction === 'verify' ? 'success' : 'error'}
+            onClick={handleKycConfirm}
+            disabled={kycLoading}
+            startIcon={kycLoading ? <CircularProgress size={16} /> : undefined}
+          >
+            {kycAction === 'verify' ? 'Confirm Verify' : 'Confirm Reject'}
           </Button>
         </DialogActions>
       </Dialog>

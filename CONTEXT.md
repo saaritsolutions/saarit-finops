@@ -293,6 +293,29 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
 - (none)
 
 ## Completed (continued)
+- SAAR-KYC-001 — KYC Workflow for CustomerService (session 46, 2026-04-26):
+  - **`SAAR_KYC_001_REQUIREMENTS.md`**: JIRA-format requirement doc (6 FRs, 3 NFRs, test plan — 6 unit + 5 Cypress)
+  - **`CustomerController.cs`**: 5 new KYC action endpoints — `initiate` (NotStarted→InProgress), `submit-documents` (InProgress→DocumentsSubmitted), `verify` (DocumentsSubmitted→Verified, requires `verifiedBy`), `reject` (InProgress|DocumentsSubmitted→Rejected, requires `rejectionReason`), `expire` (Verified→Expired). Invalid transitions return 422. Audit fields set on verify/reject.
+  - **`customerService.ts`**: `KycActionResult` interface + 4 new methods — `initiateKyc`, `submitKycDocuments`, `verifyKyc`, `rejectKyc`.
+  - **`CustomerManagement.tsx`**: KYC action buttons in table Actions cell based on kycStatus (PlayArrow=initiate, UploadFile=submit-docs, VerifiedUser=verify, Block=reject). Verify/Reject open confirmation dialog with required input. Success alert on completion. All buttons have `aria-label` for Cypress testability.
+  - **`CustomerControllerTests.cs`**: 6 new NUnit tests — initiate/submit/verify/reject transitions + 404 + 422 invalid transition. **17/17 tests passing.**
+  - **`06-customers.cy.ts`**: New `[REGRESSION] Customer KYC Workflow` describe block — 5 Cypress tests covering action button visibility per state + verify dialog flow + API stub.
+  - **`ARCHITECTURE/components/customer-service.md`**: Updated Key API Endpoints with all 5 KYC action endpoints.
+  - **`.github/REQUIREMENT_SERVICE_MAPPING.md`**: Added SAAR-KYC-001 traceability row.
+
+## Completed (continued)
+- SAAR-RPT-001 — MIS Reports & Compliance Dashboard (session 45, 2026-04-25):
+  - **`SAAR_RPT_001_REQUIREMENTS.md`**: JIRA-format requirement doc (7 FRs, 3 NFRs, test plan — 2 backend + 12 Cypress)
+  - **`IPostingEngine.cs`**: Added `GetDailySummaryAsync(from, to)` to interface + PostingEngine implementation. In-memory LINQ GroupBy (avoids EF GroupBy SQL translation issues). `DailySummaryReport` + `DailySummaryDay` DTO classes added.
+  - **`JournalController.cs`**: New `GET /api/journal/daily-summary?from=&to=` endpoint — defaults to last 30 days, max 366-day window, returns `DailySummaryReport`.
+  - **`reportService.ts`** (new): Typed API client with 5 functions — `getDailySummary`, `getLedgerBalances`, `getComplianceAlerts`, `reviewComplianceAlert`, `getUpcomingMaturities`. Interfaces: `DailySummaryDay`, `DailySummaryReport`, `LedgerBalanceRecord`, `ComplianceAlert`, `ComplianceAlertsResponse`, `UpcomingMaturity`.
+  - **`Reports.tsx`**: Full 3-tab MIS page replacing empty stub. Tab 0 = Financial Reports (GL Balance table + Recharts BarChart with date range pickers + CSV export as Blob download). Tab 1 = Compliance Alerts (status filter chips + review dialog FILED/DISMISSED). Tab 2 = Deposit Maturity (urgency chips). Tab routing via `useLocation()` — `/reports/regulatory` → Tab 1.
+  - **`nginx/nginx.conf`**: Added missing `/api/compliance` location block → `transactionservice:5290`.
+  - **`UnitTest1.cs`**: 2 new NUnit tests — `DailySummary_EmptyDatabase_ReturnsZeroCounts` + `DailySummary_TwoDistinctDates_GroupsCorrectlyAndTotalsMatch` (direct DB insertion to control PostedAt timestamps).
+  - **`13-reports.cy.ts`** (new): 12 Cypress regression tests — Financial Reports tab (5), Compliance Alerts tab (5), Deposit Maturity tab (3), Tab navigation (1). Includes `stubReportApis()` helper.
+  - **Build status**: TransactionService builds 0 errors; TypeScript 0 new errors; dotnet test blocked locally by Kaspersky (same pattern as LoanService.Tests) — push to CI for Linux verification.
+
+## Completed (continued)
 - SAAR-DFS-004 — Wire DFS into Gold Loan wizard + persist custom fields (session 43, 2026-04-24):
   - **`SAAR_DFS_004_REQUIREMENTS.md`**: JIRA-format requirement doc (8 FRs, 4 NFRs, offline-resilience test plan — mirrors SAAR-DFS-003 structure)
   - **`GoldLoanController.cs`**: `CreateGoldLoanRequest` extended with `string? CustomFieldsJson`; POST handler sets `FormDataJson = req.CustomFieldsJson`; GET detail response includes `formDataJson`
@@ -432,8 +455,9 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - All 11 containers healthy. Key smoke tests: `/api/gold-rate/today` ✅ `/api/gold-loan/applications` ✅ `/api/forms/GOLD_LOAN` ✅ `/api/tenant-config` ✅ Frontend `/` ✅
 
 ## Pending Next
-- Fix Kaspersky Application Control blocking `dotnet test` locally: Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`. Then re-run `dotnet test` to verify 83/83 green locally (already verified on GitHub Actions CI Linux).
-- E2E smoke on demobank: log in → disburse a loan → click GL Journal # chip → verify JournalDetailDialog shows debit/credit lines.
+- Fix Kaspersky Application Control blocking `dotnet test` locally: Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`. Then re-run `dotnet test` to verify all test suites locally.
+- Deploy SAAR-RPT-001 to Hetzner: `docker compose up --build -d transactionservice frontend` (new daily-summary endpoint + Reports page). Add `nginx.conf` `/api/compliance` block if not yet live.
+- E2E smoke on demobank: log in → visit `/reports` → verify GL balance table + bar chart loads.
 - DFS-003/004 manual smoke on demobank: add custom fields to GOLD_LOAN schema via Form Builder → reload New Gold Loan Application → verify accordion appears with fields.
 
 ## Notes

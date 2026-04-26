@@ -131,6 +131,7 @@ describe('[REGRESSION] Customer Management — Create Customer', () => {
   });
 
   it('successful create shows confirmation and adds to list', () => {
+    // Note: SAAR-KYC-001 — this file also covers KYC workflow tests below
     cy.intercept('POST', '**/api/customer', {
       statusCode: 201,
       body: { customerId: 200, firstName: 'New Test', lastName: 'Customer', kycStatus: 0 },
@@ -147,5 +148,79 @@ describe('[REGRESSION] Customer Management — Create Customer', () => {
         cy.contains(/success|created|New Test/i, { timeout: 10000 }).should('exist');
       }
     });
+  });
+});
+
+/**
+ * SAAR-KYC-001 — KYC Workflow regression tests
+ * KYC state machine: NotStarted(0)→InProgress(1)→DocumentsSubmitted(2)→Verified(3)/Rejected(4)
+ * Action buttons use aria-label for reliable selection (MUI Tooltip does not set DOM title).
+ */
+
+const CUSTOMERS_KYC = [
+  { customerId: 201, firstName: 'Suresh', lastName: 'Nair',   kycStatus: 0, dateOfBirth: '1980-01-01', createdAt: '2026-01-01T00:00:00Z' },
+  { customerId: 202, firstName: 'Meena',  lastName: 'Pillai', kycStatus: 1, dateOfBirth: '1990-01-01', createdAt: '2026-01-02T00:00:00Z' },
+  { customerId: 203, firstName: 'Ravi',   lastName: 'Verma',  kycStatus: 2, dateOfBirth: '1985-01-01', createdAt: '2026-01-03T00:00:00Z' },
+];
+
+describe('[REGRESSION] Customer KYC Workflow — action buttons', () => {
+  beforeEach(() => {
+    cy.loginAsDemo();
+    cy.intercept('GET', '**/api/customer', { body: CUSTOMERS_KYC }).as('customers');
+  });
+
+  it('shows Initiate KYC button for NotStarted customer', () => {
+    cy.visit('/customers');
+    cy.wait('@customers', { timeout: 15000 });
+    cy.get('[aria-label="Initiate KYC"]').should('exist');
+  });
+
+  it('shows Submit Documents button for InProgress customer', () => {
+    cy.visit('/customers');
+    cy.wait('@customers', { timeout: 15000 });
+    cy.get('[aria-label="Submit Documents"]').should('exist');
+  });
+
+  it('shows Verify KYC and Reject KYC buttons for DocumentsSubmitted customer', () => {
+    cy.visit('/customers');
+    cy.wait('@customers', { timeout: 15000 });
+    cy.get('[aria-label="Verify KYC"]').should('exist');
+    cy.get('[aria-label="Reject KYC"]').should('exist');
+  });
+
+  it('Initiate KYC calls API and shows success message', () => {
+    cy.intercept('POST', '**/api/customer/201/kyc/initiate', {
+      statusCode: 200,
+      body: { kycStatus: 1, message: 'KYC initiated successfully.' },
+    }).as('initiate');
+    // Reload list after action returns InProgress
+    cy.intercept('GET', '**/api/customer', { body: CUSTOMERS_KYC.map(c => c.customerId === 201 ? { ...c, kycStatus: 1 } : c) }).as('reload');
+
+    cy.visit('/customers');
+    cy.wait('@customers', { timeout: 15000 });
+    cy.get('[aria-label="Initiate KYC"]').first().click();
+    cy.wait('@initiate', { timeout: 10000 });
+    cy.contains(/KYC initiated/i, { timeout: 10000 }).should('exist');
+  });
+
+  it('Verify KYC dialog requires Verified By and confirms on submit', () => {
+    cy.intercept('POST', '**/api/customer/203/kyc/verify', {
+      statusCode: 200,
+      body: { kycStatus: 3, message: 'KYC verified by Branch Manager.' },
+    }).as('verify');
+    cy.intercept('GET', '**/api/customer', { body: CUSTOMERS_KYC.map(c => c.customerId === 203 ? { ...c, kycStatus: 3 } : c) }).as('reload');
+
+    cy.visit('/customers');
+    cy.wait('@customers', { timeout: 15000 });
+    cy.get('[aria-label="Verify KYC"]').first().click();
+
+    // Dialog should open
+    cy.contains(/Verify KYC/i, { timeout: 5000 }).should('exist');
+
+    // Fill in verified by
+    cy.get('[role="dialog"]').find('input').first().type('Branch Manager');
+    cy.contains(/Confirm Verify/i).click();
+    cy.wait('@verify', { timeout: 10000 });
+    cy.contains(/verified/i, { timeout: 10000 }).should('exist');
   });
 });

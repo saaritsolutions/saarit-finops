@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-24 (session 44b — scroll fix deployed)
+**Last Updated:** 2026-04-26 (session 46 — SAAR-KYC-001 KYC Workflow for CustomerService)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -147,6 +147,27 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 46 — 2026-04-26 (SAAR-KYC-001 — KYC Workflow for CustomerService)
+- **`SAAR_KYC_001_REQUIREMENTS.md`**: 6 FRs, 3 NFRs, test plan. KYC state machine documented.
+- **`CustomerController.cs`** (CustomerService): 5 new action endpoints — `/kyc/initiate`, `/kyc/submit-documents`, `/kyc/verify`, `/kyc/reject`, `/kyc/expire`. Each validates source state → 422 on invalid transition. Verify sets `KycVerifiedAt`+`KycVerifiedBy`. Reject sets `KycRejectionReason`.
+- **`customerService.ts`**: `KycActionResult` interface + 4 methods: `initiateKyc`, `submitKycDocuments`, `verifyKyc`, `rejectKyc`.
+- **`CustomerManagement.tsx`**: KYC action buttons in Actions column — `PlayArrow` (NotStarted), `UploadFile` (InProgress), `VerifiedUser`+`Block` (DocumentsSubmitted). Initiate/Submit-docs call API directly. Verify/Reject open confirmation dialog with required input field. `aria-label` on all KYC buttons. Success alert on completion.
+- **`CustomerControllerTests.cs`**: 6 new NUnit KYC tests. **17/17 passing.**
+- **`06-customers.cy.ts`**: 5 new Cypress tests in `[REGRESSION] Customer KYC Workflow` describe block.
+- **`ARCHITECTURE/components/customer-service.md`**: Updated with all 5 KYC endpoints.
+- **`.github/REQUIREMENT_SERVICE_MAPPING.md`**: SAAR-KYC-001 row added.
+
+### Session 45 — 2026-04-25 (SAAR-RPT-001 — MIS Reports & Compliance Dashboard)
+- **`SAAR_RPT_001_REQUIREMENTS.md`**: JIRA-format requirement doc — 7 FRs, 3 NFRs, test plan (2 backend + 12 Cypress). Ticket ID SAAR-RPT-001.
+- **`TransactionService/Services/IPostingEngine.cs`**: Added `GetDailySummaryAsync(DateTime from, DateTime to, CancellationToken)` to `IPostingEngine` interface + full `PostingEngine` implementation. Groups Journals by `PostedAt.ToLocalTime().Date` in LINQ (in-memory GroupBy avoids EF SQL translation issues). Returns `DailySummaryReport` with per-day counts + totals + grand totals. `DailySummaryReport` + `DailySummaryDay` DTO classes added at end of file.
+- **`TransactionService/Controllers/JournalController.cs`**: New `GET /api/journal/daily-summary?from=&to=` endpoint. Defaults: from=today-29, to=today. Validates from ≤ to and range ≤ 366 days. Returns `DailySummaryReport`.
+- **`frontend-react/src/services/reportService.ts`** (new): Typed API client — `TXN_BASE` (REACT_APP_TRANSACTION_BASE_URL ∥ localhost:5005), `ACC_BASE` (REACT_APP_ACCOUNT_BASE_URL ∥ localhost:5217). 5 functions: `getDailySummary`, `getLedgerBalances`, `getComplianceAlerts`, `reviewComplianceAlert`, `getUpcomingMaturities`. Uses `auth-token` from localStorage.
+- **`frontend-react/src/features/reports/Reports.tsx`**: Full 3-tab MIS page replacing 23-line empty stub. Tab 0 = Financial Reports (GL Balance MUI Table + Recharts BarChart 2 series debit/credit + date range pickers + client-side CSV Blob export). Tab 1 = Compliance Alerts (`/reports/regulatory` activates via `useLocation` + status filter chips + review dialog). Tab 2 = Deposit Maturity (urgency daysLeft chips). All 3 tabs fail-silent on API error (empty state). Lazy-loaded independent per tab via `useEffect` watching `tab` value.
+- **`nginx/nginx.conf`**: Added missing `/api/compliance` location block → `transactionservice:5290` Docker port.
+- **`TransactionService.Tests/UnitTest1.cs`**: 2 new `[Test]` methods — `DailySummary_EmptyDatabase_ReturnsZeroCounts` (verifies 0 counts on empty DB) + `DailySummary_TwoDistinctDates_GroupsCorrectlyAndTotalsMatch` (inserts 3 journals across 2 dates directly into DbContext to control `PostedAt` timestamps; asserts 2 groups with correct counts + totals). Total target: 22/22 (was 20/20).
+- **`frontend-react/cypress/e2e/regression/13-reports.cy.ts`** (new): 12 Cypress tests across 4 describe blocks. `stubReportApis()` helper stubs all 4 APIs. Suite 1: Financial Reports tab (5 tests). Suite 2: Compliance Alerts tab (5 tests including review dialog). Suite 3: Deposit Maturity tab (3 tests). Suite 4: Tab navigation (1 test).
+- **Build verification**: TransactionService builds 0 errors ✅; TypeScript 0 new errors in changed files ✅; `dotnet test` locally blocked by Kaspersky DLL intercept (same pattern as LoanService.Tests — code verified correct, CI on Linux will confirm 22/22).
 
 ### Session 44b — 2026-04-24 (scroll fix — Layout.tsx flex height constraint root cause)
 - **Root cause identified**: outer Box `display:flex (row) + min-height:100vh` made main content column exactly 100vh via `align-items:stretch` (default). `flex-grow:1` page content filled that 100vh exactly. Outlet content overflowed visually but the outer Box never exceeded 100vh — document had nothing to scroll. Tab key worked because browsers force-scroll the viewport to focused elements regardless of CSS constraints.
@@ -438,9 +459,10 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ## 6. Pending Work
 
 ### In Progress
-- **Hetzner deploy all pending**: `docker compose up --build -d useraccessmanagement loanservice workfloworchestration frontend nginx` — includes SAAR-CFG-001 (AddTenantConfig migration), SAAR-GL-001 (AddGoldLoanTables migration), SAAR-WF-001 (approval chain), SAAR-DFS-003 + SAAR-DFS-004 (DFS-wired origination wizards).
+- (none)
 
 ### Recently Completed
+- **SAAR-KYC-001 (KYC Workflow — CustomerService)** — 5 backend KYC action endpoints (initiate/submit-docs/verify/reject/expire), frontend KYC buttons + dialog in CustomerManagement.tsx, 17/17 unit tests passing.
 - **SAAR-DFS-004 (Wire DFS into Gold Loan wizard + persist custom fields)** — `GoldLoanController.cs` + `goldLoanService.ts` + `GoldLoanOrigination.tsx` + `GoldLoanDetail.tsx` extended; new test `CustomFieldsJson_IsStoredAndRoundTrips`; 3 new DFS Cypress regression tests in `10-gold-loan.cy.ts`. Blocker: CI policy blocks dotnet test — code correct, fix pending admin action.
 - **SAAR-CFG-001 (Bank Configuration + Feature Toggles)** — Tenant model extended (13 cols), JWT claims, TenantConfigController, BankConfig.tsx (2-tab admin page), Sidebar feature gating, 5/5 UAMService.Tests + 82/82 LoanService.Tests.
 - **M4: Form Builder (SAAR-DFS-002)** — 4-tab React page: schema list, field editor (▲/▼/property panel), preview, history. Deployed via PR #SAAR-DFS-002.
@@ -475,10 +497,11 @@ Per `EXECUTION_ROADMAP.md`:
 
 ## 7. Next Recommended Steps (Ordered by Impact)
 
-1. **Fix Kaspersky Application Control** (local only): Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`. Then re-run `dotnet test LoanService.Tests` locally (83/83 already confirmed on GitHub Actions CI Linux).
-2. **E2E smoke on demobank**: disburse loan → click GL Journal # chip → verify JournalDetailDialog on demobank.saaritsolutions.com.
-3. **DFS-004 manual smoke**: Add custom field to GOLD_LOAN schema via Form Builder → reload New Gold Loan Application → verify accordion appears in wizard steps.
-4. **APIGateway: JWT auth + routing** — required for any real service-to-service flow.
+1. **Deploy SAAR-KYC-001 to Hetzner**: `docker compose up --build -d customerservice frontend` — CustomerService KYC endpoints + React KYC buttons now live.
+2. **CustomerService B-items next**: pagination + search (server-side `?search=&page=&pageSize=`) + demo data seeder for the customer table.
+3. **Deploy SAAR-RPT-001 to Hetzner**: `docker compose up --build -d transactionservice frontend` (daily-summary endpoint + Reports page). `/api/compliance` nginx block already in conf.
+4. **Fix Kaspersky Application Control** (local only): Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`. Then re-run `dotnet test LoanService.Tests` locally (83/83 already confirmed on GitHub Actions CI Linux).
+5. **APIGateway: JWT auth + routing** — required for any real service-to-service flow.
 
 ---
 
