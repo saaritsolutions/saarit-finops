@@ -290,7 +290,7 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - **Final result: 86/86 tests green, 0 failing, 1 min 39 sec** across 8 spec files.
 
 ## In Progress
-- SAAR-LRP-002 — Overdue Loans Report: implementation complete, deploying to Hetzner (session 52, 2026-04-27)
+- (none)
 
 ## Completed (continued)
 - SAAR-CST-001 — CustomerService Pagination, Search & Demo Seeder (session 47, 2026-04-26):
