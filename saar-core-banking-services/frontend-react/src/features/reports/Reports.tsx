@@ -676,7 +676,7 @@ const Reports: React.FC = () => {
                 </Paper>
                 <Paper variant="outlined" sx={{ p: 2, minWidth: 160 }}>
                   <Typography variant="caption" color="text.secondary">Accrual Days</Typography>
-                  <Typography variant="h6" fontWeight={700}>{[...new Set(accrualData.map(d => d.date))].length}</Typography>
+                  <Typography variant="h6" fontWeight={700}>{Array.from(new Set(accrualData.map(d => d.date))).length}</Typography>
                 </Paper>
                 <Paper variant="outlined" sx={{ p: 2, minWidth: 160 }}>
                   <Typography variant="caption" color="text.secondary">Accounts Earning</Typography>
