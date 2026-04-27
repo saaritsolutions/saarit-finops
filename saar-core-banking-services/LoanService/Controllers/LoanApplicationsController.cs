@@ -275,6 +275,8 @@ namespace LoanService.Controllers
                         return BadRequest(new { error = "Application must be APPROVED to disburse" });
                     toStatus = "DISBURSED";
                     app.DisbursedAt = DateTime.UtcNow;
+                    app.OutstandingPrincipal = app.SanctionedAmount ?? app.RequestedAmount;
+                    app.NextDueDate = DateTime.UtcNow.Date.AddMonths(1);
 
                     // ── Double-entry ledger posting ────────────────────────────────────────────
                     // Use the expression service to resolve GL account codes (tenant-configurable).
@@ -385,6 +387,102 @@ namespace LoanService.Controllers
 
             return await GetById(id);
         }
+
+        // ── POST /api/loans/applications/{id}/collect-emi ───────────────────────
+        [HttpPost("{id:guid}/collect-emi")]
+        public async Task<IActionResult> CollectEmi(
+            Guid id,
+            [FromBody] CollectEmiRequest req,
+            CancellationToken ct)
+        {
+            var app = await _db.LoanApplications.FindAsync(new object[] { id }, ct);
+            if (app is null) return NotFound(new { error = "Loan application not found" });
+            if (app.Status != "DISBURSED") return BadRequest(new { error = "EMI can only be collected on a DISBURSED loan" });
+
+            var outstanding = app.OutstandingPrincipal ?? app.SanctionedAmount ?? app.RequestedAmount;
+            if (outstanding <= 0) return BadRequest(new { error = "No outstanding principal remaining" });
+
+            var monthlyRate    = (app.InterestRate ?? 0m) / 100m / 12m;
+            var interestComp   = Math.Round(outstanding * monthlyRate, 2);
+            var principalComp  = Math.Max(0m, Math.Min(req.Amount - interestComp, outstanding));
+
+            var installmentNo  = await _db.LoanRepayments.CountAsync(r => r.LoanApplicationId == id, ct) + 1;
+
+            // ── GL journal — fail-open ─────────────────────────────────────────
+            string? journalNumber = null;
+            try
+            {
+                var journalResult = await _transactionService.PostEmiJournalAsync(
+                    app.ApplicationNumber ?? id.ToString(), installmentNo, principalComp, interestComp, ct);
+                if (journalResult.Success)
+                    journalNumber = journalResult.JournalNumber;
+                else
+                    _logger.LogWarning("EMI journal posting failed for {AppId} #{No} — {Err}. EMI record will still be saved.",
+                        id, installmentNo, journalResult.Error);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "TransactionService unreachable for EMI {AppId} #{No} — continuing", id, installmentNo);
+            }
+
+            var repayment = new LoanRepayment
+            {
+                Id                = Guid.NewGuid(),
+                LoanApplicationId = id,
+                InstallmentNumber = installmentNo,
+                PrincipalComponent = principalComp,
+                InterestComponent  = interestComp,
+                TotalAmount        = req.Amount,
+                DueDate            = app.NextDueDate ?? DateTime.UtcNow.Date,
+                PaidAt             = req.PaymentDate?.ToUniversalTime() ?? DateTime.UtcNow,
+                PaymentMode        = req.PaymentMode,
+                PaymentReference   = req.PaymentReference,
+                JournalNumber      = journalNumber,
+                TenantId           = "public",
+                CreatedAt          = DateTime.UtcNow,
+            };
+
+            _db.LoanRepayments.Add(repayment);
+            app.OutstandingPrincipal = outstanding - principalComp;
+            app.NextDueDate          = (app.NextDueDate ?? DateTime.UtcNow.Date).AddMonths(1);
+            app.UpdatedAt            = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync(ct);
+
+            _logger.LogInformation(
+                "EMI #{No} collected for loan {AppId} ({AppNo}) — principal={P:N2} interest={I:N2} outstanding={O:N2}",
+                installmentNo, id, app.ApplicationNumber, principalComp, interestComp, app.OutstandingPrincipal);
+
+            return Ok(new
+            {
+                repayment,
+                outstandingPrincipal = app.OutstandingPrincipal,
+                nextDueDate          = app.NextDueDate,
+                smaStatus            = app.SmaStatus,
+                overdueDays          = app.OverdueDays,
+            });
+        }
+
+        // ── GET /api/loans/applications/{id}/repayment-history ─────────────────
+        [HttpGet("{id:guid}/repayment-history")]
+        public async Task<IActionResult> GetRepaymentHistory(Guid id, CancellationToken ct)
+        {
+            var app = await _db.LoanApplications
+                .Include(a => a.Repayments)
+                .FirstOrDefaultAsync(a => a.Id == id, ct);
+
+            if (app is null) return NotFound(new { error = "Loan application not found" });
+
+            return Ok(new
+            {
+                applicationNumber    = app.ApplicationNumber,
+                outstandingPrincipal = app.OutstandingPrincipal,
+                nextDueDate          = app.NextDueDate,
+                smaStatus            = app.SmaStatus,
+                overdueDays          = app.OverdueDays,
+                repayments           = app.Repayments.OrderBy(r => r.InstallmentNumber),
+            });
+        }
     }
 
     // ── DTOs ──────────────────────────────────────────────────────────────────────
@@ -433,5 +531,14 @@ namespace LoanService.Controllers
         public string? Role            { get; set; }
         public string? Comments        { get; set; }
         public decimal? SanctionedAmount { get; set; }
+    }
+
+    public class CollectEmiRequest
+    {
+        public decimal  Amount           { get; set; }
+        /// <summary>CASH | NEFT | RTGS | UPI | CHEQUE</summary>
+        public string   PaymentMode      { get; set; } = "CASH";
+        public string?  PaymentReference { get; set; }
+        public DateTime? PaymentDate     { get; set; }
     }
 }

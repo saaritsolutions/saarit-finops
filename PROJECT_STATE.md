@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-27 (session 48 — SAAR-IFS-001 InterestFeeService Daily Accrual + Monthly Posting)
+**Last Updated:** 2026-04-27 (session 49 — SAAR-LRP-001 Loan Repayment: EMI Collection + SMA Status)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -146,6 +146,21 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 49 — 2026-04-27 (SAAR-LRP-001 — Loan Repayment: EMI Collection + SMA Status)
+- **`SAAR_LRP_001_REQUIREMENTS.md`**: JIRA-format requirement doc (6 FRs, 4 NFRs, data model, GL journal, SMA classification, test plan T-1 through T-9).
+- **`LoanRepayment.cs`** (new): Entity — `Id, LoanApplicationId (FK+cascade), InstallmentNumber, PrincipalComponent, InterestComponent, TotalAmount, DueDate, PaidAt, PaymentMode (20), PaymentReference (100), JournalNumber (50), TenantId (50), CreatedAt`. Unique index `(LoanApplicationId, InstallmentNumber)`.
+- **`LoanApplication.cs`**: Added `OutstandingPrincipal?`, `NextDueDate?`, `Repayments` nav prop. `[NotMapped] OverdueDays` (computed from NextDueDate vs UtcNow.Date). `[NotMapped] SmaStatus` (STANDARD/SMA-0/SMA-1/SMA-2/NPA per RBI IRAC overdue bands).
+- **`LoanDbContext.cs`**: `DbSet<LoanRepayment>` + relationship config + column types + unique index. `OutstandingPrincipal decimal(18,2)` on LoanApplications entity config.
+- **EF Migration `AddRepaymentTable`** (`20260427040135_AddRepaymentTable.cs`): LoanRepayments table + 2 new columns on LoanApplications. Schema qualifiers stripped.
+- **`TransactionServiceClient.cs`** / **`ITransactionServiceClient.cs`**: `PostEmiJournalAsync(appNo, installmentNo, principal, interest)` — idempotency key `EMI-{appNo}-{no:D3}`, DR 1010 / CR 1020 + CR 4010, fail-open pattern.
+- **`LoanApplicationsController.cs`**: DISBURSE seeds `OutstandingPrincipal` + `NextDueDate`. `POST /collect-emi` + `GET /repayment-history` + `CollectEmiRequest` DTO added.
+- **`EligibilityAndWorkflowTests.cs`** + **`GoldLoanTests.cs`**: `PostEmiJournalAsync` stub added to all `ITransactionServiceClient` file-scoped stubs.
+- **`RepaymentTests.cs`** (new, 4 NUnit): Correct interest split (₹1L@12%→₹1000 interest), 400 on non-DISBURSED, outstanding decrement, 2-collection history count.
+- **`loanOriginationService.ts`**: `LoanRepayment`, `RepaymentHistoryResponse`, `CollectEmiRequest`, `CollectEmiResponse` + `getRepaymentHistory()` + `collectEmi()`.
+- **`LoanDetail.tsx`**: "EMI Collection" card (DISBURSED-only) — outstanding/due/SMA chips, Collect EMI dialog, payment history table. `useEffect` auto-loads repayment history on status DISBURSED.
+- **`04-loans.cy.ts`**: 5 Cypress repayment tests (T-11 to T-15): card visible/DISBURSED, absent/SUBMITTED, dialog+API, SMA chip, history table.
+- **Build**: LoanService 0 errors ✅ LoanService.Tests 0 errors ✅ TypeScript 0 new errors ✅
 
 ### Session 48 — 2026-04-27 (SAAR-IFS-001 — InterestFeeService Daily Accrual + Monthly Posting)
 - **`SAAR_IFS_001_REQUIREMENTS.md`**: JIRA-format requirement doc — 6 FRs (daily accrual idempotent formula job, monthly GL posting, TDS 10%/₹5000 threshold, AccountService integration 2 endpoints, accrual summary query, multi-tenant fail-open loop), 3 NFRs, acceptance criteria, test plan T-1 through T-10.

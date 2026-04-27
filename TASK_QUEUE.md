@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-27 (session 48 — SAAR-IFS-001 InterestFeeService Daily Accrual + Monthly Posting)
+**Last Updated:** 2026-04-27 (session 49 — SAAR-LRP-001 Loan Repayment: EMI Collection + SMA Status)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,24 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Deploy SAAR-IFS-001 to Hetzner**: create `InterestFeeDb` → `docker compose up --build -d interestfeeservice frontend` | InterestFeeService + Deposit Interest tab fully built and tested — nginx `/api/interest-fees` block already in conf |
-| 2 | **Deploy SAAR-CST-001 + SAAR-KYC-001 to Hetzner**: `docker compose up --build -d customerservice frontend` | CustomerService seeder (8 customers/tenant) + pagination + KYC endpoints + React filter bar now built and tested — ready to ship |
-| 3 | **Deploy SAAR-RPT-001 to Hetzner**: `docker compose up --build -d transactionservice frontend` | Daily-summary endpoint + Reports page — `/api/compliance` nginx block already in conf |
+| 1 | **Deploy SAAR-LRP-001 to Hetzner**: `docker compose up --build -d loanservice frontend` | EMI collection + SMA status fully built — `/api/loans` already proxied; sub-paths work without nginx change |
+| 2 | **Deploy SAAR-IFS-001 to Hetzner**: create `InterestFeeDb` → `docker compose up --build -d interestfeeservice frontend` | InterestFeeService + Deposit Interest tab fully built and tested |
+| 3 | **Deploy SAAR-CST-001 + SAAR-KYC-001 + SAAR-RPT-001 to Hetzner**: `docker compose up --build -d customerservice transactionservice frontend` | All built and tested — ready to ship together |
+
+### Recently Completed (session 49 — 2026-04-27)
+- [x] **SAAR-LRP-001 complete — Loan Repayment: EMI Collection + SMA Status** — builds 0 errors; 4 NUnit + 5 Cypress tests:
+  - `SAAR_LRP_001_REQUIREMENTS.md`: requirement doc (6 FRs, 4 NFRs, SMA classification table, GL journal spec, test plan).
+  - `LoanRepayment.cs` (new): entity with unique index `(LoanApplicationId, InstallmentNumber)`. InstallmentNumber, PrincipalComponent, InterestComponent, TotalAmount, DueDate, PaidAt, PaymentMode, JournalNumber.
+  - `LoanApplication.cs`: `OutstandingPrincipal?`, `NextDueDate?`, `Repayments` nav, `[NotMapped] OverdueDays`, `[NotMapped] SmaStatus`.
+  - `LoanDbContext.cs`: `DbSet<LoanRepayment>` + cascade FK + column types.
+  - EF migration `AddRepaymentTable` (schema qualifiers stripped).
+  - `ITransactionServiceClient.cs` + `TransactionServiceClient.cs`: `PostEmiJournalAsync` — idempotency key `EMI-{appNo}-{no:D3}`, DR 1010/CR 1020+4010, fail-open.
+  - `LoanApplicationsController.cs`: DISBURSE seeds fields; `POST /collect-emi` + `GET /repayment-history` + `CollectEmiRequest` DTO.
+  - `EligibilityAndWorkflowTests.cs` + `GoldLoanTests.cs`: `PostEmiJournalAsync` stubs added.
+  - `RepaymentTests.cs` (4 NUnit): interest split, 400 on non-DISBURSED, outstanding decrement, 2-collection history.
+  - `loanOriginationService.ts`: repayment types + `collectEmi` + `getRepaymentHistory`.
+  - `LoanDetail.tsx`: EMI Collection card (DISBURSED-only) with outstanding chip, SMA chip, Collect EMI dialog, payment history table.
+  - `04-loans.cy.ts`: 5 Cypress repayment tests (T-11–T-15).
 
 ### Recently Completed (session 48 — 2026-04-27)
 - [x] **SAAR-IFS-001 complete — InterestFeeService Daily Accrual + Monthly Posting** — builds 0 errors; 8 NUnit + 5 Cypress tests:

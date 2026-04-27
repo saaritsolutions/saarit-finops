@@ -488,12 +488,29 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - **`14-interest-fees.cy.ts`** (5 Cypress): Tab exists, chart renders, Run Daily Accrual button, Post Monthly Interest button, stub data shape.
   - **Build**: InterestFeeService 0 errors ✅ AccountService 0 errors ✅ InterestFeeService.Tests 0 errors ✅ (CI on Linux for dotnet test — local blocked by Kaspersky same as LoanService.Tests).
 
+## Completed (continued)
+- SAAR-LRP-001 — Loan Repayment: EMI Collection + SMA Status (session 49, 2026-04-27):
+  - **`SAAR_LRP_001_REQUIREMENTS.md`**: JIRA-format requirement doc (6 FRs, 4 NFRs, data model, GL journal, SMA classification table, test plan T-1 through T-9).
+  - **`LoanRepayment.cs`** (new): Entity with FK to LoanApplication — InstallmentNumber, PrincipalComponent, InterestComponent, TotalAmount, DueDate, PaidAt, PaymentMode, PaymentReference, JournalNumber, TenantId. Unique index on (LoanApplicationId, InstallmentNumber).
+  - **`LoanApplication.cs`**: Added `OutstandingPrincipal` (decimal?), `NextDueDate` (DateTime?), `Repayments` nav prop; `[NotMapped] OverdueDays` + `[NotMapped] SmaStatus` computed from NextDueDate at request time (STANDARD/SMA-0/SMA-1/SMA-2/NPA per RBI IRAC norms).
+  - **`LoanDbContext.cs`**: `DbSet<LoanRepayment>` + relationship config (cascade delete) + `decimal(18,2)` column types + unique index.
+  - **EF Migration `AddRepaymentTable`**: LoanRepayments table + OutstandingPrincipal/NextDueDate columns on LoanApplications. Schema qualifiers stripped (multi-tenancy pattern).
+  - **`ITransactionServiceClient.cs`** + **`TransactionServiceClient.cs`**: `PostEmiJournalAsync` — idempotency key `EMI-{appNo}-{installmentNum:D3}`, 3-line journal: DR 1010 Cash / CR 1020 Loans & Advances / CR 4010 Interest Income. Fail-open.
+  - **`LoanApplicationsController.cs`**: DISBURSE action now seeds `OutstandingPrincipal` + `NextDueDate`. Two new endpoints: `POST /api/loans/applications/{id}/collect-emi` (validates status, computes interest split, calls GL fail-open, updates outstanding + next due date) and `GET /api/loans/applications/{id}/repayment-history`. `CollectEmiRequest` DTO added.
+  - **`EligibilityAndWorkflowTests.cs`** + **`GoldLoanTests.cs`**: `PostEmiJournalAsync` stub added to all `ITransactionServiceClient` stubs.
+  - **`RepaymentTests.cs`** (new, 4 NUnit): `CollectEmi_ValidDisbursedLoan_UpdatesOutstandingPrincipal`, `CollectEmi_LoanNotDisbursed_Returns400`, `CollectEmi_ComputesCorrectInterestSplit`, `GetRepaymentHistory_After2Collections_ReturnsBoth`.
+  - **`loanOriginationService.ts`**: `LoanRepayment`, `RepaymentHistoryResponse`, `CollectEmiRequest`, `CollectEmiResponse` interfaces + `getRepaymentHistory()` + `collectEmi()` functions.
+  - **`LoanDetail.tsx`**: "EMI Collection" card (DISBURSED only) — outstanding chip, next-due chip, SMA chip (STANDARD=success/SMA-0,1=warning/SMA-2,NPA=error), "Collect EMI" button → dialog (amount/mode/reference), payment history table. `handleCollectEmi` + `repaymentHistory` state; `useEffect` auto-loads history on DISBURSED status.
+  - **`04-loans.cy.ts`**: 5 new Cypress tests in `[REGRESSION] Loan Repayment (SAAR-LRP-001)` — T-11 card visible/DISBURSED, T-12 card absent/SUBMITTED, T-13 collect EMI dialog + API, T-14 SMA chip STANDARD, T-15 payment history table.
+  - **Build**: LoanService 0 errors ✅ LoanService.Tests 0 errors ✅ TypeScript 0 new errors ✅
+
 ## Pending Next
-- Deploy SAAR-IFS-001 to Hetzner: `docker compose up --build -d interestfeeservice frontend` + create InterestFeeDb manually first: `docker exec <postgres-container> psql -U postgres -c "CREATE DATABASE \"InterestFeeDb\""`.
-- Deploy SAAR-CST-001 + SAAR-KYC-001 to Hetzner: `docker compose up --build -d customerservice frontend` — CustomerService seeder (8 demo customers per tenant) + pagination endpoint + KYC action buttons now live.
-- Deploy SAAR-RPT-001 to Hetzner: `docker compose up --build -d transactionservice frontend` (new daily-summary endpoint + Reports page). Add `nginx.conf` `/api/compliance` block if not yet live.
-- Fix Kaspersky Application Control blocking `dotnet test` locally: Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`. Then re-run `dotnet test` to verify all test suites locally.
-- E2E smoke on demobank: log in → visit `/reports` → click "Deposit Interest" tab → verify chart loads.
+- Deploy SAAR-LRP-001 to Hetzner: `docker compose up --build -d loanservice frontend` (no new nginx routes needed — `/api/loans` already proxied; new routes are sub-paths of existing `/api/loans/applications/{id}`).
+- Deploy SAAR-IFS-001 to Hetzner: `docker compose up --build -d interestfeeservice frontend` + create InterestFeeDb first: `docker exec <postgres-container> psql -U postgres -c "CREATE DATABASE \"InterestFeeDb\""`.
+- Deploy SAAR-CST-001 + SAAR-KYC-001 to Hetzner: `docker compose up --build -d customerservice frontend`.
+- Deploy SAAR-RPT-001 to Hetzner: `docker compose up --build -d transactionservice frontend`.
+- E2E smoke on demobank: DISBURSE a loan → verify EMI Collection card appears → collect one EMI → verify outstanding decrements.
+- Fix Kaspersky Application Control blocking `dotnet test` locally: Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`.
 
 ## Notes
 - Eligibility expression ID currently in use: EXPR_1755237353842.

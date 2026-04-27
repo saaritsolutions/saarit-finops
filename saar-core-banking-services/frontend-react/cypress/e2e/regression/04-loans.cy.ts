@@ -218,3 +218,101 @@ describe('[REGRESSION] Loan Management — New Loan Origination Form', () => {
     cy.contains(/personal|applicant/i, { timeout: 5000 }).should('exist');
   });
 });
+
+// ── SAAR-LRP-001: Loan Repayment Regression Tests ──────────────────────��──────
+
+const DISBURSED_APP = {
+  ...LOAN_APPS[2], // id=3, DISBURSED, LOAN-2026-003
+  outstandingPrincipal: 1000000,
+  nextDueDate:          '2026-05-15T00:00:00Z',
+  smaStatus:            'STANDARD',
+  overdueDays:          0,
+};
+
+const REPAYMENT_HISTORY = {
+  applicationNumber:    'LOAN-2026-003',
+  outstandingPrincipal: 490000,
+  nextDueDate:          '2026-05-15T00:00:00Z',
+  smaStatus:            'STANDARD',
+  overdueDays:          0,
+  repayments: [
+    {
+      id: 'r1', installmentNumber: 1, totalAmount: 10000,
+      principalComponent: 9000, interestComponent: 1000,
+      paidAt: '2026-04-15T00:00:00Z', paymentMode: 'CASH',
+      dueDate: '2026-04-15T00:00:00Z', tenantId: 'public',
+      loanApplicationId: '3', createdAt: '2026-04-15T00:00:00Z',
+    },
+  ],
+};
+
+describe('[REGRESSION] Loan Repayment (SAAR-LRP-001)', () => {
+  beforeEach(() => {
+    cy.loginAsDemo();
+    cy.intercept('GET', '**/api/loans/applications*', { body: listBody(LOAN_APPS) }).as('loans');
+    cy.intercept('GET', '**/api/loan-products*',       { body: [] }).as('products');
+    cy.intercept('GET', '**/api/loans/applications/3*', {
+      body: { application: DISBURSED_APP, documents: [], actions: [] },
+    }).as('loanDetail3');
+    cy.intercept('GET', '**/repayment-history*', { body: REPAYMENT_HISTORY }).as('history');
+    cy.intercept('POST', '**/collect-emi*', {
+      body: {
+        repayment: { ...REPAYMENT_HISTORY.repayments[0], id: 'r2', installmentNumber: 2, journalNumber: 'JNL-EMI-002' },
+        outstandingPrincipal: 481000,
+        smaStatus: 'STANDARD',
+        overdueDays: 0,
+      },
+    }).as('collectEmi');
+  });
+
+  // T-11: Repayment card visible on DISBURSED loan
+  it('T-11 — EMI Collection card is visible on a DISBURSED loan', () => {
+    cy.visit('/loans/3');
+    cy.wait('@loanDetail3', { timeout: 15000 });
+    cy.wait('@history', { timeout: 10000 });
+    cy.contains(/EMI Collection/i, { timeout: 10000 }).should('exist');
+  });
+
+  // T-12: Repayment card NOT shown on SUBMITTED loan
+  it('T-12 — EMI Collection card is NOT shown on a SUBMITTED loan', () => {
+    cy.intercept('GET', '**/api/loans/applications/1*', {
+      body: { application: LOAN_APPS[0], documents: [], actions: [] }, // SUBMITTED
+    }).as('loanDetail1');
+    cy.visit('/loans/1');
+    cy.wait('@loanDetail1', { timeout: 15000 });
+    cy.get('body').then($body => {
+      // repayment-history should not be called and card should not appear
+      expect($body.text()).not.to.include('EMI Collection');
+    });
+  });
+
+  // T-13: Collect EMI button opens dialog and submit calls the API
+  it('T-13 — Collect EMI button opens dialog; submit calls POST collect-emi', () => {
+    cy.visit('/loans/3');
+    cy.wait('@loanDetail3', { timeout: 15000 });
+    cy.wait('@history', { timeout: 10000 });
+    cy.contains('Collect EMI', { timeout: 10000 }).click({ force: true });
+    cy.get('[role="dialog"]', { timeout: 8000 }).should('be.visible');
+    cy.get('[role="dialog"]').find('input[type="number"]').type('10000');
+    cy.get('[role="dialog"]').contains('Collect').click({ force: true });
+    cy.wait('@collectEmi', { timeout: 10000 });
+    cy.get('[role="dialog"]').should('not.exist');
+  });
+
+  // T-14: SMA chip shows STANDARD
+  it('T-14 — SMA chip shows STANDARD for a current loan', () => {
+    cy.visit('/loans/3');
+    cy.wait('@loanDetail3', { timeout: 15000 });
+    cy.wait('@history', { timeout: 10000 });
+    cy.get('[data-testid="sma-chip"]', { timeout: 10000 }).should('contain.text', 'STANDARD');
+  });
+
+  // T-15: Payment history table renders 1 row from stub
+  it('T-15 — Payment history table renders the seeded repayment row', () => {
+    cy.visit('/loans/3');
+    cy.wait('@loanDetail3', { timeout: 15000 });
+    cy.wait('@history', { timeout: 10000 });
+    cy.get('table', { timeout: 10000 }).should('exist');
+    cy.contains(/₹9,000|9000/i).should('exist'); // principal component
+  });
+});

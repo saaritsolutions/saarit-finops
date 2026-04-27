@@ -30,6 +30,7 @@ namespace LoanService.Data
         public DbSet<LoanProduct> LoanProducts { get; set; }
         public DbSet<LoanDocument> LoanDocuments { get; set; }
         public DbSet<LoanApprovalAction> LoanApprovalActions { get; set; }
+        public DbSet<LoanRepayment> LoanRepayments { get; set; }
 
         // ── Gold Loan ──────────────────────────────────────────────────────────
         public DbSet<GoldLoanDetails> GoldLoanDetails { get; set; }
@@ -53,6 +54,13 @@ namespace LoanService.Data
                  .WithOne(d => d.LoanApplication)
                  .HasForeignKey(d => d.LoanApplicationId)
                  .OnDelete(DeleteBehavior.Cascade);
+
+                e.HasMany(a => a.Repayments)
+                 .WithOne(r => r.LoanApplication)
+                 .HasForeignKey(r => r.LoanApplicationId)
+                 .OnDelete(DeleteBehavior.Cascade);
+
+                e.Property(a => a.OutstandingPrincipal).HasColumnType("decimal(18,2)");
 
                 e.HasIndex(a => a.ApplicationNumber).IsUnique();
                 e.HasIndex(a => a.Status);
@@ -90,6 +98,20 @@ namespace LoanService.Data
             modelBuilder.Entity<GoldRateMaster>(e =>
             {
                 e.HasIndex(r => r.RateDate).IsUnique();
+            });
+
+            // ── LoanRepayment ─────────────────────────────────────────────────
+            modelBuilder.Entity<LoanRepayment>(e =>
+            {
+                e.HasKey(r => r.Id);
+                e.Property(r => r.PrincipalComponent).HasColumnType("decimal(18,2)");
+                e.Property(r => r.InterestComponent).HasColumnType("decimal(18,2)");
+                e.Property(r => r.TotalAmount).HasColumnType("decimal(18,2)");
+                e.Property(r => r.PaymentMode).HasMaxLength(20);
+                e.Property(r => r.PaymentReference).HasMaxLength(100);
+                e.Property(r => r.JournalNumber).HasMaxLength(50);
+                e.Property(r => r.TenantId).HasMaxLength(50);
+                e.HasIndex(r => new { r.LoanApplicationId, r.InstallmentNumber }).IsUnique();
             });
         }
 

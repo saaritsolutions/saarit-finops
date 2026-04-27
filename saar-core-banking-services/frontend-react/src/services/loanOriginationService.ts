@@ -370,6 +370,57 @@ export async function takeApplicationAction(id: string, req: LoanActionRequest):
   return res.data as ApplicationDetail;
 }
 
+// ── Loan Repayment (SAAR-LRP-001) ────────────────────────────────────────────
+export interface LoanRepayment {
+  id: string;
+  loanApplicationId: string;
+  installmentNumber: number;
+  principalComponent: number;
+  interestComponent: number;
+  totalAmount: number;
+  dueDate: string;
+  paidAt: string;
+  paymentMode: string;
+  paymentReference?: string;
+  journalNumber?: string;
+  tenantId: string;
+  createdAt: string;
+}
+
+export interface RepaymentHistoryResponse {
+  applicationNumber: string;
+  outstandingPrincipal?: number;
+  nextDueDate?: string;
+  smaStatus: string;
+  overdueDays: number;
+  repayments: LoanRepayment[];
+}
+
+export interface CollectEmiRequest {
+  amount: number;
+  paymentMode: string;
+  paymentReference?: string;
+  paymentDate?: string;
+}
+
+export interface CollectEmiResponse {
+  outstandingPrincipal?: number;
+  nextDueDate?: string;
+  smaStatus: string;
+  overdueDays: number;
+  repayment: LoanRepayment;
+}
+
+export async function getRepaymentHistory(id: string): Promise<RepaymentHistoryResponse> {
+  const res = await axios.get(`${APPS_ROOT}/${id}/repayment-history`);
+  return res.data as RepaymentHistoryResponse;
+}
+
+export async function collectEmi(id: string, req: CollectEmiRequest): Promise<CollectEmiResponse> {
+  const res = await axios.post(`${APPS_ROOT}/${id}/collect-emi`, req);
+  return res.data as CollectEmiResponse;
+}
+
 // ── Legacy exports (backward compat with old LoanOrigination.tsx) ──────────
 export type { PreValidateRequest } from './loanOriginationServiceLegacy';
 export type { ServerField }        from './loanOriginationServiceLegacy';
