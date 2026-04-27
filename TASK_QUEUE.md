@@ -16,7 +16,7 @@
 | 3 | **Next feature**: SAAR-NPA-001 (NPA classification board) or SAAR-STMT-001 (Account Statement) | Logical post-LRP-002 continuation |
 
 ### Recently Completed (session 52 — 2026-04-27)
-- [x] **SAAR-LRP-002 — Overdue Loans Report** (session 52): `GET /api/loans/applications/overdue` endpoint with SMA filter + pagination. Tab 4 "Overdue Loans" in Reports.tsx with SMA chips, CSV export, fail-open empty state. 3 NUnit tests + 4 Cypress tests. No new migration needed. Builds: 0 errors.
+- [x] **SAAR-LRP-002 — Overdue Loans Report DEPLOYED** (session 52, commit `ce46b5e`): `GET /api/loans/applications/overdue` endpoint. Tab 4 "Overdue Loans" in Reports.tsx with SMA chips, CSV export, fail-open empty state. 3 NUnit tests + 4 Cypress tests. Smoke: `GET /api/loans/applications/overdue` → `{"total":0,...}` ✅ LIVE.
 
 ### Recently Completed (session 51 — 2026-04-27)
 - [x] **SAAR-IFS-001 deployed to Hetzner**: Created `InterestFeeDb`, `docker compose up --build -d interestfeeservice`, force-recreated nginx. Smoke: `GET /accrual-summary` → `[]` ✅; `POST /run-daily-accrual` → `{"message":"Daily accrual completed","date":"2026-04-27"}` ✅ LIVE.
