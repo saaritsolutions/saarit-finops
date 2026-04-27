@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-27 (session 49 — SAAR-LRP-001 Loan Repayment: EMI Collection + SMA Status)
+**Last Updated:** 2026-04-27 (session 50 — SAAR-CST-001 + SAAR-RPT-001 deployed to Hetzner; TS2802 fix)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -146,6 +146,14 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 50 — 2026-04-27 (Deploy SAAR-CST-001 + SAAR-KYC-001 + SAAR-RPT-001 to Hetzner)
+- **TS2802 fix in `Reports.tsx`** (commit `d1f9ee0`): Line 679 `[...new Set(accrualData.map(d => d.date))].length` → `Array.from(new Set(accrualData.map(d => d.date))).length`. TypeScript `downlevelIteration` flag not set in this project; Array.from is the portable cross-target fix. This was the only uncommitted change blocking a clean build.
+- **Hetzner deploy**: `docker compose up --build -d customerservice transactionservice frontend` from `/opt/saarit/saar-core-banking-services/`. Rebuilt 3 containers; all 11 healthy post-deploy.
+- **Smoke tests LIVE**:
+  - `GET https://demobank.saaritsolutions.com/api/customer?pageSize=3` (UCB JWT) → `{"total":8,"items":[...]}` — `CustomerDemoDataSeeder` seeded all 8 customers ✅
+  - `GET https://demobank.saaritsolutions.com/api/journal/daily-summary` (UCB JWT) → `{"grandTotalCount":0,"days":[]}` — expected (no journals yet in ucb_demo; TransactionService running) ✅
+- SAAR-KYC-001 also live as part of the same customerservice container (initiate/submit/verify/reject KYC endpoints).
 
 ### Session 49 — 2026-04-27 (SAAR-LRP-001 — Loan Repayment: EMI Collection + SMA Status)
 - **`SAAR_LRP_001_REQUIREMENTS.md`**: JIRA-format requirement doc (6 FRs, 4 NFRs, data model, GL journal, SMA classification, test plan T-1 through T-9).
@@ -549,11 +557,10 @@ Per `EXECUTION_ROADMAP.md`:
 ## 7. Next Recommended Steps (Ordered by Impact)
 
 1. **Deploy SAAR-IFS-001 to Hetzner**: (a) `docker exec <postgres> psql -U postgres -c "CREATE DATABASE \"InterestFeeDb\""` — then (b) `docker compose up --build -d interestfeeservice frontend`. InterestFeeService port 5218, auto-migrates on startup, nginx `/api/interest-fees` block already in conf.
-2. **Deploy SAAR-CST-001 + SAAR-KYC-001 to Hetzner**: `docker compose up --build -d customerservice frontend` — CustomerService seeder + pagination + KYC endpoints + React filter bar, KYC buttons now live.
-3. **Deploy SAAR-RPT-001 to Hetzner**: `docker compose up --build -d transactionservice frontend` (daily-summary endpoint + Reports page). `/api/compliance` nginx block already in conf.
-4. **Fix Kaspersky Application Control** (local only): Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`. Then re-run `dotnet test` locally (all suites — Kaspersky is the only blocker).
-5. **E2E smoke on demobank**: `/reports` → "Deposit Interest" tab → verify chart loads; `/customers` → verify 8 seeded customers + search/filter work.
-6. **APIGateway: JWT auth + routing** — required for any real service-to-service flow.
+2. **E2E smoke on demobank**: `/customers` (8 customers, search/filter bar), `/reports` (Financial tab BarChart + Compliance Alerts tab), EMI Collection card on DISBURSED loan (UCB-GL-2026-004 already has 1 EMI).
+3. **Fix Kaspersky Application Control** (local only): Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`. Then re-run `dotnet test` locally (all suites — Kaspersky is the only blocker).
+4. **Next feature**: SAAR-LRP-002 (Overdue Loans Report tab in Reports.tsx) or SAAR-NPA-001 (NPA classification board).
+5. **APIGateway: JWT auth + routing** — required for any real service-to-service flow.
 
 ---
 

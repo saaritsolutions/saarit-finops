@@ -505,11 +505,17 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - **Build**: LoanService 0 errors ✅ LoanService.Tests 0 errors ✅ TypeScript 0 new errors ✅
   - **Deployed to Hetzner** (session 49, commit 5276e19): `docker compose up --build -d loanservice frontend`. Smoke tested: `GET /repayment-history` → STANDARD/0 days; `POST /collect-emi` ₹5000 on UCB-GL-2026-004 → outstanding 200000→196416.67, interest ₹1416.67, principal ₹3583.33. Fail-open on GL (TransactionService accounts not seeded for ucb_demo — EMI record saved regardless). ✅ LIVE
 
+## Completed (continued)
+- SAAR-CST-001 + SAAR-KYC-001 + SAAR-RPT-001 deployed to Hetzner (session 50, 2026-04-27, commit d1f9ee0):
+  - **TS2802 fix**: `Reports.tsx` line 679 — `[...new Set(accrualData.map(d => d.date))].length` → `Array.from(new Set(accrualData.map(d => d.date))).length` (TypeScript `downlevelIteration` not set; Array.from is the portable fix)
+  - `docker compose up --build -d customerservice transactionservice frontend` on Hetzner
+  - Smoke tested LIVE: `GET /api/customer?pageSize=3` → `total=8` (CustomerDemoDataSeeder working for ucb_demo) ✅; `GET /api/journal/daily-summary` → `grandTotalCount=0, days=[]` (expected — no journals yet in ucb_demo) ✅
+  - Both SAAR-CST-001 (pagination + seeder) and SAAR-KYC-001 (KYC workflow endpoints + buttons) live in the same customerservice container
+
 ## Pending Next
 - Deploy SAAR-IFS-001 to Hetzner: create `InterestFeeDb` first → `docker compose up --build -d interestfeeservice frontend`.
-- Deploy SAAR-CST-001 + SAAR-KYC-001 + SAAR-RPT-001 to Hetzner: `docker compose up --build -d customerservice transactionservice frontend`.
 - Fix Kaspersky Application Control blocking `dotnet test` locally: Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`.
-- Frontend: verify EMI Collection card on demobank for DISBURSED loan (UCB-GL-2026-004 already has 1 EMI collected).
+- E2E smoke on demobank: `/customers` (8 customers + search/filter), `/reports` (Financial tab + Compliance tab), EMI Collection card on DISBURSED loan.
 
 ## Notes
 - Eligibility expression ID currently in use: EXPR_1755237353842.

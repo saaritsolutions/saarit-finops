@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-27 (session 49 — SAAR-LRP-001 Loan Repayment: EMI Collection + SMA Status)
+**Last Updated:** 2026-04-27 (session 50 — SAAR-CST-001 + SAAR-RPT-001 deployed to Hetzner)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,13 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Deploy SAAR-IFS-001 to Hetzner**: create `InterestFeeDb` first → `docker compose up --build -d interestfeeservice frontend` | InterestFeeService + Deposit Interest tab fully built and tested |
-| 2 | **Deploy SAAR-CST-001 + SAAR-KYC-001 + SAAR-RPT-001 to Hetzner**: `docker compose up --build -d customerservice transactionservice frontend` | All built and tested — ready to ship together |
+| 1 | **Deploy SAAR-IFS-001 to Hetzner**: create `InterestFeeDb` → `docker compose up --build -d interestfeeservice frontend` | InterestFeeService + Deposit Interest tab fully built; nginx block already in conf |
+| 2 | **E2E smoke on demobank**: `/customers` (8 customers + filter), `/reports` (Financial + Compliance tabs), EMI card on UCB-GL-2026-004 | CST-001+RPT-001+LRP-001 all live — verify end-to-end |
 | 3 | **Next feature**: SAAR-LRP-002 (Overdue Loans Report) or SAAR-NPA-001 (NPA classification board) | Post-LRP-001 logical continuation |
+
+### Recently Completed (session 50 — 2026-04-27)
+- [x] **TS2802 fix in `Reports.tsx`** (commit `d1f9ee0`): `[...new Set(...)]` → `Array.from(new Set(...))`. TypeScript spread-iterator requires `downlevelIteration` or ES2015 target; Array.from is portable.
+- [x] **SAAR-CST-001 + SAAR-KYC-001 + SAAR-RPT-001 deployed to Hetzner**: `docker compose up --build -d customerservice transactionservice frontend`. Smoke tested: `GET /api/customer?pageSize=3` → `total=8` ✅; `GET /api/journal/daily-summary` → `grandTotalCount=0` ✅ LIVE.
 
 ### Recently Completed (session 49 — 2026-04-27)
 - [x] **SAAR-LRP-001 DEPLOYED to Hetzner** (commit 5276e19): `docker compose up --build -d loanservice frontend`. Smoke: `GET /repayment-history` ✅ `POST /collect-emi` ✅ (UCB-GL-2026-004: 200000→196416.67 outstanding, ₹1416.67 interest). GL fail-open working correctly.
