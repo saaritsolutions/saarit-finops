@@ -512,10 +512,17 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - Smoke tested LIVE: `GET /api/customer?pageSize=3` → `total=8` (CustomerDemoDataSeeder working for ucb_demo) ✅; `GET /api/journal/daily-summary` → `grandTotalCount=0, days=[]` (expected — no journals yet in ucb_demo) ✅
   - Both SAAR-CST-001 (pagination + seeder) and SAAR-KYC-001 (KYC workflow endpoints + buttons) live in the same customerservice container
 
+## Completed (continued)
+- SAAR-IFS-001 deployed to Hetzner (session 51, 2026-04-27):
+  - Created `InterestFeeDb` on Hetzner postgres: `docker exec ... psql -U postgres -c "CREATE DATABASE \"InterestFeeDb\""`
+  - `docker compose up --build -d interestfeeservice` — container started, auto-migrated, DailyAccrualJob started
+  - Force-recreated nginx to pick up `/api/interest-fees` location block (added in session 48 but nginx not reloaded since session 44)
+  - Smoke: `GET /api/interest-fees/accrual-summary` → `[]` ✅; `POST /api/interest-fees/run-daily-accrual` → `{"message":"Daily accrual completed","date":"2026-04-27T00:00:00Z"}` ✅ LIVE
+
 ## Pending Next
-- Deploy SAAR-IFS-001 to Hetzner: create `InterestFeeDb` first → `docker compose up --build -d interestfeeservice frontend`.
 - Fix Kaspersky Application Control blocking `dotnet test` locally: Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`.
-- E2E smoke on demobank: `/customers` (8 customers + search/filter), `/reports` (Financial tab + Compliance tab), EMI Collection card on DISBURSED loan.
+- E2E smoke on demobank: `/customers` (8 customers + search/filter), `/reports` (all 4 tabs including Deposit Interest), EMI Collection card on DISBURSED loan.
+- Next feature: SAAR-LRP-002 (Overdue Loans Report) or SAAR-NPA-001 (NPA classification board).
 
 ## Notes
 - Eligibility expression ID currently in use: EXPR_1755237353842.

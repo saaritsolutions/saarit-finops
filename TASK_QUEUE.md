@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-27 (session 50 — SAAR-CST-001 + SAAR-RPT-001 deployed to Hetzner)
+**Last Updated:** 2026-04-27 (session 51 — SAAR-IFS-001 deployed to Hetzner)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,13 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Deploy SAAR-IFS-001 to Hetzner**: create `InterestFeeDb` → `docker compose up --build -d interestfeeservice frontend` | InterestFeeService + Deposit Interest tab fully built; nginx block already in conf |
-| 2 | **E2E smoke on demobank**: `/customers` (8 customers + filter), `/reports` (Financial + Compliance tabs), EMI card on UCB-GL-2026-004 | CST-001+RPT-001+LRP-001 all live — verify end-to-end |
-| 3 | **Next feature**: SAAR-LRP-002 (Overdue Loans Report) or SAAR-NPA-001 (NPA classification board) | Post-LRP-001 logical continuation |
+| 1 | **E2E smoke on demobank**: `/customers` (filter + KYC), `/reports` (all 4 tabs), EMI card on UCB-GL-2026-004 | All features now live — verify end-to-end before next feature |
+| 2 | **Next feature**: SAAR-LRP-002 (Overdue Loans Report) or SAAR-NPA-001 (NPA board) or SAAR-STMT-001 (Account Statement) | Logical post-IFS-001 continuation |
+| 3 | **Fix Kaspersky** locally: add exclusion `C:\Users\LENOVO YOGA\SAARIT\saarit-finops` in Kaspersky Application Control | Only remaining local dotnet test blocker |
+
+### Recently Completed (session 51 — 2026-04-27)
+- [x] **SAAR-IFS-001 deployed to Hetzner**: Created `InterestFeeDb`, `docker compose up --build -d interestfeeservice`, force-recreated nginx. Smoke: `GET /accrual-summary` → `[]` ✅; `POST /run-daily-accrual` → `{"message":"Daily accrual completed","date":"2026-04-27"}` ✅ LIVE.
+  - **nginx gotcha**: `/api/interest-fees` block was in conf since session 48 but nginx not reloaded since session 44 → served React HTML. Fix: `--force-recreate nginx`.
 
 ### Recently Completed (session 50 — 2026-04-27)
 - [x] **TS2802 fix in `Reports.tsx`** (commit `d1f9ee0`): `[...new Set(...)]` → `Array.from(new Set(...))`. TypeScript spread-iterator requires `downlevelIteration` or ES2015 target; Array.from is portable.
