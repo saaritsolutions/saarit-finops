@@ -45,6 +45,20 @@ namespace LoanService.Services
             decimal principal,
             decimal interest,
             CancellationToken ct = default);
+
+        /// <summary>
+        /// Posts EMI collection journal (3-line):
+        ///   DR 1010 Cash and Bank (full EMI)
+        ///   CR 1020 Loans and Advances (principal component)
+        ///   CR 4010 Interest Income (interest component)
+        /// Idempotency key: EMI-{applicationNumber}-{installmentNumber:D3}.
+        /// </summary>
+        Task<DisbursalJournalResult> PostEmiJournalAsync(
+            string applicationNumber,
+            int installmentNumber,
+            decimal principalAmount,
+            decimal interestAmount,
+            CancellationToken ct = default);
     }
 
     public class TransactionServiceClient : ITransactionServiceClient
@@ -129,6 +143,34 @@ namespace LoanService.Services
                           currency = "INR", narration = $"Gold loan principal closed — {applicationNumber}" },
                     new { accountCode = "4015", debitAmount = 0m,        creditAmount = interest,
                           currency = "INR", narration = $"Gold loan interest income — {applicationNumber}" }
+                }
+            };
+            return await PostJournalAsync(applicationNumber, payload, ct);
+        }
+
+        public async Task<DisbursalJournalResult> PostEmiJournalAsync(
+            string applicationNumber,
+            int installmentNumber,
+            decimal principalAmount,
+            decimal interestAmount,
+            CancellationToken ct = default)
+        {
+            var totalEmi = principalAmount + interestAmount;
+            var payload = new
+            {
+                idempotencyKey = $"EMI-{applicationNumber}-{installmentNumber:D3}",
+                description    = $"EMI Collection #{installmentNumber:D3} — {applicationNumber}",
+                referenceType  = "LoanRepayment",
+                referenceId    = applicationNumber,
+                postedBy       = "LoanService",
+                entries        = new object[]
+                {
+                    new { accountCode = "1010", debitAmount = totalEmi,        creditAmount = 0m,
+                          currency = "INR", narration = $"EMI received — {applicationNumber} #{installmentNumber:D3}" },
+                    new { accountCode = "1020", debitAmount = 0m,              creditAmount = principalAmount,
+                          currency = "INR", narration = $"Principal repaid — {applicationNumber} #{installmentNumber:D3}" },
+                    new { accountCode = "4010", debitAmount = 0m,              creditAmount = interestAmount,
+                          currency = "INR", narration = $"Interest income — {applicationNumber} #{installmentNumber:D3}" }
                 }
             };
             return await PostJournalAsync(applicationNumber, payload, ct);

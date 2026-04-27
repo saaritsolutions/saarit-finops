@@ -23,10 +23,11 @@ import WorkIcon          from '@mui/icons-material/Work';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import DescriptionIcon   from '@mui/icons-material/Description';
 import CalculateIcon     from '@mui/icons-material/Calculate';
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  getApplicationDetail, takeApplicationAction,
-  type ApplicationDetail, type ApprovalAction,
+  getApplicationDetail, takeApplicationAction, getRepaymentHistory, collectEmi,
+  type ApplicationDetail, type ApprovalAction, type RepaymentHistoryResponse,
 } from '../services/loanOriginationService';
 import JournalDetailDialog from '../components/dialogs/JournalDetailDialog';
 
@@ -226,6 +227,13 @@ const LoanDetail: React.FC = () => {
   const [showSchedule, setShowSchedule] = useState(false);
   const [journalDialogOpen, setJournalDialogOpen] = useState(false);
   const [approvalChain, setApprovalChain]         = useState<ChainStep[] | null>(null);
+  const [repaymentHistory, setRepaymentHistory]   = useState<RepaymentHistoryResponse | null>(null);
+  const [collectOpen, setCollectOpen]             = useState(false);
+  const [collectAmount, setCollectAmount]         = useState('');
+  const [collectMode, setCollectMode]             = useState('CASH');
+  const [collectRef, setCollectRef]               = useState('');
+  const [collecting, setCollecting]               = useState(false);
+  const [collectMsg, setCollectMsg]               = useState<string | null>(null);
 
   const app = detail?.application ?? null;
 
@@ -259,6 +267,37 @@ const LoanDetail: React.FC = () => {
       })
       .catch(() => setApprovalChain(null));
   }, [detail]);
+
+  // Load repayment history whenever the app is DISBURSED
+  useEffect(() => {
+    const status = (app as any)?.status ?? (app as any)?.Status;
+    if (!id || status !== 'DISBURSED') { setRepaymentHistory(null); return; }
+    getRepaymentHistory(id)
+      .then(setRepaymentHistory)
+      .catch(() => setRepaymentHistory(null));
+  }, [id, app]);
+
+  const handleCollectEmi = async () => {
+    if (!id) return;
+    setCollecting(true);
+    try {
+      const res = await collectEmi(id, {
+        amount:           parseFloat(collectAmount) || 0,
+        paymentMode:      collectMode,
+        paymentReference: collectRef || undefined,
+      });
+      const updated = await getRepaymentHistory(id);
+      setRepaymentHistory(updated);
+      setCollectMsg(`EMI #${updated.repayments.length} collected${res.repayment.journalNumber ? ` — Journal ${res.repayment.journalNumber}` : ''}`);
+      setCollectOpen(false);
+      setCollectAmount('');
+      setCollectRef('');
+    } catch (e: any) {
+      setCollectMsg(e?.response?.data?.error ?? 'EMI collection failed');
+    } finally {
+      setCollecting(false);
+    }
+  };
 
   const handleAction = async (comments: string) => {
     if (!id || !actionDef) return;
@@ -733,6 +772,138 @@ const LoanDetail: React.FC = () => {
           </Box>
         );
       })()}
+
+      {/* ── EMI Collection Card (DISBURSED loans only) ────────────────────── */}
+      {(app as any)?.status === 'DISBURSED' && (
+        <Box mt={3} data-testid="repayment-card">
+          <Card sx={{ border: `1px solid ${SLATE_200}`, boxShadow: 'none', borderRadius: 2 }}>
+            <CardContent sx={{ p: 2.5 }}>
+              <Stack direction="row" spacing={1} alignItems="center" mb={1.5}>
+                <Box sx={{ color: BLUE_600, display: 'flex' }}><AccountBalanceWalletIcon /></Box>
+                <Typography variant="subtitle2" fontWeight={700} color={SLATE_900}>EMI Collection</Typography>
+              </Stack>
+              <Divider sx={{ mb: 2 }} />
+
+              {collectMsg && (
+                <Alert severity="success" sx={{ mb: 2 }} onClose={() => setCollectMsg(null)}>{collectMsg}</Alert>
+              )}
+
+              {/* Summary chips */}
+              <Stack direction="row" spacing={1.5} flexWrap="wrap" mb={2}>
+                <Chip
+                  label={`Outstanding: ${INR(repaymentHistory?.outstandingPrincipal)}`}
+                  color="primary" variant="outlined" size="small"
+                  data-testid="outstanding-chip"
+                />
+                {repaymentHistory?.nextDueDate && (
+                  <Chip
+                    label={`Next Due: ${fmtDateOnly(repaymentHistory.nextDueDate)}`}
+                    color="default" variant="outlined" size="small"
+                  />
+                )}
+                {repaymentHistory && (
+                  <Chip
+                    label={repaymentHistory.smaStatus}
+                    size="small"
+                    color={
+                      repaymentHistory.smaStatus === 'STANDARD' ? 'success' :
+                      repaymentHistory.smaStatus === 'SMA-0'    ? 'warning' :
+                      repaymentHistory.smaStatus === 'SMA-1'    ? 'warning' :
+                      'error'
+                    }
+                    data-testid="sma-chip"
+                  />
+                )}
+              </Stack>
+
+              <Button
+                variant="outlined"
+                startIcon={<PaymentsIcon />}
+                onClick={() => setCollectOpen(true)}
+                size="small"
+                sx={{ mb: repaymentHistory && repaymentHistory.repayments.length > 0 ? 2 : 0 }}
+              >
+                Collect EMI
+              </Button>
+
+              {/* Payment history table */}
+              {repaymentHistory && repaymentHistory.repayments.length > 0 && (
+                <TableContainer sx={{ borderRadius: 1, border: `1px solid ${SLATE_200}` }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        {['#', 'Paid On', 'Principal', 'Interest', 'Total', 'Mode', 'Journal'].map(h => (
+                          <TableCell key={h} sx={{ fontWeight: 700, bgcolor: SLATE_50, fontSize: '0.72rem', whiteSpace: 'nowrap', py: 1 }}>
+                            {h}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {repaymentHistory.repayments.map(r => (
+                        <TableRow key={r.id} hover sx={{ '&:last-child td': { borderBottom: 0 } }}>
+                          <TableCell sx={{ fontSize: '0.78rem', color: SLATE_500 }}>{r.installmentNumber}</TableCell>
+                          <TableCell sx={{ fontSize: '0.78rem' }}>{fmtDateOnly(r.paidAt)}</TableCell>
+                          <TableCell sx={{ fontSize: '0.78rem', color: '#10B981' }}>{INR(r.principalComponent)}</TableCell>
+                          <TableCell sx={{ fontSize: '0.78rem', color: '#F59E0B' }}>{INR(r.interestComponent)}</TableCell>
+                          <TableCell sx={{ fontSize: '0.78rem', fontWeight: 600 }}>{INR(r.totalAmount)}</TableCell>
+                          <TableCell sx={{ fontSize: '0.78rem' }}>{r.paymentMode}</TableCell>
+                          <TableCell sx={{ fontSize: '0.78rem', color: SLATE_500 }}>{r.journalNumber ?? '—'}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </CardContent>
+          </Card>
+        </Box>
+      )}
+
+      {/* Collect EMI Dialog */}
+      <Dialog open={collectOpen} onClose={() => setCollectOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700 }}>Collect EMI Payment</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} mt={1}>
+            <TextField
+              label="Amount (₹)"
+              type="number"
+              fullWidth
+              value={collectAmount}
+              onChange={e => setCollectAmount(e.target.value)}
+              inputProps={{ min: 1 }}
+            />
+            <TextField
+              label="Payment Mode"
+              select
+              SelectProps={{ native: true }}
+              fullWidth
+              value={collectMode}
+              onChange={e => setCollectMode(e.target.value)}
+            >
+              {['CASH', 'NEFT', 'RTGS', 'UPI', 'CHEQUE'].map(m => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </TextField>
+            <TextField
+              label="Reference (optional)"
+              fullWidth
+              value={collectRef}
+              onChange={e => setCollectRef(e.target.value)}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setCollectOpen(false)} variant="outlined" sx={{ borderColor: SLATE_200 }}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleCollectEmi}
+            disabled={collecting || !collectAmount || parseFloat(collectAmount) <= 0}
+          >
+            {collecting ? <CircularProgress size={18} color="inherit" /> : 'Collect'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Action Dialog */}
       <ActionDialog

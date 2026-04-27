@@ -216,8 +216,35 @@ namespace LoanService.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
+        // ── Post-Disbursal Repayment Tracking ───────────────────────────────────
+        /// <summary>Set to SanctionedAmount on DISBURSE; decremented by principal component on each EMI.</summary>
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? OutstandingPrincipal { get; set; }
+
+        /// <summary>Set on DISBURSE to today+1 month; advanced +1 month on each successful EMI collection.</summary>
+        public DateTime? NextDueDate { get; set; }
+
+        /// <summary>Days past NextDueDate — computed at request time; never stored.</summary>
+        [NotMapped]
+        public int OverdueDays =>
+            NextDueDate.HasValue && NextDueDate.Value.Date < DateTime.UtcNow.Date
+                ? (int)(DateTime.UtcNow.Date - NextDueDate.Value.Date).TotalDays
+                : 0;
+
+        /// <summary>RBI IRAC SMA classification — STANDARD | SMA-0 | SMA-1 | SMA-2 | NPA.</summary>
+        [NotMapped]
+        public string SmaStatus => OverdueDays switch
+        {
+            0     => "STANDARD",
+            <= 30 => "SMA-0",
+            <= 60 => "SMA-1",
+            <= 90 => "SMA-2",
+            _     => "NPA"
+        };
+
         // ── Navigation ──────────────────────────────────────────────────────────
         public List<LoanDocument> Documents { get; set; } = new();
         public List<LoanApprovalAction> ApprovalActions { get; set; } = new();
+        public List<LoanRepayment> Repayments { get; set; } = new();
     }
 }
