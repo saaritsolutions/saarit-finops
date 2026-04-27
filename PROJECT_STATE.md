@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-27 (session 51 — SAAR-IFS-001 deployed to Hetzner)
+**Last Updated:** 2026-04-27 (session 52 — SAAR-LRP-002 Overdue Loans Report implemented)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -146,6 +146,16 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 52 — 2026-04-27 (SAAR-LRP-002 — Overdue Loans Report)
+- **`SAAR_LRP_002_REQUIREMENTS.md`**: JIRA-format requirement doc (8 FRs, 3 NFRs, test plan T-1 through T-19).
+- **`LoanApplicationsController.cs`**: `GET /api/loans/applications/overdue` — EF WHERE `Status=DISBURSED AND NextDueDate < today`, paged Skip/Take, in-memory OverdueDays+SmaStatus computation, optional in-memory smaStatus filter. `OverdueLoanDto` DTO added. No new EF migration — uses existing columns from SAAR-LRP-001.
+- **`loanOriginationService.ts`**: `OverdueLoanItem` + `OverdueLoansResult` interfaces + `getOverdueLoans(params?)` function with camelCase/PascalCase dual-read mapping.
+- **`Reports.tsx`**: Tab 4 "Overdue Loans" — `WarningAmberIcon`, `smaFilter` state, `loadOverdue()` `useCallback`, SMA band filter chips (ALL/SMA-0/SMA-1/SMA-2/NPA), summary stats row, overdue loans table (7 cols), `exportOverdueCsv()`, `smaColor()` helper, fail-open empty state.
+- **`OverdueLoansTests.cs`**: 3 NUnit tests (T-1 empty DB, T-2 SMA-0 @15d, T-3 filter SMA-0 from 2 loans).
+- **`13-reports.cy.ts`**: 4 Cypress tests Suite 5 (T-16 tab visible, T-17 table 2 rows, T-18 chip fires reload, T-19 CSV button enabled).
+- **Build**: LoanService 0 errors ✅ LoanService.Tests 0 errors ✅ TypeScript 0 new errors ✅ (5 pre-existing in FormBuilder.tsx/GoldLoanList.tsx unchanged).
+- **nginx**: No change needed — `/api/loans` already proxied to loanservice:5130.
 
 ### Session 51 — 2026-04-27 (Deploy SAAR-IFS-001 to Hetzner)
 - **`InterestFeeDb` created**: `docker exec saar-core-banking-services-postgres-1 psql -U postgres -c "CREATE DATABASE \"InterestFeeDb\""`.
@@ -565,10 +575,11 @@ Per `EXECUTION_ROADMAP.md`:
 
 ## 7. Next Recommended Steps (Ordered by Impact)
 
-1. **E2E smoke on demobank**: `/customers` (8 customers, filter bar, KYC buttons), `/reports` (all 4 tabs including Deposit Interest), EMI Collection card on UCB-GL-2026-004 (already has 1 EMI).
-2. **Fix Kaspersky Application Control** (local only): Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`. Then re-run `dotnet test` locally.
-3. **Next feature**: SAAR-LRP-002 (Overdue Loans Report) or SAAR-NPA-001 (NPA classification board) or SAAR-STMT-001 (Account Statement endpoint).
-4. **APIGateway: JWT auth + routing** — required for any real service-to-service flow.
+1. **Deploy SAAR-LRP-002 to Hetzner**: `docker compose up --build -d loanservice frontend` on Hetzner.
+2. **E2E smoke on demobank**: `/reports` Tab 4 Overdue Loans (verify empty state or seeded data), EMI Collection card on UCB-GL-2026-004.
+3. **Fix Kaspersky Application Control** (local only): Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`. Then re-run `dotnet test` locally.
+4. **Next feature**: SAAR-NPA-001 (NPA classification board) or SAAR-STMT-001 (Account Statement endpoint).
+5. **APIGateway: JWT auth + routing** — required for any real service-to-service flow.
 
 ---
 

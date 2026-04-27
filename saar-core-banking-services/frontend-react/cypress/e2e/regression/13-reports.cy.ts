@@ -237,3 +237,85 @@ describe('[REGRESSION] Reports — Tab navigation', () => {
     cy.contains('GL Account Balances').should('be.visible');
   });
 });
+
+// ── Mock Data: Overdue Loans ──────────────────────────────────────────────────
+
+const OVERDUE_LOANS = [
+  {
+    id: 'ol1',
+    applicationNumber: 'LOAN-2026-001',
+    applicantName: 'Ramesh Kumar',
+    mobileNumber: '9876543210',
+    productType: 'PERSONAL_LOAN',
+    outstandingPrincipal: 85000,
+    nextDueDate: '2026-03-15T00:00:00Z',
+    overdueDays: 43,
+    smaStatus: 'SMA-1',
+    interestRate: 12.5,
+    tenureMonths: 24,
+    disbursedAt: '2025-12-15T08:00:00Z',
+  },
+  {
+    id: 'ol2',
+    applicationNumber: 'LOAN-2026-002',
+    applicantName: 'Priya Sharma',
+    mobileNumber: '9123456789',
+    productType: 'HOME_LOAN',
+    outstandingPrincipal: 450000,
+    nextDueDate: '2026-02-01T00:00:00Z',
+    overdueDays: 85,
+    smaStatus: 'SMA-2',
+    interestRate: 9.0,
+    tenureMonths: 240,
+    disbursedAt: '2025-08-01T08:00:00Z',
+  },
+];
+
+// ── Suite 5: Overdue Loans Tab (SAAR-LRP-002) ─────────────────────────────────
+
+describe('[REGRESSION] Reports — Overdue Loans Tab (SAAR-LRP-002)', () => {
+  beforeEach(() => {
+    stubReportApis();
+    cy.intercept('GET', '**/loans/applications/overdue**',
+      { body: { total: 2, items: OVERDUE_LOANS, page: 1, pageSize: 50 } }
+    ).as('overdueLoans');
+    cy.loginAsDemo();
+    cy.visit('/reports');
+  });
+
+  // T-16: Overdue Loans tab (5th tab, index 4) is visible
+  it('T-16: Overdue Loans tab is visible in Reports page', () => {
+    cy.contains('[role="tab"]', /Overdue Loans/i).should('be.visible');
+  });
+
+  // T-17: Clicking tab fires GET /overdue and shows the data table with 2 rows
+  it('T-17: Tab click loads overdue loans table with 2 rows', () => {
+    cy.contains('[role="tab"]', /Overdue Loans/i).click();
+    cy.wait('@overdueLoans');
+
+    cy.contains('LOAN-2026-001').should('be.visible');
+    cy.contains('Ramesh Kumar').should('be.visible');
+
+    cy.get('[role="tabpanel"]:not([hidden]) tbody tr').should('have.length', 2);
+  });
+
+  // T-18: SMA-1 filter chip click triggers a second API call
+  it('T-18: Clicking SMA-1 chip triggers API reload with smaStatus filter', () => {
+    cy.contains('[role="tab"]', /Overdue Loans/i).click();
+    cy.wait('@overdueLoans');
+
+    // Click the SMA-1 chip
+    cy.get('[aria-label="filter SMA-1"]').click();
+    cy.wait('@overdueLoans');
+  });
+
+  // T-19: Export CSV button is present and enabled when overdue loans are loaded
+  it('T-19: Export CSV button is present and enabled after data loads', () => {
+    cy.contains('[role="tab"]', /Overdue Loans/i).click();
+    cy.wait('@overdueLoans');
+
+    cy.get('[aria-label="Export Overdue CSV"]')
+      .should('be.visible')
+      .and('not.be.disabled');
+  });
+});
