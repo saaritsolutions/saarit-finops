@@ -30,6 +30,9 @@ import {
   AccountBalance as AccountBalanceIcon,
   NotificationsActive as AlertIcon,
   Savings as SavingsIcon,
+  TrendingUp as TrendingUpIcon,
+  PlayArrow as RunIcon,
+  AccountBalanceWallet as PostIcon,
 } from '@mui/icons-material';
 import {
   BarChart,
@@ -53,6 +56,13 @@ import {
   type ComplianceAlert,
   type UpcomingMaturity,
 } from '../../services/reportService';
+import {
+  getAccrualSummary,
+  runDailyAccrual,
+  runMonthlyPosting,
+  type AccrualSummaryDay,
+  type MonthlyPostingResult,
+} from '../../services/interestFeeService';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -129,6 +139,17 @@ const Reports: React.FC = () => {
   const [maturities, setMaturities]               = useState<UpcomingMaturity[]>([]);
   const [maturitiesLoading, setMaturitiesLoading] = useState(false);
 
+  // ── Tab 3 — Deposit Interest (SAAR-IFS-001) ───────────────────────────────
+  const [accrualData, setAccrualData]             = useState<AccrualSummaryDay[]>([]);
+  const [accrualLoading, setAccrualLoading]       = useState(false);
+  const [accrualError, setAccrualError]           = useState('');
+  const [ifsFromDate, setIfsFromDate]             = useState(formatDateInput(subDays(29)));
+  const [ifsToDate,   setIfsToDate]               = useState(formatDateInput(new Date()));
+  const [accrualRunning, setAccrualRunning]       = useState(false);
+  const [accrualMsg, setAccrualMsg]               = useState('');
+  const [postingRunning, setPostingRunning]       = useState(false);
+  const [postingResult, setPostingResult]         = useState<MonthlyPostingResult | null>(null);
+
   // ── Data loaders ──────────────────────────────────────────────────────────
 
   const loadBalances = useCallback(() => {
@@ -163,6 +184,44 @@ const Reports: React.FC = () => {
       .finally(() => setMaturitiesLoading(false));
   }, []);
 
+  const loadAccrualSummary = useCallback(() => {
+    setAccrualLoading(true);
+    setAccrualError('');
+    getAccrualSummary(undefined, ifsFromDate, ifsToDate)
+      .then(setAccrualData)
+      .catch(() => { setAccrualError('Unable to load accrual data.'); setAccrualData([]); })
+      .finally(() => setAccrualLoading(false));
+  }, [ifsFromDate, ifsToDate]);
+
+  async function handleRunDailyAccrual() {
+    setAccrualRunning(true);
+    setAccrualMsg('');
+    try {
+      const res = await runDailyAccrual();
+      setAccrualMsg(`Accrual completed for ${res.date}`);
+      loadAccrualSummary();
+    } catch {
+      setAccrualMsg('Accrual failed — check service logs.');
+    } finally {
+      setAccrualRunning(false);
+    }
+  }
+
+  async function handleRunMonthlyPosting() {
+    const period = new Date().toISOString().slice(0, 7).replace('-', '');
+    setPostingRunning(true);
+    setPostingResult(null);
+    try {
+      const res = await runMonthlyPosting(period);
+      setPostingResult(res);
+      loadAccrualSummary();
+    } catch {
+      setAccrualMsg('Monthly posting failed — check service logs.');
+    } finally {
+      setPostingRunning(false);
+    }
+  }
+
   // ── Lazy load on tab activation ───────────────────────────────────────────
 
   useEffect(() => {
@@ -175,6 +234,10 @@ const Reports: React.FC = () => {
 
   useEffect(() => {
     if (tab === 2) loadMaturities();
+  }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (tab === 3) loadAccrualSummary();
   }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── CSV export ────────────────────────────────────────────────────────────
@@ -236,9 +299,10 @@ const Reports: React.FC = () => {
           onChange={(_, v) => setTab(v)}
           sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}
         >
-          <Tab icon={<BarChartIcon fontSize="small" />} iconPosition="start" label="Financial Reports"  id="rpt-tab-0" />
-          <Tab icon={<AlertIcon    fontSize="small" />} iconPosition="start" label="Compliance Alerts" id="rpt-tab-1" />
-          <Tab icon={<SavingsIcon  fontSize="small" />} iconPosition="start" label="Deposit Maturity"  id="rpt-tab-2" />
+          <Tab icon={<BarChartIcon     fontSize="small" />} iconPosition="start" label="Financial Reports"  id="rpt-tab-0" />
+          <Tab icon={<AlertIcon        fontSize="small" />} iconPosition="start" label="Compliance Alerts" id="rpt-tab-1" />
+          <Tab icon={<SavingsIcon      fontSize="small" />} iconPosition="start" label="Deposit Maturity"  id="rpt-tab-2" />
+          <Tab icon={<TrendingUpIcon   fontSize="small" />} iconPosition="start" label="Deposit Interest"  id="rpt-tab-3" />
         </Tabs>
 
         {/* ── Tab 0: Financial Reports ─────────────────────────────────────── */}
@@ -532,6 +596,126 @@ const Reports: React.FC = () => {
                 </TableBody>
               </Table>
             </TableContainer>
+          )}
+        </TabPanel>
+
+        {/* ── Tab 3: Deposit Interest ──────────────────────────────────────── */}
+        <TabPanel value={tab} index={3}>
+
+          {/* Action row */}
+          <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: 'wrap' }}>
+            <TextField
+              label="From" type="date" size="small"
+              value={ifsFromDate}
+              onChange={e => setIfsFromDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: 170 }}
+            />
+            <TextField
+              label="To" type="date" size="small"
+              value={ifsToDate}
+              onChange={e => setIfsToDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: 170 }}
+            />
+            <Button variant="outlined" onClick={loadAccrualSummary} disabled={accrualLoading}>
+              Refresh
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<RunIcon />}
+              onClick={handleRunDailyAccrual}
+              disabled={accrualRunning}
+            >
+              {accrualRunning ? <CircularProgress size={16} sx={{ mr: 1 }} /> : null}
+              Run Daily Accrual
+            </Button>
+            <Button
+              variant="contained"
+              color="secondary"
+              startIcon={<PostIcon />}
+              onClick={handleRunMonthlyPosting}
+              disabled={postingRunning}
+            >
+              {postingRunning ? <CircularProgress size={16} sx={{ mr: 1 }} /> : null}
+              Post Monthly Interest
+            </Button>
+          </Stack>
+
+          {accrualMsg && (
+            <Alert
+              severity={accrualMsg.includes('failed') ? 'error' : 'success'}
+              sx={{ mb: 2 }}
+              onClose={() => setAccrualMsg('')}
+            >
+              {accrualMsg}
+            </Alert>
+          )}
+
+          {postingResult && (
+            <Alert severity="info" sx={{ mb: 2 }} onClose={() => setPostingResult(null)}>
+              Monthly posting complete — Period: <strong>{postingResult.period}</strong>,
+              Accounts: <strong>{postingResult.accountsPosted}</strong>,
+              Interest: <strong>{INR(postingResult.totalInterest)}</strong>,
+              TDS: <strong>{INR(postingResult.totalTds)}</strong>
+            </Alert>
+          )}
+
+          {accrualError && <Alert severity="error" sx={{ mb: 2 }}>{accrualError}</Alert>}
+
+          {/* Summary stats */}
+          {!accrualLoading && accrualData.length > 0 && (() => {
+            const totalInt   = accrualData.reduce((s, d) => s + d.totalInterest, 0);
+            const totalAccts = accrualData.reduce((s, d) => s + d.accountCount,  0);
+            return (
+              <Stack direction="row" spacing={3} sx={{ mb: 3, flexWrap: 'wrap' }}>
+                <Paper variant="outlined" sx={{ p: 2, minWidth: 160 }}>
+                  <Typography variant="caption" color="text.secondary">Total Accrued</Typography>
+                  <Typography variant="h6" fontWeight={700} color="primary">{INR(totalInt)}</Typography>
+                </Paper>
+                <Paper variant="outlined" sx={{ p: 2, minWidth: 160 }}>
+                  <Typography variant="caption" color="text.secondary">Accrual Days</Typography>
+                  <Typography variant="h6" fontWeight={700}>{[...new Set(accrualData.map(d => d.date))].length}</Typography>
+                </Paper>
+                <Paper variant="outlined" sx={{ p: 2, minWidth: 160 }}>
+                  <Typography variant="caption" color="text.secondary">Accounts Earning</Typography>
+                  <Typography variant="h6" fontWeight={700}>{totalAccts}</Typography>
+                </Paper>
+              </Stack>
+            );
+          })()}
+
+          {/* Daily accrual bar chart */}
+          {accrualLoading ? (
+            <Stack spacing={1}>{[1,2,3].map(i => <Skeleton key={i} height={40} />)}</Stack>
+          ) : accrualData.length === 0 ? (
+            <Box sx={{ py: 4, textAlign: 'center' }}>
+              <TrendingUpIcon sx={{ fontSize: 40, color: 'text.disabled', mb: 1 }} />
+              <Typography color="text.secondary">
+                No accrual records found for the selected date range.
+              </Typography>
+            </Box>
+          ) : (
+            <Box>
+              <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+                Daily Accrual (INR)
+              </Typography>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={accrualData.map(d => ({
+                  date:     String(d.date).slice(0, 10),
+                  interest: Number(d.totalInterest.toFixed(2)),
+                  accounts: d.accountCount,
+                }))}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} />
+                  <RechartsTooltip formatter={(v: number) => INR(v)} />
+                  <Legend />
+                  <Bar dataKey="interest" fill="#1976d2" name="Interest (INR)" />
+                </BarChart>
+              </ResponsiveContainer>
+            </Box>
           )}
         </TabPanel>
       </Paper>

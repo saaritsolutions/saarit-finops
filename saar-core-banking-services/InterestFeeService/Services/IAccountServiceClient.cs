@@ -10,8 +10,20 @@ namespace InterestFeeService.Services
         public bool IsClosed { get; set; }
     }
 
+    public record InterestEligibleAccount(
+        int AccountId,
+        string? AccountNumber,
+        string? AccountType,
+        decimal Balance,
+        decimal? InterestRate,
+        bool IsTDSExempt,
+        decimal AccruedInterest,
+        decimal AccruedTDS);
+
     public interface IAccountServiceClient
     {
         Task<AccountInfo?> GetAccountAsync(int accountId);
+        Task<List<InterestEligibleAccount>> GetInterestEligibleAsync(string tenantId, CancellationToken ct = default);
+        Task UpdateAccruedInterestAsync(int accountId, string tenantId, decimal delta, CancellationToken ct = default);
     }
 }

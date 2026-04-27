@@ -465,12 +465,35 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - **Bug fix**: `ApprovalLevelSeedService` used `decimal.MaxValue` for `AmountMax` — overflows `numeric(18,2)` → Postgres 22003. Fixed: replaced with `9_999_999_999_999_999m` sentinel (commit ddfb617). All 3 tenants now seed 3 approval levels cleanly.
   - All 11 containers healthy. Key smoke tests: `/api/gold-rate/today` ✅ `/api/gold-loan/applications` ✅ `/api/forms/GOLD_LOAN` ✅ `/api/tenant-config` ✅ Frontend `/` ✅
 
+## Completed (continued)
+- SAAR-IFS-001 — InterestFeeService: Daily Accrual + Monthly Posting (session 48, 2026-04-27):
+  - **`SAAR_IFS_001_REQUIREMENTS.md`**: JIRA-format requirement doc (6 FRs, 3 NFRs, test plan T-1 through T-10).
+  - **`ADR-016-interest-fee-service-design.md`**: Two decisions — (1) keep IFS standalone, (2) single-schema DB with TenantId column (background jobs have no HTTP request context for schema-per-tenant).
+  - **`InterestFee.cs`**: Added `TenantId` (string, default "public") + `AccountNumber` (string?). EF migration `AddTenantIdAndAccountNumber` generated.
+  - **`AccountController.cs`** (AccountService): Two new `[AllowAnonymous]` endpoints — `GET /api/account/interest-eligible` (Active accounts with InterestRate > 0, includes ProductType join) + `PATCH /api/account/{id}/accrued-interest` (delta update).
+  - **`IAccountServiceClient.cs`**: `InterestEligibleAccount` record + 2 new interface methods.
+  - **`AccountServiceClient.cs`** (new): Real HTTP client using `HttpClient` + X-Tenant-ID header per tenant loop. Fail-open on exceptions.
+  - **`ITransactionPostingClient.cs`** + **`TransactionPostingClient.cs`** (new): Monthly interest (DR 5010 / CR 2010) + TDS deduction (DR 2010 / CR 2040) journal posting with idempotency keys.
+  - **`DailyAccrualJob.cs`** (new, `IHostedService`): Loops tenants `["public", "ucb_demo", "nbfc_demo"]`. Idempotent (AnyAsync check for existing record). Daily formula: `Math.Round(balance × rate / 100m / 365m, 4)`. `RunMonthlyPostingAsync`: groups unposted records, posts GL journals, computes TDS (10% if total > ₹5000 and not TDS-exempt), marks as posted.
+  - **`InterestFeesController.cs`**: 3 new endpoints — `POST /run-daily-accrual`, `POST /run-monthly-posting?period=`, `GET /accrual-summary?tenantId=&from=&to=`.
+  - **`Program.cs`**: DailyAccrualJob registered as both Singleton + HostedService; real HTTP clients wired; auto-migrate on startup.
+  - **`Dockerfile`** (new): Standard multi-stage .NET 8 build.
+  - **`docker-compose.yml`**: `interestfeeservice` block added (port 5218, depends on postgres + accountservice + transactionservice).
+  - **`nginx/nginx.conf`**: `/api/interest-fees` → `interestfeeservice:5218` location block added.
+  - **`scripts/start-all.sh`**: InterestFeeService on port 5218 added.
+  - **`interestFeeService.ts`** (new frontend service): `getAccrualSummary`, `runDailyAccrual`, `runMonthlyPosting`, `getAccountInterestTds`.
+  - **`Reports.tsx`**: Tab 3 "Deposit Interest" added — date range pickers, Recharts BarChart of daily accrual, summary stats (Total Accrued / Accrual Days / Accounts Earning), "Run Daily Accrual" + "Post Monthly Interest" action buttons.
+  - **`AccrualTests.cs`** (5 NUnit): Savings accrual calc, FD accrual calc, idempotency, TDS computed, TDS skipped for exempt.
+  - **`InterestFeesControllerTests.cs`** (3 NUnit): GetInterestAndTDS, CreateInterestFee, DeleteInterestFee (updated for new constructor).
+  - **`14-interest-fees.cy.ts`** (5 Cypress): Tab exists, chart renders, Run Daily Accrual button, Post Monthly Interest button, stub data shape.
+  - **Build**: InterestFeeService 0 errors ✅ AccountService 0 errors ✅ InterestFeeService.Tests 0 errors ✅ (CI on Linux for dotnet test — local blocked by Kaspersky same as LoanService.Tests).
+
 ## Pending Next
+- Deploy SAAR-IFS-001 to Hetzner: `docker compose up --build -d interestfeeservice frontend` + create InterestFeeDb manually first: `docker exec <postgres-container> psql -U postgres -c "CREATE DATABASE \"InterestFeeDb\""`.
 - Deploy SAAR-CST-001 + SAAR-KYC-001 to Hetzner: `docker compose up --build -d customerservice frontend` — CustomerService seeder (8 demo customers per tenant) + pagination endpoint + KYC action buttons now live.
 - Deploy SAAR-RPT-001 to Hetzner: `docker compose up --build -d transactionservice frontend` (new daily-summary endpoint + Reports page). Add `nginx.conf` `/api/compliance` block if not yet live.
 - Fix Kaspersky Application Control blocking `dotnet test` locally: Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`. Then re-run `dotnet test` to verify all test suites locally.
-- E2E smoke on demobank: log in → visit `/customers` → verify 8 seeded customers visible + search/filter work.
-- E2E smoke on demobank: log in → visit `/reports` → verify GL balance table + bar chart loads.
+- E2E smoke on demobank: log in → visit `/reports` → click "Deposit Interest" tab → verify chart loads.
 
 ## Notes
 - Eligibility expression ID currently in use: EXPR_1755237353842.

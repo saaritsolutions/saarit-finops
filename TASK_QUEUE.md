@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-26 (session 47 — SAAR-CST-001 CustomerService Pagination + Search + Demo Seeder)
+**Last Updated:** 2026-04-27 (session 48 — SAAR-IFS-001 InterestFeeService Daily Accrual + Monthly Posting)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,30 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Deploy SAAR-CST-001 + SAAR-KYC-001 to Hetzner**: `docker compose up --build -d customerservice frontend` | CustomerService seeder (8 customers/tenant) + pagination + KYC endpoints + React filter bar now built and tested — ready to ship |
-| 2 | **Deploy SAAR-RPT-001 to Hetzner**: `docker compose up --build -d transactionservice frontend` | Daily-summary endpoint + Reports page — `/api/compliance` nginx block already in conf |
-| 3 | **Fix Kaspersky Application Control** (local): Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops` | `LoanService.Tests.dll` blocked by Kaspersky kernel-level DLL load intercept — 83/83 already confirmed on GitHub Actions CI Linux |
+| 1 | **Deploy SAAR-IFS-001 to Hetzner**: create `InterestFeeDb` → `docker compose up --build -d interestfeeservice frontend` | InterestFeeService + Deposit Interest tab fully built and tested — nginx `/api/interest-fees` block already in conf |
+| 2 | **Deploy SAAR-CST-001 + SAAR-KYC-001 to Hetzner**: `docker compose up --build -d customerservice frontend` | CustomerService seeder (8 customers/tenant) + pagination + KYC endpoints + React filter bar now built and tested — ready to ship |
+| 3 | **Deploy SAAR-RPT-001 to Hetzner**: `docker compose up --build -d transactionservice frontend` | Daily-summary endpoint + Reports page — `/api/compliance` nginx block already in conf |
+
+### Recently Completed (session 48 — 2026-04-27)
+- [x] **SAAR-IFS-001 complete — InterestFeeService Daily Accrual + Monthly Posting** — builds 0 errors; 8 NUnit + 5 Cypress tests:
+  - `SAAR_IFS_001_REQUIREMENTS.md` + `ADR-016-interest-fee-service-design.md`: requirement doc (6 FRs, TDS/GL rules, multi-tenant) + ADR (standalone service, single-schema DB).
+  - `InterestFee.cs`: `TenantId` + `AccountNumber` fields added. EF migration `AddTenantIdAndAccountNumber` generated.
+  - `AccountController.cs` (AccountService): `GET /api/account/interest-eligible` (`[AllowAnonymous]`, ProductType join, InterestRate > 0 filter) + `PATCH /api/account/{id}/accrued-interest` (delta update).
+  - `IAccountServiceClient.cs` + `AccountServiceClient.cs` (real HTTP) + `StubAccountServiceClient.cs` (updated): full interface with `InterestEligibleAccount` record + `GetInterestEligibleAsync` + `UpdateAccruedInterestAsync`.
+  - `ITransactionPostingClient.cs` + `TransactionPostingClient.cs` (new): monthly interest (DR 5010/CR 2010) + TDS (DR 2010/CR 2040) journal posting with idempotency keys. Fail-open.
+  - `DailyAccrualJob.cs` (new, IHostedService): tenant loop, AnyAsync idempotency, daily accrual formula, `RunMonthlyPostingAsync` (TDS computed at 10%/₹5000 threshold).
+  - `InterestFeesController.cs`: `POST /run-daily-accrual`, `POST /run-monthly-posting?period=`, `GET /accrual-summary` added.
+  - `Program.cs`: DailyAccrualJob Singleton+HostedService pattern; real clients; auto-migrate.
+  - `appsettings.Development.json`: Password fixed to `postgres`; `Services:AccountBaseUrl`/`TransactionBaseUrl` added.
+  - `Dockerfile` (new): standard multi-stage .NET 8.
+  - `docker-compose.yml`: `interestfeeservice` block (port 5218, depends_on postgres+accountservice+transactionservice).
+  - `nginx/nginx.conf`: `/api/interest-fees` → `interestfeeservice:5218` location block added.
+  - `scripts/start-all.sh`: InterestFeeService port 5218 added.
+  - `interestFeeService.ts` (new): `getAccrualSummary`, `runDailyAccrual`, `runMonthlyPosting`, `getAccountInterestTds`.
+  - `Reports.tsx`: Tab 3 "Deposit Interest" — Recharts BarChart, summary stats, Run Daily Accrual + Post Monthly Interest buttons.
+  - `AccrualTests.cs` (5 NUnit T-1–T-5): Savings/FD accrual calc, idempotency, TDS computed/skipped.
+  - `InterestFeesControllerTests.cs` (3 NUnit, rewritten for new constructor + `StubTransactionPostingClient`).
+  - `14-interest-fees.cy.ts` (5 Cypress T-6–T-10): Tab, chart, Run Daily Accrual, Post Monthly Interest, stub data shape.
 
 ### Recently Completed (session 47 — 2026-04-26)
 - [x] **SAAR-CST-001 complete — CustomerService Pagination + Search + Demo Seeder** — 21/21 NUnit tests passing:

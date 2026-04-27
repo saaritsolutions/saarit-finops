@@ -1,10 +1,13 @@
 using NUnit.Framework;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using InterestFeeService.Controllers;
 using InterestFeeService.Data;
 using InterestFeeService.Models;
 using InterestFeeService.Services;
+using InterestFeeService.Jobs;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -24,87 +27,115 @@ namespace InterestFeeService.Tests
             return new InterestFeeDbContext(options);
         }
 
+        private DailyAccrualJob GetJob(InterestFeeDbContext db)
+        {
+            var services = new ServiceCollection();
+            services.AddSingleton<InterestFeeDbContext>(db);
+            services.AddSingleton<IAccountServiceClient, StubAccountServiceClient>();
+            services.AddSingleton<ITransactionPostingClient>(new StubTransactionPostingClient());
+            var sp = services.BuildServiceProvider();
+            return new DailyAccrualJob(
+                sp.GetRequiredService<IServiceScopeFactory>(),
+                NullLogger<DailyAccrualJob>.Instance);
+        }
+
         private InterestFeesController GetController(InterestFeeDbContext context)
         {
-            return new InterestFeesController(context, new StubAccountServiceClient());
+            return new InterestFeesController(
+                context,
+                new StubAccountServiceClient(),
+                GetJob(context),
+                NullLogger<InterestFeesController>.Instance);
         }
 
         [SetUp]
-        public void SetUp()
-        {
-            StubAccountServiceClient.ClearAccounts();
-        }
-
-        [Test]
-        public async Task AccrueInterest_AddsDailyInterest()
-        {
-            var context = GetDbContext(nameof(AccrueInterest_AddsDailyInterest));
-            StubAccountServiceClient.AddOrUpdateAccount(new AccountInfo {
-                AccountId = 1,
-                Balance = 1000,
-                IsTDSExempt = false,
-                AccruedInterest = 0,
-                AccruedTDS = 0,
-                IsClosed = false
-            });
-            var controller = GetController(context);
-            var result = await controller.AccrueInterest(1, 1); // AccountId=1, 1% p.a.
-            var ok = result as OkObjectResult;
-            Assert.That(ok, Is.Not.Null);
-            Assert.That((decimal)ok.Value, Is.EqualTo(0.0273972602739726m).Within(0.0001m));
-            Assert.That(context.InterestFees.Any(f => f.AccountId == 1 && f.CalculationType == "Interest"));
-        }
-
-        [Test]
-        public async Task ApplyInterest_AppliesInterestAndDeductsTDS()
-        {
-            var context = GetDbContext(nameof(ApplyInterest_AppliesInterestAndDeductsTDS));
-            context.InterestFees.Add(new InterestFee { AccountId = 1, InterestAmount = 100, CalculationType = "Interest", CalculationDate = DateTime.UtcNow });
-            context.SaveChanges();
-            StubAccountServiceClient.AddOrUpdateAccount(new AccountInfo {
-                AccountId = 1,
-                Balance = 1000,
-                IsTDSExempt = false,
-                AccruedInterest = 100,
-                AccruedTDS = 0,
-                IsClosed = false
-            });
-            var controller = GetController(context);
-            var result = await controller.ApplyInterest(1, 10); // 10% TDS
-            var ok = result as OkObjectResult;
-            Assert.That(ok, Is.Not.Null);
-            Console.WriteLine($"ApplyInterest result: {System.Text.Json.JsonSerializer.Serialize(ok.Value)}");
-            var data = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, System.Text.Json.JsonElement>>(System.Text.Json.JsonSerializer.Serialize(ok.Value));
-            Assert.That(data, Is.Not.Null);
-            Assert.That(data["AppliedInterest"].GetDecimal(), Is.EqualTo(100));
-            Assert.That(data["TDS"].GetDecimal(), Is.EqualTo(10));
-            Assert.That(context.InterestFees.Any(f => f.AccountId == 1 && f.CalculationType == "TDS" && f.TdsAmount == 10));
-        }
+        public void SetUp() => StubAccountServiceClient.ClearAccounts();
 
         [Test]
         public async Task GetInterestAndTDS_ReturnsCorrectValues()
         {
             var context = GetDbContext(nameof(GetInterestAndTDS_ReturnsCorrectValues));
-            context.InterestFees.Add(new InterestFee { AccountId = 1, InterestAmount = 5, CalculationType = "Interest", CalculationDate = DateTime.UtcNow });
-            context.InterestFees.Add(new InterestFee { AccountId = 1, TdsAmount = 2, CalculationType = "TDS", CalculationDate = DateTime.UtcNow });
-            context.SaveChanges();
-            StubAccountServiceClient.AddOrUpdateAccount(new AccountInfo {
-                AccountId = 1,
-                Balance = 1000,
-                IsTDSExempt = false,
-                AccruedInterest = 5,
-                AccruedTDS = 2,
-                IsClosed = false
+            context.InterestFees.Add(new InterestFee
+            {
+                AccountId = 1, InterestAmount = 5,
+                CalculationType = "DailyAccrual", CalculationDate = DateTime.UtcNow
             });
+            context.InterestFees.Add(new InterestFee
+            {
+                AccountId = 1, TdsAmount = 2,
+                CalculationType = "MonthlyPosted", CalculationDate = DateTime.UtcNow
+            });
+            context.SaveChanges();
+
+            StubAccountServiceClient.AddOrUpdateAccount(new AccountInfo
+            {
+                AccountId = 1, Balance = 1000, IsTDSExempt = false,
+                AccruedInterest = 5, AccruedTDS = 2, IsClosed = false
+            });
+
             var controller = GetController(context);
-            var result = await controller.GetInterestAndTDS(1);
-            var ok = result as OkObjectResult;
+            var result     = await controller.GetInterestAndTDS(1);
+            var ok         = result as OkObjectResult;
             Assert.That(ok, Is.Not.Null);
-            Console.WriteLine($"GetInterestAndTDS result: {System.Text.Json.JsonSerializer.Serialize(ok.Value)}");
-            var data = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, System.Text.Json.JsonElement>>(System.Text.Json.JsonSerializer.Serialize(ok.Value));
-            Assert.That(data, Is.Not.Null);
-            Assert.That(data["AccruedInterest"].GetDecimal(), Is.EqualTo(5));
-            Assert.That(data["AccruedTDS"].GetDecimal(), Is.EqualTo(2));
+
+            var data = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
+                JsonSerializer.Serialize(ok!.Value));
+            Assert.That(data!["AccruedInterest"].GetDecimal(), Is.EqualTo(5m));
+            Assert.That(data!["AccruedTDS"].GetDecimal(),      Is.EqualTo(2m));
         }
+
+        [Test]
+        public async Task CreateInterestFee_StoresFeeInDb()
+        {
+            var context    = GetDbContext(nameof(CreateInterestFee_StoresFeeInDb));
+            var controller = GetController(context);
+
+            var fee = new InterestFee
+            {
+                AccountId       = 10,
+                InterestAmount  = 25.50m,
+                CalculationType = "DailyAccrual"
+            };
+
+            var result  = await controller.CreateInterestFee(fee);
+            var created = result.Result as CreatedAtActionResult;
+            Assert.That(created, Is.Not.Null);
+            Assert.That(context.InterestFees.Count(), Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task DeleteInterestFee_RemovesRecord()
+        {
+            var context = GetDbContext(nameof(DeleteInterestFee_RemovesRecord));
+            context.InterestFees.Add(new InterestFee
+            {
+                InterestFeeId   = 99,
+                AccountId       = 7,
+                InterestAmount  = 10m,
+                CalculationType = "DailyAccrual",
+                CalculationDate = DateTime.UtcNow
+            });
+            context.SaveChanges();
+
+            var controller = GetController(context);
+            var result     = await controller.DeleteInterestFee(99);
+            Assert.That(result, Is.InstanceOf<NoContentResult>());
+            Assert.That(context.InterestFees.Count(), Is.EqualTo(0));
+        }
+    }
+
+    // ── Stub for ITransactionPostingClient ────────────────────────────────────
+
+    internal class StubTransactionPostingClient : ITransactionPostingClient
+    {
+        public Task<string?> PostMonthlyInterestAsync(
+            int accountId, string accountNumber, string tenantId,
+            decimal interestAmount, string period, CancellationToken ct = default)
+            => Task.FromResult<string?>("JNL-STUB-001");
+
+        public Task<string?> PostTdsDeductionAsync(
+            int accountId, string accountNumber, string tenantId,
+            decimal tdsAmount, string period, CancellationToken ct = default)
+            => Task.FromResult<string?>("JNL-STUB-002");
     }
 }
