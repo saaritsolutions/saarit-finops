@@ -11,11 +11,12 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Deploy SAAR-LRP-001 to Hetzner**: `docker compose up --build -d loanservice frontend` | EMI collection + SMA status fully built — `/api/loans` already proxied; sub-paths work without nginx change |
-| 2 | **Deploy SAAR-IFS-001 to Hetzner**: create `InterestFeeDb` → `docker compose up --build -d interestfeeservice frontend` | InterestFeeService + Deposit Interest tab fully built and tested |
-| 3 | **Deploy SAAR-CST-001 + SAAR-KYC-001 + SAAR-RPT-001 to Hetzner**: `docker compose up --build -d customerservice transactionservice frontend` | All built and tested — ready to ship together |
+| 1 | **Deploy SAAR-IFS-001 to Hetzner**: create `InterestFeeDb` first → `docker compose up --build -d interestfeeservice frontend` | InterestFeeService + Deposit Interest tab fully built and tested |
+| 2 | **Deploy SAAR-CST-001 + SAAR-KYC-001 + SAAR-RPT-001 to Hetzner**: `docker compose up --build -d customerservice transactionservice frontend` | All built and tested — ready to ship together |
+| 3 | **Next feature**: SAAR-LRP-002 (Overdue Loans Report) or SAAR-NPA-001 (NPA classification board) | Post-LRP-001 logical continuation |
 
 ### Recently Completed (session 49 — 2026-04-27)
+- [x] **SAAR-LRP-001 DEPLOYED to Hetzner** (commit 5276e19): `docker compose up --build -d loanservice frontend`. Smoke: `GET /repayment-history` ✅ `POST /collect-emi` ✅ (UCB-GL-2026-004: 200000→196416.67 outstanding, ₹1416.67 interest). GL fail-open working correctly.
 - [x] **SAAR-LRP-001 complete — Loan Repayment: EMI Collection + SMA Status** — builds 0 errors; 4 NUnit + 5 Cypress tests:
   - `SAAR_LRP_001_REQUIREMENTS.md`: requirement doc (6 FRs, 4 NFRs, SMA classification table, GL journal spec, test plan).
   - `LoanRepayment.cs` (new): entity with unique index `(LoanApplicationId, InstallmentNumber)`. InstallmentNumber, PrincipalComponent, InterestComponent, TotalAmount, DueDate, PaidAt, PaymentMode, JournalNumber.

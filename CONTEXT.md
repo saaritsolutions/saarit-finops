@@ -503,14 +503,13 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - **`LoanDetail.tsx`**: "EMI Collection" card (DISBURSED only) — outstanding chip, next-due chip, SMA chip (STANDARD=success/SMA-0,1=warning/SMA-2,NPA=error), "Collect EMI" button → dialog (amount/mode/reference), payment history table. `handleCollectEmi` + `repaymentHistory` state; `useEffect` auto-loads history on DISBURSED status.
   - **`04-loans.cy.ts`**: 5 new Cypress tests in `[REGRESSION] Loan Repayment (SAAR-LRP-001)` — T-11 card visible/DISBURSED, T-12 card absent/SUBMITTED, T-13 collect EMI dialog + API, T-14 SMA chip STANDARD, T-15 payment history table.
   - **Build**: LoanService 0 errors ✅ LoanService.Tests 0 errors ✅ TypeScript 0 new errors ✅
+  - **Deployed to Hetzner** (session 49, commit 5276e19): `docker compose up --build -d loanservice frontend`. Smoke tested: `GET /repayment-history` → STANDARD/0 days; `POST /collect-emi` ₹5000 on UCB-GL-2026-004 → outstanding 200000→196416.67, interest ₹1416.67, principal ₹3583.33. Fail-open on GL (TransactionService accounts not seeded for ucb_demo — EMI record saved regardless). ✅ LIVE
 
 ## Pending Next
-- Deploy SAAR-LRP-001 to Hetzner: `docker compose up --build -d loanservice frontend` (no new nginx routes needed — `/api/loans` already proxied; new routes are sub-paths of existing `/api/loans/applications/{id}`).
-- Deploy SAAR-IFS-001 to Hetzner: `docker compose up --build -d interestfeeservice frontend` + create InterestFeeDb first: `docker exec <postgres-container> psql -U postgres -c "CREATE DATABASE \"InterestFeeDb\""`.
-- Deploy SAAR-CST-001 + SAAR-KYC-001 to Hetzner: `docker compose up --build -d customerservice frontend`.
-- Deploy SAAR-RPT-001 to Hetzner: `docker compose up --build -d transactionservice frontend`.
-- E2E smoke on demobank: DISBURSE a loan → verify EMI Collection card appears → collect one EMI → verify outstanding decrements.
+- Deploy SAAR-IFS-001 to Hetzner: create `InterestFeeDb` first → `docker compose up --build -d interestfeeservice frontend`.
+- Deploy SAAR-CST-001 + SAAR-KYC-001 + SAAR-RPT-001 to Hetzner: `docker compose up --build -d customerservice transactionservice frontend`.
 - Fix Kaspersky Application Control blocking `dotnet test` locally: Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`.
+- Frontend: verify EMI Collection card on demobank for DISBURSED loan (UCB-GL-2026-004 already has 1 EMI collected).
 
 ## Notes
 - Eligibility expression ID currently in use: EXPR_1755237353842.
