@@ -160,6 +160,66 @@ namespace LoanService.Controllers
             });
         }
 
+        // ── GET /api/loans/applications/overdue ──────────────────────────────────
+        /// <summary>
+        /// All DISBURSED loans where NextDueDate is in the past, with SMA classification.
+        /// </summary>
+        [HttpGet("overdue")]
+        public async Task<IActionResult> GetOverdueLoans(
+            [FromQuery] string? smaStatus = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 50,
+            CancellationToken ct = default)
+        {
+            var today = DateTime.UtcNow.Date;
+
+            var query = _db.LoanApplications
+                .Where(a => a.Status == "DISBURSED" && a.NextDueDate.HasValue && a.NextDueDate.Value.Date < today)
+                .OrderBy(a => a.NextDueDate);
+
+            var total = await query.CountAsync(ct);
+
+            var rows = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(a => new OverdueLoanDto
+                {
+                    Id                   = a.Id,
+                    ApplicationNumber    = a.ApplicationNumber,
+                    ApplicantName        = a.ApplicantName,
+                    MobileNumber         = a.MobileNumber,
+                    ProductType          = a.ProductType,
+                    OutstandingPrincipal = a.OutstandingPrincipal,
+                    NextDueDate          = a.NextDueDate,
+                    InterestRate         = a.InterestRate,
+                    TenureMonths         = a.TenureMonths,
+                    DisbursedAt          = a.DisbursedAt,
+                })
+                .ToListAsync(ct);
+
+            // OverdueDays and SmaStatus are [NotMapped] — compute in-memory after fetch
+            foreach (var r in rows)
+            {
+                r.OverdueDays = r.NextDueDate.HasValue
+                    ? (int)(today - r.NextDueDate.Value.Date).TotalDays
+                    : 0;
+                r.SmaStatus = r.OverdueDays switch
+                {
+                    0     => "STANDARD",
+                    <= 30 => "SMA-0",
+                    <= 60 => "SMA-1",
+                    <= 90 => "SMA-2",
+                    _     => "NPA"
+                };
+            }
+
+            // Optional in-memory smaStatus filter (applied after SMA computation)
+            if (!string.IsNullOrEmpty(smaStatus) && smaStatus != "ALL")
+                rows = rows.Where(r => r.SmaStatus == smaStatus).ToList();
+
+            return Ok(new { total, page, pageSize, items = rows });
+        }
+
         // ── POST /api/loans/applications/{id}/action ─────────────────────────────
         /// <summary>
         /// Take an approval action: CREDIT_APPROVE | SANCTION | REJECT | REQUEST_INFO | DISBURSE | SEND_TO_REVIEW
@@ -540,5 +600,21 @@ namespace LoanService.Controllers
         public string   PaymentMode      { get; set; } = "CASH";
         public string?  PaymentReference { get; set; }
         public DateTime? PaymentDate     { get; set; }
+    }
+
+    public class OverdueLoanDto
+    {
+        public Guid      Id                   { get; set; }
+        public string    ApplicationNumber    { get; set; } = "";
+        public string    ApplicantName        { get; set; } = "";
+        public string?   MobileNumber         { get; set; }
+        public string    ProductType          { get; set; } = "";
+        public decimal?  OutstandingPrincipal { get; set; }
+        public DateTime? NextDueDate          { get; set; }
+        public int       OverdueDays          { get; set; }
+        public string    SmaStatus            { get; set; } = "";
+        public decimal?  InterestRate         { get; set; }
+        public int       TenureMonths         { get; set; }
+        public DateTime? DisbursedAt          { get; set; }
     }
 }

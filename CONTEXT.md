@@ -290,7 +290,7 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - **Final result: 86/86 tests green, 0 failing, 1 min 39 sec** across 8 spec files.
 
 ## In Progress
-- (none)
+- SAAR-LRP-002 — Overdue Loans Report: implementation complete, deploying to Hetzner (session 52, 2026-04-27)
 
 ## Completed (continued)
 - SAAR-CST-001 — CustomerService Pagination, Search & Demo Seeder (session 47, 2026-04-26):
@@ -513,6 +513,16 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - Both SAAR-CST-001 (pagination + seeder) and SAAR-KYC-001 (KYC workflow endpoints + buttons) live in the same customerservice container
 
 ## Completed (continued)
+- SAAR-LRP-002 — Overdue Loans Report (session 52, 2026-04-27):
+  - **`SAAR_LRP_002_REQUIREMENTS.md`**: JIRA-format requirement doc (8 FRs, 3 NFRs, test plan T-1 through T-19).
+  - **`LoanApplicationsController.cs`**: `GET /api/loans/applications/overdue` — EF WHERE `Status=DISBURSED AND NextDueDate < today`, in-memory OverdueDays/SmaStatus computation, optional smaStatus filter. `OverdueLoanDto` DTO added.
+  - **`loanOriginationService.ts`**: `OverdueLoanItem`, `OverdueLoansResult` interfaces + `getOverdueLoans()` function.
+  - **`Reports.tsx`**: Tab 4 "Overdue Loans" — SMA band filter chips, summary stats, overdue loans table, CSV export, fail-open empty state. `WarningAmberIcon` added.
+  - **`OverdueLoansTests.cs`** (3 NUnit): T-1 empty DB, T-2 15-day SMA-0 loan, T-3 smaStatus filter.
+  - **`13-reports.cy.ts`**: 4 Cypress tests (T-16 tab visible, T-17 table rows, T-18 chip reload, T-19 CSV button).
+  - No new EF migration needed — uses existing `NextDueDate`/`OutstandingPrincipal` columns from SAAR-LRP-001.
+
+## Completed (continued)
 - SAAR-IFS-001 deployed to Hetzner (session 51, 2026-04-27):
   - Created `InterestFeeDb` on Hetzner postgres: `docker exec ... psql -U postgres -c "CREATE DATABASE \"InterestFeeDb\""`
   - `docker compose up --build -d interestfeeservice` — container started, auto-migrated, DailyAccrualJob started
@@ -521,8 +531,8 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
 
 ## Pending Next
 - Fix Kaspersky Application Control blocking `dotnet test` locally: Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`.
-- E2E smoke on demobank: `/customers` (8 customers + search/filter), `/reports` (all 4 tabs including Deposit Interest), EMI Collection card on DISBURSED loan.
-- Next feature: SAAR-LRP-002 (Overdue Loans Report) or SAAR-NPA-001 (NPA classification board).
+- E2E smoke on demobank: `/customers`, `/reports` (all 5 tabs including Overdue Loans), EMI Collection card on DISBURSED loan.
+- Next feature: SAAR-NPA-001 (NPA classification board) or SAAR-STMT-001 (Account Statement).
 
 ## Notes
 - Eligibility expression ID currently in use: EXPR_1755237353842.

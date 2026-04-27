@@ -33,6 +33,7 @@ import {
   TrendingUp as TrendingUpIcon,
   PlayArrow as RunIcon,
   AccountBalanceWallet as PostIcon,
+  WarningAmber as WarningAmberIcon,
 } from '@mui/icons-material';
 import {
   BarChart,
@@ -63,6 +64,10 @@ import {
   type AccrualSummaryDay,
   type MonthlyPostingResult,
 } from '../../services/interestFeeService';
+import {
+  getOverdueLoans,
+  type OverdueLoanItem,
+} from '../../services/loanOriginationService';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -141,6 +146,7 @@ const Reports: React.FC = () => {
 
   // ── Tab 3 — Deposit Interest (SAAR-IFS-001) ───────────────────────────────
   const [accrualData, setAccrualData]             = useState<AccrualSummaryDay[]>([]);
+
   const [accrualLoading, setAccrualLoading]       = useState(false);
   const [accrualError, setAccrualError]           = useState('');
   const [ifsFromDate, setIfsFromDate]             = useState(formatDateInput(subDays(29)));
@@ -149,6 +155,12 @@ const Reports: React.FC = () => {
   const [accrualMsg, setAccrualMsg]               = useState('');
   const [postingRunning, setPostingRunning]       = useState(false);
   const [postingResult, setPostingResult]         = useState<MonthlyPostingResult | null>(null);
+
+  // ── Tab 4 — Overdue Loans (SAAR-LRP-002) ─────────────────────────────────
+  const [overdueLoans, setOverdueLoans]           = useState<OverdueLoanItem[]>([]);
+  const [overdueTotal, setOverdueTotal]           = useState(0);
+  const [overdueLoading, setOverdueLoading]       = useState(false);
+  const [smaFilter, setSmaFilter]                 = useState('ALL');
 
   // ── Data loaders ──────────────────────────────────────────────────────────
 
@@ -192,6 +204,14 @@ const Reports: React.FC = () => {
       .catch(() => { setAccrualError('Unable to load accrual data.'); setAccrualData([]); })
       .finally(() => setAccrualLoading(false));
   }, [ifsFromDate, ifsToDate]);
+
+  const loadOverdue = useCallback(() => {
+    setOverdueLoading(true);
+    getOverdueLoans({ smaStatus: smaFilter === 'ALL' ? undefined : smaFilter })
+      .then(r => { setOverdueLoans(r.items); setOverdueTotal(r.total); })
+      .catch(() => { setOverdueLoans([]); setOverdueTotal(0); })
+      .finally(() => setOverdueLoading(false));
+  }, [smaFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleRunDailyAccrual() {
     setAccrualRunning(true);
@@ -240,6 +260,10 @@ const Reports: React.FC = () => {
     if (tab === 3) loadAccrualSummary();
   }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (tab === 4) loadOverdue();
+  }, [tab, smaFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── CSV export ────────────────────────────────────────────────────────────
 
   function exportCsv() {
@@ -255,6 +279,27 @@ const Reports: React.FC = () => {
     a.download = `journal-summary-${fromDate}-to-${toDate}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  function exportOverdueCsv() {
+    const header = 'Application No,Applicant,Product,Outstanding,Overdue Days,SMA Status,Next Due Date\n';
+    const rows   = overdueLoans.map(l =>
+      `${l.applicationNumber},${l.applicantName},${l.productType},${l.outstandingPrincipal ?? ''},${l.overdueDays},${l.smaStatus},${l.nextDueDate ? String(l.nextDueDate).slice(0, 10) : ''}`
+    ).join('\n');
+    const blob = new Blob([header + rows], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'overdue-loans.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function smaColor(s: string): 'success' | 'warning' | 'error' | 'default' {
+    if (s === 'STANDARD') return 'success';
+    if (s === 'SMA-0' || s === 'SMA-1') return 'warning';
+    if (s === 'SMA-2' || s === 'NPA')   return 'error';
+    return 'default';
   }
 
   // ── Review alert ──────────────────────────────────────────────────────────
@@ -303,6 +348,7 @@ const Reports: React.FC = () => {
           <Tab icon={<AlertIcon        fontSize="small" />} iconPosition="start" label="Compliance Alerts" id="rpt-tab-1" />
           <Tab icon={<SavingsIcon      fontSize="small" />} iconPosition="start" label="Deposit Maturity"  id="rpt-tab-2" />
           <Tab icon={<TrendingUpIcon   fontSize="small" />} iconPosition="start" label="Deposit Interest"  id="rpt-tab-3" />
+          <Tab icon={<WarningAmberIcon fontSize="small" />} iconPosition="start" label="Overdue Loans"    id="rpt-tab-4" />
         </Tabs>
 
         {/* ── Tab 0: Financial Reports ─────────────────────────────────────── */}
@@ -716,6 +762,86 @@ const Reports: React.FC = () => {
                 </BarChart>
               </ResponsiveContainer>
             </Box>
+          )}
+        </TabPanel>
+
+        {/* ── Tab 4: Overdue Loans (SAAR-LRP-002) ─────────────────────────────── */}
+        <TabPanel value={tab} index={4}>
+          {/* Header row */}
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+            <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <WarningAmberIcon color="warning" /> Overdue Loans ({overdueTotal})
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              {(['ALL', 'SMA-0', 'SMA-1', 'SMA-2', 'NPA'] as const).map(s => (
+                <Chip
+                  key={s}
+                  label={s}
+                  size="small"
+                  variant={smaFilter === s ? 'filled' : 'outlined'}
+                  color={s === 'ALL' ? 'default' : smaColor(s)}
+                  onClick={() => setSmaFilter(s)}
+                  aria-label={`filter ${s}`}
+                />
+              ))}
+              <Button
+                variant="outlined" size="small" startIcon={<DownloadIcon />}
+                onClick={exportOverdueCsv} disabled={overdueLoans.length === 0}
+                aria-label="Export Overdue CSV"
+              >Export CSV</Button>
+            </Box>
+          </Box>
+
+          {/* Summary stats chips */}
+          {overdueLoans.length > 0 && (
+            <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+              {(['SMA-0', 'SMA-1', 'SMA-2', 'NPA'] as const).map(band => {
+                const count = overdueLoans.filter(l => l.smaStatus === band).length;
+                return count > 0 ? (
+                  <Chip key={band} label={`${band}: ${count}`} color={smaColor(band)} size="small" />
+                ) : null;
+              })}
+            </Box>
+          )}
+
+          {/* Table */}
+          {overdueLoading ? (
+            <Stack spacing={1}>{[1, 2, 3, 4].map(i => <Skeleton key={i} height={40} />)}</Stack>
+          ) : overdueLoans.length === 0 ? (
+            <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
+              No overdue loans — all accounts are current.
+            </Typography>
+          ) : (
+            <TableContainer component={Paper} variant="outlined">
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ '& th': { fontWeight: 600, bgcolor: 'action.hover' } }}>
+                    <TableCell>Application No</TableCell>
+                    <TableCell>Applicant</TableCell>
+                    <TableCell>Product</TableCell>
+                    <TableCell align="right">Outstanding (₹)</TableCell>
+                    <TableCell align="right">Overdue Days</TableCell>
+                    <TableCell>SMA Status</TableCell>
+                    <TableCell>Next Due</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {overdueLoans.map(l => (
+                    <TableRow key={l.id} hover>
+                      <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{l.applicationNumber}</TableCell>
+                      <TableCell>{l.applicantName}</TableCell>
+                      <TableCell>{l.productType.replace(/_/g, ' ')}</TableCell>
+                      <TableCell align="right">{l.outstandingPrincipal != null ? INR(l.outstandingPrincipal) : '—'}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold', color: l.overdueDays > 60 ? 'error.main' : 'warning.main' }}>
+                        {l.overdueDays}
+                      </TableCell>
+                      <TableCell><Chip label={l.smaStatus} color={smaColor(l.smaStatus)} size="small" /></TableCell>
+                      <TableCell>{l.nextDueDate ? String(l.nextDueDate).slice(0, 10) : '—'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
           )}
         </TabPanel>
       </Paper>

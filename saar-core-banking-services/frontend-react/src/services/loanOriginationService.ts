@@ -421,6 +421,57 @@ export async function collectEmi(id: string, req: CollectEmiRequest): Promise<Co
   return res.data as CollectEmiResponse;
 }
 
+// ── Overdue Loans (SAAR-LRP-002) ─────────────────────────────────────────────
+export interface OverdueLoanItem {
+  id: string;
+  applicationNumber: string;
+  applicantName: string;
+  mobileNumber?: string;
+  productType: string;
+  outstandingPrincipal?: number;
+  nextDueDate?: string;
+  overdueDays: number;
+  smaStatus: string;
+  interestRate?: number;
+  tenureMonths: number;
+  disbursedAt?: string;
+}
+
+export interface OverdueLoansResult {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: OverdueLoanItem[];
+}
+
+export async function getOverdueLoans(params?: {
+  smaStatus?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<OverdueLoansResult> {
+  const res = await axios.get(`${APPS_ROOT}/overdue`, { params });
+  const d = res.data;
+  return {
+    total:    d.total    ?? d.Total    ?? 0,
+    page:     d.page     ?? d.Page     ?? 1,
+    pageSize: d.pageSize ?? d.PageSize ?? 50,
+    items: (d.items ?? d.Items ?? []).map((a: any) => ({
+      id:                   a.id                   ?? a.Id,
+      applicationNumber:    a.applicationNumber    ?? a.ApplicationNumber ?? '',
+      applicantName:        a.applicantName         ?? a.ApplicantName     ?? '',
+      mobileNumber:         a.mobileNumber          ?? a.MobileNumber,
+      productType:          a.productType           ?? a.ProductType       ?? '',
+      outstandingPrincipal: a.outstandingPrincipal  ?? a.OutstandingPrincipal,
+      nextDueDate:          a.nextDueDate            ?? a.NextDueDate,
+      overdueDays:          a.overdueDays            ?? a.OverdueDays       ?? 0,
+      smaStatus:            a.smaStatus              ?? a.SmaStatus         ?? 'STANDARD',
+      interestRate:         a.interestRate           ?? a.InterestRate,
+      tenureMonths:         a.tenureMonths           ?? a.TenureMonths      ?? 0,
+      disbursedAt:          a.disbursedAt            ?? a.DisbursedAt,
+    })),
+  };
+}
+
 // ── Legacy exports (backward compat with old LoanOrigination.tsx) ──────────
 export type { PreValidateRequest } from './loanOriginationServiceLegacy';
 export type { ServerField }        from './loanOriginationServiceLegacy';

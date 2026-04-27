@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-27 (session 51 — SAAR-IFS-001 deployed to Hetzner)
+**Last Updated:** 2026-04-27 (session 52 — SAAR-LRP-002 Overdue Loans Report implemented)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,12 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **E2E smoke on demobank**: `/customers` (filter + KYC), `/reports` (all 4 tabs), EMI card on UCB-GL-2026-004 | All features now live — verify end-to-end before next feature |
-| 2 | **Next feature**: SAAR-LRP-002 (Overdue Loans Report) or SAAR-NPA-001 (NPA board) or SAAR-STMT-001 (Account Statement) | Logical post-IFS-001 continuation |
-| 3 | **Fix Kaspersky** locally: add exclusion `C:\Users\LENOVO YOGA\SAARIT\saarit-finops` in Kaspersky Application Control | Only remaining local dotnet test blocker |
+| 1 | **Deploy SAAR-LRP-002 to Hetzner**: `docker compose up --build -d loanservice frontend` | Implementation complete — needs to go live |
+| 2 | **E2E smoke on demobank**: `/reports` Tab 4 Overdue Loans, EMI card on UCB-GL-2026-004 | Verify after deploy |
+| 3 | **Next feature**: SAAR-NPA-001 (NPA classification board) or SAAR-STMT-001 (Account Statement) | Logical post-LRP-002 continuation |
+
+### Recently Completed (session 52 — 2026-04-27)
+- [x] **SAAR-LRP-002 — Overdue Loans Report** (session 52): `GET /api/loans/applications/overdue` endpoint with SMA filter + pagination. Tab 4 "Overdue Loans" in Reports.tsx with SMA chips, CSV export, fail-open empty state. 3 NUnit tests + 4 Cypress tests. No new migration needed. Builds: 0 errors.
 
 ### Recently Completed (session 51 — 2026-04-27)
 - [x] **SAAR-IFS-001 deployed to Hetzner**: Created `InterestFeeDb`, `docker compose up --build -d interestfeeservice`, force-recreated nginx. Smoke: `GET /accrual-summary` → `[]` ✅; `POST /run-daily-accrual` → `{"message":"Daily accrual completed","date":"2026-04-27"}` ✅ LIVE.
