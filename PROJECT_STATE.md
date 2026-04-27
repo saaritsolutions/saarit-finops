@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-26 (session 47 — SAAR-CST-001 CustomerService Pagination + Search + Demo Seeder)
+**Last Updated:** 2026-04-27 (session 48 — SAAR-IFS-001 InterestFeeService Daily Accrual + Monthly Posting)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -56,8 +56,7 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 - **WorkflowOrchestrationService** (~45%) — EF9 persistence, multi-tenancy, real Load/Save, expression routing
 
 ### Not Started (Confirmed Empty / Stub)
-- EOD/BOD batch processing, InterestFeeService, ReportingMIS, full GL Chart of Accounts management
-- InterestFeeService (accrual logic)
+- EOD/BOD batch processing, ReportingMIS, full GL Chart of Accounts management
 - Payment rails (IMPS, NEFT, RTGS, UPI)
 - Full KYC/eKYC workflow
 - RBI regulatory reporting
@@ -147,6 +146,32 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 48 — 2026-04-27 (SAAR-IFS-001 — InterestFeeService Daily Accrual + Monthly Posting)
+- **`SAAR_IFS_001_REQUIREMENTS.md`**: JIRA-format requirement doc — 6 FRs (daily accrual idempotent formula job, monthly GL posting, TDS 10%/₹5000 threshold, AccountService integration 2 endpoints, accrual summary query, multi-tenant fail-open loop), 3 NFRs, acceptance criteria, test plan T-1 through T-10.
+- **`ADR-016-interest-fee-service-design.md`**: Two architectural decisions — (1) IFS remains standalone (batch concern != request-scoped concern), (2) single-schema DB with TenantId column (IHostedService has no HTTP request context for TenantResolutionMiddleware).
+- **`InterestFee.cs`**: Added `TenantId` (string, default "public") + `AccountNumber` (string?). EF migration `AddTenantIdAndAccountNumber` generated successfully.
+- **`AccountController.cs`** (AccountService): Two new `[AllowAnonymous]` endpoints (class-level `[Authorize]` overridden at action level):
+  - `GET /api/account/interest-eligible`: Active accounts with InterestRate > 0, `.Include(a => a.ProductType)`, returns anonymous projection.
+  - `PATCH /api/account/{id}/accrued-interest`: delta update — `account.AccruedInterest += delta`.
+- **`IAccountServiceClient.cs`**: Added `InterestEligibleAccount` record (AccountId, AccountNumber, AccountType, Balance, InterestRate, IsTDSExempt, AccruedInterest, AccruedTDS) + 2 new interface methods.
+- **`AccountServiceClient.cs`** (new): Real HTTP client — uses `SetTenantHeader(tenantId)` before each call. Returns empty list on exception (fail-open).
+- **`StubAccountServiceClient.cs`**: Added 2 new method implementations (builds stub list from `_accounts` dictionary).
+- **`ITransactionPostingClient.cs`** (new) + **`TransactionPostingClient.cs`** (new): Monthly interest: IdempotencyKey `"MONTHLY-INTEREST-{accountNumber}-{period}"`, DR 5010 / CR 2010. TDS: IdempotencyKey `"TDS-{accountNumber}-{period}"`, DR 2010 / CR 2040. Fail-open: returns null JournalNumber on exception.
+- **`DailyAccrualJob.cs`** (new, `IHostedService + IDisposable`): Timer-based (run once on startup + every 24h). `RunAccrualAsync(ct)` — tenant loop, AnyAsync idempotency check, daily interest formula, `InterestFee` record insert + `UpdateAccruedInterestAsync` call. `RunMonthlyPostingAsync(period, ct)` — groups unposted DailyAccrual records by account, posts monthly interest journal, computes TDS (10% if > ₹5000 and !IsTDSExempt), inserts MonthlyPosted record.
+- **`InterestFeesController.cs`** (rewritten): Kept CRUD + `GET /{id}/interest-tds`. New: `POST /run-daily-accrual`, `POST /run-monthly-posting?period=`, `GET /accrual-summary`. Constructor now takes `DailyAccrualJob` as 3rd arg.
+- **`Program.cs`** (InterestFeeService): `AddSingleton<DailyAccrualJob>()` + `AddHostedService(sp => sp.GetRequiredService<DailyAccrualJob>())` pattern; real HTTP clients registered; auto-migrate on startup.
+- **`appsettings.Development.json`**: Fixed `Password=yourpassword` → `Password=postgres`; added `Services:AccountBaseUrl` + `Services:TransactionBaseUrl`.
+- **`Dockerfile`** (new): Standard multi-stage .NET 8 build (matches other services).
+- **`docker-compose.yml`**: `interestfeeservice` block added — port 5218, env vars, `depends_on` postgres + accountservice + transactionservice.
+- **`nginx/nginx.conf`**: `/api/interest-fees` → `interestfeeservice:5218` location block added before React catch-all.
+- **`scripts/start-all.sh`**: `InterestFeeService` on port 5218 added (`IFS_PID`); trap + echo updated.
+- **`interestFeeService.ts`** (new): `getAccrualSummary(tenantId?, from?, to?)`, `runDailyAccrual()`, `runMonthlyPosting(period)`, `getAccountInterestTds(accountId)`. Types: `AccrualSummaryDay`, `MonthlyPostingResult`, `AccountInterestTds`.
+- **`Reports.tsx`**: Tab 3 "Deposit Interest" — `useEffect` loads accrual summary on tab=3 switch; Recharts `BarChart` of daily totalInterest; summary stats (Total Accrued INR, Accrual Days, Accounts Earning); "Run Daily Accrual" + "Post Monthly Interest" action buttons with success alerts.
+- **`AccrualTests.cs`** (5 NUnit tests): T-1 Savings accrual calc (₹1L @ 3.5% = ₹9.5890/day), T-2 FD accrual calc (₹5L @ 8% = ₹109.5890/day), T-3 idempotency (second run skips existing date), T-4 TDS computed (₹6000 total, not exempt → TDS = ₹600), T-5 TDS skipped for exempt account.
+- **`InterestFeesControllerTests.cs`** (rewritten, 3 NUnit): `GetInterestAndTDS_ReturnsCorrectValues`, `CreateInterestFee_StoresFeeInDb`, `DeleteInterestFee_RemovesRecord` — updated for new 4-arg constructor + `StubTransactionPostingClient` inner class.
+- **`14-interest-fees.cy.ts`** (5 Cypress tests T-6 to T-10): Tab exists, chart renders, Run Daily Accrual API call, Post Monthly Interest API call + alert, stub data shape validation.
+- **Build**: InterestFeeService 0 errors ✅ AccountService 0 errors ✅ InterestFeeService.Tests 0 errors ✅ (MSB3277 non-blocking warning only). `dotnet test` locally blocked by Kaspersky same pattern as LoanService.Tests — CI on GitHub Actions (Linux) unaffected.
 
 ### Session 47 — 2026-04-26 (SAAR-CST-001 — CustomerService Pagination + Search + Demo Seeder)
 - **`SAAR_CST_001_REQUIREMENTS.md`**: JIRA-format requirement doc — 7 FRs (pagination, search, KYC filter, type filter, seeder, filter bar UI, pagination UI), 3 NFRs (no migration, idempotent, 21+ tests), acceptance criteria table, test plan.
@@ -508,11 +533,12 @@ Per `EXECUTION_ROADMAP.md`:
 
 ## 7. Next Recommended Steps (Ordered by Impact)
 
-1. **Deploy SAAR-CST-001 + SAAR-KYC-001 to Hetzner**: `docker compose up --build -d customerservice frontend` — CustomerService seeder + pagination + KYC endpoints + React filter bar, KYC buttons now live.
-2. **Deploy SAAR-RPT-001 to Hetzner**: `docker compose up --build -d transactionservice frontend` (daily-summary endpoint + Reports page). `/api/compliance` nginx block already in conf.
-3. **Fix Kaspersky Application Control** (local only): Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`. Then re-run `dotnet test LoanService.Tests` locally (83/83 already confirmed on GitHub Actions CI Linux).
-4. **Fix Kaspersky Application Control** (local only): Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`. Then re-run `dotnet test LoanService.Tests` locally (83/83 already confirmed on GitHub Actions CI Linux).
-5. **APIGateway: JWT auth + routing** — required for any real service-to-service flow.
+1. **Deploy SAAR-IFS-001 to Hetzner**: (a) `docker exec <postgres> psql -U postgres -c "CREATE DATABASE \"InterestFeeDb\""` — then (b) `docker compose up --build -d interestfeeservice frontend`. InterestFeeService port 5218, auto-migrates on startup, nginx `/api/interest-fees` block already in conf.
+2. **Deploy SAAR-CST-001 + SAAR-KYC-001 to Hetzner**: `docker compose up --build -d customerservice frontend` — CustomerService seeder + pagination + KYC endpoints + React filter bar, KYC buttons now live.
+3. **Deploy SAAR-RPT-001 to Hetzner**: `docker compose up --build -d transactionservice frontend` (daily-summary endpoint + Reports page). `/api/compliance` nginx block already in conf.
+4. **Fix Kaspersky Application Control** (local only): Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`. Then re-run `dotnet test` locally (all suites — Kaspersky is the only blocker).
+5. **E2E smoke on demobank**: `/reports` → "Deposit Interest" tab → verify chart loads; `/customers` → verify 8 seeded customers + search/filter work.
+6. **APIGateway: JWT auth + routing** — required for any real service-to-service flow.
 
 ---
 

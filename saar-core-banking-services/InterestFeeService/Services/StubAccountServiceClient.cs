@@ -22,5 +22,24 @@ namespace InterestFeeService.Services
             _accounts.TryGetValue(accountId, out var account);
             return Task.FromResult<AccountInfo?>(account);
         }
+
+        public Task<List<InterestEligibleAccount>> GetInterestEligibleAsync(
+            string tenantId, CancellationToken ct = default)
+        {
+            // Return stub accounts as InterestEligibleAccount records for testing
+            var result = _accounts.Values.Select(a => new InterestEligibleAccount(
+                a.AccountId, $"ACC{a.AccountId:D5}", "Savings",
+                a.Balance, 3.5m, a.IsTDSExempt, a.AccruedInterest, a.AccruedTDS
+            )).ToList();
+            return Task.FromResult(result);
+        }
+
+        public Task UpdateAccruedInterestAsync(
+            int accountId, string tenantId, decimal delta, CancellationToken ct = default)
+        {
+            if (_accounts.TryGetValue(accountId, out var account))
+                account.AccruedInterest += delta;
+            return Task.CompletedTask;
+        }
     }
 }

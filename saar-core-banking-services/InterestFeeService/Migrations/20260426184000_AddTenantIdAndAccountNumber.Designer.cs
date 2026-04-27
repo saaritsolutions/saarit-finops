@@ -3,6 +3,7 @@ using System;
 using InterestFeeService.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace InterestFeeService.Migrations
 {
     [DbContext(typeof(InterestFeeDbContext))]
-    partial class InterestFeeDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260426184000_AddTenantIdAndAccountNumber")]
+    partial class AddTenantIdAndAccountNumber
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

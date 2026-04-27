@@ -1,56 +1,58 @@
 using InterestFeeService.Data;
+using InterestFeeService.Jobs;
 using InterestFeeService.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+// ── Database ─────────────────────────────────────────────────────────────────
+builder.Services.AddDbContext<InterestFeeDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// ── HTTP clients for downstream services ─────────────────────────────────────
+var accBase = builder.Configuration["Services:AccountBaseUrl"]     ?? "http://localhost:5217";
+var txnBase = builder.Configuration["Services:TransactionBaseUrl"] ?? "http://localhost:5005";
+
+builder.Services.AddHttpClient<IAccountServiceClient, AccountServiceClient>(c =>
+    c.BaseAddress = new Uri(accBase));
+builder.Services.AddHttpClient<ITransactionPostingClient, TransactionPostingClient>(c =>
+    c.BaseAddress = new Uri(txnBase));
+
+// ── Background job: register as both singleton (for DI into controller)
+//    and as a hosted service ──────────────────────────────────────────────────
+builder.Services.AddSingleton<DailyAccrualJob>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<DailyAccrualJob>());
+
+// ── Controllers + Swagger ─────────────────────────────────────────────────────
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Add DbContext
-builder.Services.AddDbContext<InterestFeeDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-// Register StubAccountServiceClient as IAccountServiceClient in DI container
-builder.Services.AddScoped<IAccountServiceClient, StubAccountServiceClient>();
+// ── CORS ──────────────────────────────────────────────────────────────────────
+var allowedOrigins = builder.Configuration["CORS:AllowedOrigins"]?.Split(',') ??
+                     new[] { "http://localhost:3002" };
+builder.Services.AddCors(options =>
+    options.AddDefaultPolicy(policy =>
+        policy.WithOrigins(allowedOrigins)
+              .AllowAnyHeader()
+              .AllowAnyMethod()));
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// ── Auto-migrate DB on startup (single schema — no TenantSchemaProvisioner) ──
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<InterestFeeDbContext>();
+    db.Database.Migrate();
+}
+
+// ── Middleware ────────────────────────────────────────────────────────────────
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
-
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast")
-.WithOpenApi();
-
+app.UseCors();
+app.MapControllers();
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

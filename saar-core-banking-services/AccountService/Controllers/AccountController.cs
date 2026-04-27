@@ -781,6 +781,57 @@ namespace AccountService.Controllers
                 fee, id, account.AccountNumber, result.JournalNumber);
             return Ok(new { accountId = id, fee, applied = true, journalNumber = result.JournalNumber });
         }
+
+        // ── SAAR-IFS-001: Internal endpoints for InterestFeeService ──────────────────
+        // AllowAnonymous at the action level overrides the class-level [Authorize].
+        // InterestFeeService sends X-Tenant-ID header; TenantResolutionMiddleware
+        // resolves tenant from that header when no JWT is present.
+
+        /// <summary>
+        /// Returns all Active SB/FD/RD/Current accounts that have InterestRate > 0.
+        /// Called by InterestFeeService DailyAccrualJob with X-Tenant-ID header.
+        /// </summary>
+        [HttpGet("interest-eligible")]
+        [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+        public async Task<IActionResult> GetInterestEligible()
+        {
+            var accounts = await _context.Accounts
+                .Include(a => a.ProductType)
+                .Where(a => a.Status == "Active" &&
+                            a.DateClosed == null &&
+                            a.ProductType != null &&
+                            (a.ProductType.Name == "Savings" || a.ProductType.Name == "FD" ||
+                             a.ProductType.Name == "RD"      || a.ProductType.Name == "Current") &&
+                            a.InterestRate.HasValue && a.InterestRate > 0)
+                .Select(a => new
+                {
+                    a.AccountId,
+                    a.AccountNumber,
+                    AccountType = a.ProductType!.Name,
+                    a.Balance,
+                    a.InterestRate,
+                    a.IsTDSExempt,
+                    a.AccruedInterest,
+                    a.AccruedTDS
+                })
+                .ToListAsync();
+            return Ok(accounts);
+        }
+
+        /// <summary>
+        /// Increments AccruedInterest on an account by the supplied delta.
+        /// Called by InterestFeeService after each daily accrual cycle.
+        /// </summary>
+        [HttpPatch("{id}/accrued-interest")]
+        [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+        public async Task<IActionResult> UpdateAccruedInterest(int id, [FromBody] decimal delta)
+        {
+            var account = await _context.Accounts.FindAsync(id);
+            if (account == null) return NotFound();
+            account.AccruedInterest += delta;
+            await _context.SaveChangesAsync();
+            return Ok(new { account.AccountId, account.AccruedInterest });
+        }
     }
 
     /// <summary>Request body for POST /api/account/{id}/calculate-fee.</summary>

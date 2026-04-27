@@ -184,6 +184,29 @@ services:
     networks:
       - saar-net
 
+  # ── InterestFeeService (port 5218) ───────────────────────────────────────────
+  interestfeeservice:
+    build:
+      context: .
+      dockerfile: InterestFeeService/Dockerfile
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:5218
+      ConnectionStrings__DefaultConnection: "Host=postgres;Database=InterestFeeDb;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-saar_demo_2026};Port=5432"
+      Services__AccountBaseUrl: http://accountservice:5210
+      Services__TransactionBaseUrl: http://transactionservice:5290
+      CORS__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-https://demobank.saaritsolutions.com}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      accountservice:
+        condition: service_started
+      transactionservice:
+        condition: service_started
+    networks:
+      - saar-net
+
   # ── React Frontend ────────────────────────────────────────────────────────────
   frontend:
     build:
@@ -221,6 +244,7 @@ services:
       - transactionservice
       - useraccessmanagement
       - accountservice
+      - interestfeeservice
     networks:
       - saar-net
       - ai-consultant_default  # needed to proxy aiconsultant_frontend:80
