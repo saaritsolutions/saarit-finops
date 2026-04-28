@@ -13,6 +13,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import BlockIcon from '@mui/icons-material/Block';
+import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
 import {
   customerService,
   CustomerRecord,
@@ -214,13 +215,15 @@ const CustomerManagement: React.FC = () => {
 
   // ── KYC actions ───────────────────────────────────────────────────────────
 
-  async function handleKycSimple(id: number, action: 'initiate' | 'submit-documents') {
+  async function handleKycSimple(id: number, action: 'initiate' | 'submit-documents' | 'expire') {
     setSuccessMsg(null);
     setError(null);
     try {
       const result = action === 'initiate'
         ? await customerService.initiateKyc(id)
-        : await customerService.submitKycDocuments(id);
+        : action === 'submit-documents'
+          ? await customerService.submitKycDocuments(id)
+          : await customerService.expireKyc(id);
       setSuccessMsg(result.message);
       await load();
     } catch (e: any) {
@@ -406,6 +409,14 @@ const CustomerManagement: React.FC = () => {
                         </IconButton>
                       </Tooltip>
                     </>
+                  )}
+                  {c.kycStatus === 3 && (
+                    <Tooltip title="Expire KYC">
+                      <IconButton size="small" color="warning" aria-label="Expire KYC"
+                        onClick={() => handleKycSimple(c.customerId, 'expire')}>
+                        <HourglassEmptyIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                   )}
                   {/* Standard CRUD buttons */}
                   <Tooltip title="Edit">

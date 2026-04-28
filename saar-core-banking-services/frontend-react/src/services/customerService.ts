@@ -113,4 +113,7 @@ export const customerService = {
 
   rejectKyc: (id: number, rejectionReason: string) =>
     apiService.post<KycActionResult>(`${BASE}/${id}/kyc/reject`, { rejectionReason }),
+
+  expireKyc: (id: number) =>
+    apiService.post<KycActionResult>(`${BASE}/${id}/kyc/expire`, {}),
 };
