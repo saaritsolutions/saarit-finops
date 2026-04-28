@@ -143,3 +143,6 @@ catch (Exception ex)
 }
 
 app.Run();
+
+// Required by WebApplicationFactory<Program> in integration test projects
+public partial class Program { }
