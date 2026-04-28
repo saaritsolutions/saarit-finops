@@ -10,7 +10,7 @@ namespace AccountService.Models
         public string? Name { get; set; }
         public string? Address { get; set; }
         public string? Relationship { get; set; }
-        public DateTime? DateOfBirth { get; set; }
+        public DateOnly? DateOfBirth { get; set; }
         public string? AuthorizedReceiver { get; set; } // For minor nominee
         public string? Signature { get; set; }
         public decimal? PercentageShare { get; set; } // Added for nominee share
