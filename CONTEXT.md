@@ -293,6 +293,18 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
 - (none)
 
 ## Completed (continued)
+- SAAR-NPA-001 — NPA Classification Board (session 55, 2026-04-28, commit 09745b8):
+  - **`SAAR_NPA_001_REQUIREMENTS.md`**: JIRA-format requirement doc (FR-1 NPA sub-classification, FR-2 provisioning calc, FR-3 npa-board endpoint, FR-4 frontend page, FR-5 sidebar+router, FR-6 nginx). RBI IRAC bands table, provisioning table, test plan T-01 through T-06.
+  - **`LoanApplication.cs`**: 3 new `[NotMapped]` computed properties — `NpaSubClassification` (SUB_STANDARD/DOUBTFUL_1/2/3 based on OverdueDays), `RequiredProvisioningPct` (15/25/40/100% RBI IRAC secured), `RequiredProvisioning` = `OutstandingPrincipal × pct / 100`.
+  - **`LoanApplicationsController.cs`**: `GET /api/loans/npa-board` (`[AllowAnonymous]`, absolute route). Returns `NpaBoardResult` with portfolio stats + `npaLoans[]` + `smaWatchList[]`. New DTOs: `NpaBoardResult`, `NpaLoanDto`, `SmaWatchDto`.
+  - **`NpaBoard.tsx`**: `/npa-board` page — KPI cards (NPA Ratio red >5%, Outstanding, Provisioning, SMA count); NPA Accounts table with sub-class chips; SMA Watch List table; empty state; skeleton; refresh.
+  - **`npaBoardService.ts`**: `getNpaBoard()` + typed interfaces.
+  - **Router + Sidebar**: lazy `/npa-board` route; WarningAmberIcon "NPA Board" under Loans section.
+  - **3 NUnit tests** (`NpaBoardTests.cs`): empty DB → zeroes, 95 DPD → SUB_STANDARD 15%, 370 DPD → DOUBTFUL_1 25%.
+  - **3 Cypress tests** (`15-npa-board.cy.ts`): page load + KPI, NPA table + Sub-Standard chip, SMA watch list.
+  - **Deployed to Hetzner**: loanservice + frontend rebuilt. Smoke: `GET /api/loans/npa-board` → `{"totalLoanBook":0,"npaLoans":[],"smaWatchList":[]}` ✅ LIVE.
+
+## Completed (continued)
 - SAAR-STMT-001 — Account Statement (session 54, 2026-04-28, commits dc9a9be + 71f26e7 + 2f658e7):
   - **`SAAR_STMT_001_REQUIREMENTS.md`**: JIRA-format requirement doc (FR-1 auto-generate AccountNumber, FR-2 TransactionService by-reference endpoint, FR-3 AccountService statement endpoint, FR-4 StatementEntry shape, FR-5 Statement UI, FR-6 CSV export). NFRs, out-of-scope, test plan T-01 through T-08.
   - **TransactionService**: `GetByReferenceAsync` added to `IPostingEngine` + implementation; `JournalPagedResult` DTO; `GET /api/journal/by-reference/{referenceId}?from=&to=&page=&pageSize=` controller endpoint (defaults: last 90 days, max 200 per page).
@@ -555,8 +567,8 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
 
 ## Pending Next
 - Fix Kaspersky Application Control blocking `dotnet test` locally: Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`.
-- E2E smoke on demobank: `/accounts` (Statement dialog → Load → see entries), `/reports` (all 5 tabs), EMI Collection card on DISBURSED loan.
-- Next feature: SAAR-NPA-001 (NPA classification board) or SAAR-ACC-002 (Account Statement pagination + search).
+- E2E smoke on demobank: `/npa-board` (verify page renders, KPI cards), `/accounts` (Statement dialog), EMI Collection card on DISBURSED loan.
+- Next feature: SAAR-NPA-002 (NPA upgrade/write-off actions) or SAAR-LRP-003 (restructured loan tracking).
 
 ## Notes
 - Eligibility expression ID currently in use: EXPR_1755237353842.

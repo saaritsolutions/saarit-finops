@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-28 (session 54 — SAAR-STMT-001 Account Statement + Cypress T-13 fix)
+**Last Updated:** 2026-04-28 (session 55 — SAAR-NPA-001 NPA Classification Board)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,17 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **E2E smoke on demobank**: Account Statement dialog on `/accounts` — click View Statement, Load, verify entries | Verify SAAR-STMT-001 e2e |
-| 2 | **Next feature**: SAAR-NPA-001 (NPA classification board) | Logical continuation from repayment + SMA |
+| 1 | **E2E smoke on demobank**: `/npa-board` (verify KPI cards + empty state renders) | Verify SAAR-NPA-001 live |
+| 2 | **Next feature**: SAAR-LRP-003 (restructured loan tracking) or SAAR-NPA-002 (NPA write-off) | Risk management continuation |
 | 3 | **Fix Kaspersky Application Control** (local only): Add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops` | Enables local `dotnet test` |
+
+### Recently Completed (session 55 — 2026-04-28)
+- [x] **SAAR-NPA-001 — NPA Classification Board DEPLOYED** (commit 09745b8):
+  - `LoanApplication.cs`: `NpaSubClassification` (SUB_STANDARD/DOUBTFUL_1/2/3), `RequiredProvisioningPct`, `RequiredProvisioning` — all `[NotMapped]` computed.
+  - `LoanApplicationsController.cs`: `GET /api/loans/npa-board` (AllowAnonymous, absolute route) + `NpaBoardResult`/`NpaLoanDto`/`SmaWatchDto` DTOs.
+  - `NpaBoard.tsx` + `npaBoardService.ts` + sidebar entry (WarningAmberIcon) + router route.
+  - 3 NUnit tests (NpaBoardTests.cs) + 3 Cypress tests (15-npa-board.cy.ts).
+  - Smoke: `GET /api/loans/npa-board` → `{"totalLoanBook":0,"npaLoans":[],"smaWatchList":[]}` ✅ LIVE.
 
 ### Recently Completed (session 54 — 2026-04-28)
 - [x] **SAAR-STMT-001 — Account Statement DEPLOYED** (commits dc9a9be, 71f26e7):
