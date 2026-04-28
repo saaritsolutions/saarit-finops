@@ -864,7 +864,9 @@ namespace AccountService.Controllers
             var fromDate = (from ?? toDate.AddDays(-29)).Date;   // default: last 30 days
             pageSize = Math.Clamp(pageSize, 1, 200);
 
-            var referenceId = account.AccountNumber ?? account.AccountId.ToString();
+            var referenceId = !string.IsNullOrWhiteSpace(account.AccountNumber)
+                ? account.AccountNumber
+                : account.AccountId.ToString();
             var statement   = await _transactions.GetStatementAsync(referenceId, fromDate, toDate, page, pageSize, ct);
 
             return Ok(new
