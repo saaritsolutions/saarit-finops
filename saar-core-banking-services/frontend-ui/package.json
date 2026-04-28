@@ -6,7 +6,8 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "lint": "echo 'Linting not configured for unmaintained Angular frontend — skipping'"
   },
   "private": true,
   "dependencies": {
