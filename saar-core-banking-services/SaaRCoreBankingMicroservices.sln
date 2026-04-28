@@ -89,6 +89,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DynamicFieldsSchemaService.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkflowOrchestrationService.Tests", "WorkflowOrchestrationService.Tests\WorkflowOrchestrationService.Tests.csproj", "{F1371D23-D3B3-4AAE-A135-C6A6C7CE0A23}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransactionService.IntegrationTests", "TransactionService.IntegrationTests\TransactionService.IntegrationTests.csproj", "{D59AD5D8-01C5-4E29-99F7-0AA304484322}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -615,6 +617,18 @@ Global
 		{F1371D23-D3B3-4AAE-A135-C6A6C7CE0A23}.Release|x64.Build.0 = Release|Any CPU
 		{F1371D23-D3B3-4AAE-A135-C6A6C7CE0A23}.Release|x86.ActiveCfg = Release|Any CPU
 		{F1371D23-D3B3-4AAE-A135-C6A6C7CE0A23}.Release|x86.Build.0 = Release|Any CPU
+		{D59AD5D8-01C5-4E29-99F7-0AA304484322}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D59AD5D8-01C5-4E29-99F7-0AA304484322}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D59AD5D8-01C5-4E29-99F7-0AA304484322}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D59AD5D8-01C5-4E29-99F7-0AA304484322}.Debug|x64.Build.0 = Debug|Any CPU
+		{D59AD5D8-01C5-4E29-99F7-0AA304484322}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D59AD5D8-01C5-4E29-99F7-0AA304484322}.Debug|x86.Build.0 = Debug|Any CPU
+		{D59AD5D8-01C5-4E29-99F7-0AA304484322}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D59AD5D8-01C5-4E29-99F7-0AA304484322}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D59AD5D8-01C5-4E29-99F7-0AA304484322}.Release|x64.ActiveCfg = Release|Any CPU
+		{D59AD5D8-01C5-4E29-99F7-0AA304484322}.Release|x64.Build.0 = Release|Any CPU
+		{D59AD5D8-01C5-4E29-99F7-0AA304484322}.Release|x86.ActiveCfg = Release|Any CPU
+		{D59AD5D8-01C5-4E29-99F7-0AA304484322}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
