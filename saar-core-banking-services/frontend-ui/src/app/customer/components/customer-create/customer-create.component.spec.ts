@@ -54,8 +54,8 @@ describe('CustomerCreateComponent - API Connectivity Test', () => {
     httpClient = TestBed.inject(HttpClient);
   });
 
-  // Direct API test
-  it('should verify API connectivity', (done) => {
+  // Direct API test — requires live backend; skip in CI unit-test jobs (xit = permanently pending)
+  xit('should verify API connectivity', (done) => {
     const timestamp = Date.now();
     const testEmail = `test${timestamp}@example.com`;
     
