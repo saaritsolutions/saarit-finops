@@ -20,6 +20,7 @@ This file maps the major functional requirements from `CBS_Requirements_for_UCBs
 | Framework: Low-Code Admin UI — SAAR-ADMIN-001                | React frontend (extend SimpleExpressionBuilder.tsx, WorkflowDesigner, BankConfig UI), all framework services |
 | KYC Workflow — SAAR-KYC-001                                  | CustomerService (5 KYC action endpoints: initiate/submit-docs/verify/reject/expire), React frontend (CustomerManagement.tsx KYC action buttons + verify/reject dialog) |
 | Account Statement — SAAR-STMT-001                            | AccountService (GET /api/account/{id}/statement, auto-generate AccountNumber), TransactionService (GET /api/journal/by-reference/{referenceId}), React frontend (AccountManagement.tsx Statement dialog) |
+| NPA Classification Board — SAAR-NPA-001                      | LoanService (GET /api/loans/npa-board, NpaSubClassification + provisioning [NotMapped] on LoanApplication), React frontend (NpaBoard.tsx — KPI cards + NPA table + SMA watch list) |
 | 8. Bills                                                      | Transaction Service, GL & Accounting       |
 | 9. Remittances                                                | Remittance & Payment Service, Card & ATM Service |
 | 10. Interest and Fee Calculation                              | Interest & Fee Service, Deposit Service, GL & Accounting, Compliance Service |

@@ -1,6 +1,7 @@
 using LoanService.Data;
 using LoanService.Models;
 using LoanService.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -218,6 +219,66 @@ namespace LoanService.Controllers
                 rows = rows.Where(r => r.SmaStatus == smaStatus).ToList();
 
             return Ok(new { total, page, pageSize, items = rows });
+        }
+
+        // ── GET /api/loans/npa-board ─────────────────────────────────────────────
+        /// <summary>
+        /// Portfolio NPA summary with sub-classification and provisioning per RBI IRAC norms.
+        /// Absolute route overrides the controller [Route("api/loans/applications")] prefix.
+        /// </summary>
+        [HttpGet("/api/loans/npa-board")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetNpaBoard(CancellationToken ct = default)
+        {
+            var loans = await _db.LoanApplications
+                .Where(a => a.Status == "DISBURSED" && a.OutstandingPrincipal.HasValue)
+                .ToListAsync(ct);
+
+            var totalLoanBook         = loans.Sum(a => a.OutstandingPrincipal ?? 0m);
+            var npaLoans              = loans.Where(a => a.SmaStatus == "NPA").ToList();
+            var smaWatch              = loans.Where(a => a.SmaStatus is "SMA-0" or "SMA-1" or "SMA-2").ToList();
+            var totalNpa              = npaLoans.Sum(a => a.OutstandingPrincipal ?? 0m);
+            var totalProvisioning     = npaLoans.Sum(a => a.RequiredProvisioning);
+            var npaRatio              = totalLoanBook > 0 ? Math.Round(totalNpa / totalLoanBook, 6) : 0m;
+
+            return Ok(new NpaBoardResult
+            {
+                AsOfDate                  = DateTime.UtcNow.Date,
+                TotalLoanBook             = totalLoanBook,
+                TotalNpaOutstanding       = totalNpa,
+                NpaRatio                  = npaRatio,
+                TotalRequiredProvisioning = totalProvisioning,
+                SmaWatchCount             = smaWatch.Count,
+                SmaWatchOutstanding       = smaWatch.Sum(a => a.OutstandingPrincipal ?? 0m),
+                NpaLoans = npaLoans
+                    .Select(a => new NpaLoanDto
+                    {
+                        Id                   = a.Id,
+                        ApplicationNumber    = a.ApplicationNumber,
+                        ApplicantName        = a.ApplicantName,
+                        ProductType          = a.ProductType,
+                        OutstandingPrincipal = a.OutstandingPrincipal ?? 0m,
+                        OverdueDays          = a.OverdueDays,
+                        SmaStatus            = a.SmaStatus,
+                        NpaSubClassification = a.NpaSubClassification,
+                        RequiredProvisioning = a.RequiredProvisioning,
+                    })
+                    .OrderByDescending(a => a.OverdueDays)
+                    .ToList(),
+                SmaWatchList = smaWatch
+                    .Select(a => new SmaWatchDto
+                    {
+                        Id                   = a.Id,
+                        ApplicationNumber    = a.ApplicationNumber,
+                        ApplicantName        = a.ApplicantName,
+                        ProductType          = a.ProductType,
+                        OutstandingPrincipal = a.OutstandingPrincipal ?? 0m,
+                        OverdueDays          = a.OverdueDays,
+                        SmaStatus            = a.SmaStatus,
+                    })
+                    .OrderByDescending(a => a.OverdueDays)
+                    .ToList(),
+            });
         }
 
         // ── POST /api/loans/applications/{id}/action ─────────────────────────────
@@ -616,5 +677,44 @@ namespace LoanService.Controllers
         public decimal?  InterestRate         { get; set; }
         public int       TenureMonths         { get; set; }
         public DateTime? DisbursedAt          { get; set; }
+    }
+
+    // ── SAAR-NPA-001 DTOs ────────────────────────────────────────────────────
+
+    public class NpaBoardResult
+    {
+        public DateTime AsOfDate                  { get; set; }
+        public decimal  TotalLoanBook             { get; set; }
+        public decimal  TotalNpaOutstanding       { get; set; }
+        public decimal  NpaRatio                  { get; set; }
+        public decimal  TotalRequiredProvisioning { get; set; }
+        public int      SmaWatchCount             { get; set; }
+        public decimal  SmaWatchOutstanding       { get; set; }
+        public List<NpaLoanDto>  NpaLoans         { get; set; } = new();
+        public List<SmaWatchDto> SmaWatchList     { get; set; } = new();
+    }
+
+    public class NpaLoanDto
+    {
+        public Guid    Id                   { get; set; }
+        public string  ApplicationNumber    { get; set; } = "";
+        public string  ApplicantName        { get; set; } = "";
+        public string  ProductType          { get; set; } = "";
+        public decimal OutstandingPrincipal { get; set; }
+        public int     OverdueDays          { get; set; }
+        public string  SmaStatus            { get; set; } = "";
+        public string? NpaSubClassification { get; set; }
+        public decimal RequiredProvisioning { get; set; }
+    }
+
+    public class SmaWatchDto
+    {
+        public Guid    Id                   { get; set; }
+        public string  ApplicationNumber    { get; set; } = "";
+        public string  ApplicantName        { get; set; } = "";
+        public string  ProductType          { get; set; } = "";
+        public decimal OutstandingPrincipal { get; set; }
+        public int     OverdueDays          { get; set; }
+        public string  SmaStatus            { get; set; } = "";
     }
 }
