@@ -107,7 +107,7 @@ public class LedgerControllerTests
 
         var result = await ctrl.GetBalance("XXXX", CancellationToken.None);
 
-        Assert.That(result, Is.InstanceOf<NotFoundResult>(), "Unknown account code should return 404");
+        Assert.That(result, Is.InstanceOf<NotFoundObjectResult>(), "Unknown account code should return 404");
     }
 
     // Bonus: Credit-normal account (Liability) should compute balance as CreditTotal - DebitTotal
