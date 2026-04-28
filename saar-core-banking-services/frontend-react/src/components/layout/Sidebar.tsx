@@ -41,6 +41,7 @@ import {
   Diamond as DiamondIcon,
   MonetizationOn as GoldRateIcon,
   Tune as BankConfigIcon,
+  WarningAmber as NpaBoardIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
@@ -126,8 +127,9 @@ const menuSections: MenuSection[] = [
         title: 'Loans',
         icon:  <LoansIcon fontSize="small" />,
         children: [
-          { id: 'loan-list',   title: 'Applications', icon: <LoansIcon fontSize="small" />, path: '/loans',        permission: 'loans.view'   },
-          { id: 'loan-create', title: 'New Loan',     icon: <LoansIcon fontSize="small" />, path: '/loans/create', permission: 'loans.create' },
+          { id: 'loan-list',   title: 'Applications', icon: <LoansIcon fontSize="small" />,  path: '/loans',        permission: 'loans.view'   },
+          { id: 'loan-create', title: 'New Loan',     icon: <LoansIcon fontSize="small" />,  path: '/loans/create', permission: 'loans.create' },
+          { id: 'npa-board',   title: 'NPA Board',    icon: <NpaBoardIcon fontSize="small" />, path: '/npa-board',  permission: BANKING_PERMISSIONS.LOAN_VIEW },
         ],
       },
       {

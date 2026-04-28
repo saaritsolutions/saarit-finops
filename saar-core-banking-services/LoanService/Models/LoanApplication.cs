@@ -242,6 +242,32 @@ namespace LoanService.Models
             _     => "NPA"
         };
 
+        /// <summary>RBI IRAC NPA sub-classification (only when SmaStatus == "NPA").</summary>
+        [NotMapped]
+        public string? NpaSubClassification => SmaStatus == "NPA" ? OverdueDays switch
+        {
+            <= 365  => "SUB_STANDARD",
+            <= 730  => "DOUBTFUL_1",
+            <= 1095 => "DOUBTFUL_2",
+            _       => "DOUBTFUL_3",
+        } : null;
+
+        /// <summary>Required provisioning percentage per RBI IRAC (secured basis).</summary>
+        [NotMapped]
+        public decimal RequiredProvisioningPct => NpaSubClassification switch
+        {
+            "SUB_STANDARD" => 15m,
+            "DOUBTFUL_1"   => 25m,
+            "DOUBTFUL_2"   => 40m,
+            "DOUBTFUL_3"   => 100m,
+            _              => 0m,
+        };
+
+        /// <summary>Provisioning amount = OutstandingPrincipal × RequiredProvisioningPct / 100.</summary>
+        [NotMapped]
+        public decimal RequiredProvisioning =>
+            Math.Round((OutstandingPrincipal ?? 0m) * RequiredProvisioningPct / 100m, 2);
+
         // ── Navigation ──────────────────────────────────────────────────────────
         public List<LoanDocument> Documents { get; set; } = new();
         public List<LoanApprovalAction> ApprovalActions { get; set; } = new();
