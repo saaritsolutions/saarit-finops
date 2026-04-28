@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-27 (session 52 — SAAR-LRP-002 Overdue Loans Report implemented)
+**Last Updated:** 2026-04-28 (session 53 — Production-grade testing overhaul + DOB bug fix)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -146,6 +146,17 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 53 — 2026-04-28 (SAAR-TESTING-001 — Production-grade testing overhaul + DOB fix)
+- **DOB bug fix**: `Customer.DateOfBirth` DateTime→DateOnly + `.HasColumnType("date")` + EF migration `FixDateOfBirthToDate`. `Nominee.DateOfBirth` DateTime?→DateOnly? + `.HasColumnType("date")` + EF migration `FixNomineeDateOfBirthToDate`. Deployed to Hetzner, smoke tested (DOB returns "1987-08-14" pure date).
+- **TransactionService.Tests**: Created `JournalControllerTests.cs` (4 tests — GetByNumber found/404, DailySummary 366-day + from>to) + `LedgerControllerTests.cs` (4 tests — GetAllBalances, debit-normal balance, 404 unknown, credit-normal balance). 22→30 tests.
+- **AccountService.Tests**: Created `MaturityTests.cs` (5 tests — mature FD, already-closed 400, savings 400, premature close, auto-renewal). 24→29 tests.
+- **CustomerService.Tests**: Created `CustomerValidationTests.cs` (5 tests — duplicate PAN/UID, DateOnly round-trip, KycInitiate valid/invalid). 21→26 tests.
+- **TransactionService.IntegrationTests**: New project — `WebApplicationFactory<Program>` with TXN_USE_INMEMORY_DB=true. 5 IT tests (idempotency, ledger balance, tenant header, fail-open, daily summary). `public partial class Program {}` added to TransactionService/Program.cs.
+- **ReferenceHandler.IgnoreCycles**: Added to TransactionService/Program.cs (was missing vs other services — fixed Journal→JournalEntry circular JSON crash in IT tests).
+- **Angular spec fix**: `customer-create.component.spec.ts` + `customer-create.integration.spec.ts` changed `dateOfBirth: '1990-01-01T00:00:00Z'` → `'1990-01-01'` to align with DateOnly API.
+- **Commits**: `ddbbf75` (DOB fix + deploy), `2ebfc1b` (test projects), `a594cac` (CI fixes), pending (Angular spec fix).
+- **CI**: 3/4 workflows green; Full Stack CI/CD green after Angular spec push.
 
 ### Session 52 — 2026-04-27 (SAAR-LRP-002 — Overdue Loans Report)
 - **`SAAR_LRP_002_REQUIREMENTS.md`**: JIRA-format requirement doc (8 FRs, 3 NFRs, test plan T-1 through T-19).
