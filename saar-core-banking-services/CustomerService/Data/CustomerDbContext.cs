@@ -29,6 +29,10 @@ namespace CustomerService.Data
         {
             base.OnModelCreating(modelBuilder);
             modelBuilder.HasDefaultSchema(TenantSchema);
+
+            modelBuilder.Entity<Customer>()
+                .Property(c => c.DateOfBirth)
+                .HasColumnType("date");
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

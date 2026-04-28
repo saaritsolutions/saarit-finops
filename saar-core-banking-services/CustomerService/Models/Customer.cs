@@ -15,7 +15,7 @@ namespace CustomerService.Models
         public string? Telephone { get; set; }
         public string? Mobile { get; set; }
         public string? Email { get; set; }
-        public DateTime DateOfBirth { get; set; }
+        public DateOnly DateOfBirth { get; set; }
         public string? Gender { get; set; }
         public string? PAN { get; set; }
         public string? Passport { get; set; }

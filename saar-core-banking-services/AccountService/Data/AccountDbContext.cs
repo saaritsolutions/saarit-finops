@@ -33,6 +33,10 @@ namespace AccountService.Data
         {
             base.OnModelCreating(modelBuilder);
             modelBuilder.HasDefaultSchema(TenantSchema);
+
+            modelBuilder.Entity<Models.Nominee>()
+                .Property(n => n.DateOfBirth)
+                .HasColumnType("date");
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
