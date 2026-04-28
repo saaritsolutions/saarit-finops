@@ -293,6 +293,19 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
 - (none)
 
 ## Completed (continued)
+- SAAR-STMT-001 — Account Statement (session 54, 2026-04-28, commits dc9a9be + 71f26e7 + 2f658e7):
+  - **`SAAR_STMT_001_REQUIREMENTS.md`**: JIRA-format requirement doc (FR-1 auto-generate AccountNumber, FR-2 TransactionService by-reference endpoint, FR-3 AccountService statement endpoint, FR-4 StatementEntry shape, FR-5 Statement UI, FR-6 CSV export). NFRs, out-of-scope, test plan T-01 through T-08.
+  - **TransactionService**: `GetByReferenceAsync` added to `IPostingEngine` + implementation; `JournalPagedResult` DTO; `GET /api/journal/by-reference/{referenceId}?from=&to=&page=&pageSize=` controller endpoint (defaults: last 90 days, max 200 per page).
+  - **AccountService**: `GetStatementAsync` added to `ITransactionServiceClient` + implementation (fail-open — returns warning on unreachable). `StatementResult`/`StatementEntry` DTOs. Auto-generate `AccountNumber = ACC{id:D8}` in `CreateAccount` after first `SaveChangesAsync`. `GET /api/account/{id}/statement` endpoint (`[AllowAnonymous]`, default last 30 days, fail-open on TransactionService down).
+  - **Empty AccountNumber fix** (71f26e7): `account.AccountNumber ?? fallback` → `!string.IsNullOrWhiteSpace()` check — existing Hetzner accounts had `""` not null.
+  - **Frontend**: `accountService.ts` — `getStatement()` + `AccountStatement`/`StatementEntry` interfaces. `AccountManagement.tsx` — purple "View Statement" button per row (`aria-label="View Statement"`); Statement dialog with from/to date pickers, Load button, entry table (Date/Description/Credit/Debit/Journal#), Export CSV (Blob URL download).
+  - **NUnit tests**: `TransactionService.Tests/JournalControllerTests.cs` — T-STMT-01 (by-reference returns paged) + T-STMT-02 (empty list 200). `AccountService.Tests/StatementTests.cs` — T-03 auto-generate AccountNumber, T-04 fail-open with warning, T-05 404 on missing account.
+  - **Cypress tests** (`03-accounts.cy.ts`): T-06 dialog opens with date pickers; T-07 entries shown after Load; T-08 Export CSV button visible.
+  - **Cypress T-13 fix** (2f658e7): `contains('Collect')` in 04-loans.cy.ts was matching DialogTitle text — fixed to `contains('button', 'Collect')` + `clear().type().blur()` + `should('not.be.disabled')`.
+  - **Deployed to Hetzner**: transactionservice + accountservice + frontend rebuilt. Smoke: `GET /api/account/1/statement` → `{"total":0,"entries":[],"warning":null}` ✅ LIVE.
+  - Architecture docs updated: `REQUIREMENT_SERVICE_MAPPING.md`, `ARCHITECTURE/components/gl-accounting-service.md`, `ARCHITECTURE/components/account-service.md`.
+
+## Completed (continued)
 - SAAR-TESTING-001 — Production-grade testing overhaul (session 53, 2026-04-28, commit a594cac + pending Angular fix):
   - **Bug fix — DateOfBirth timezone drift**: `Customer.DateOfBirth` DateTime→DateOnly + `.HasColumnType("date")` in CustomerDbContext + EF migration `FixDateOfBirthToDate`. `Nominee.DateOfBirth` DateTime?→DateOnly? + `.HasColumnType("date")` in AccountDbContext + EF migration `FixNomineeDateOfBirthToDate`. Deployed to Hetzner (commit ddbbf75). Smoke tested: DOB returns "1987-08-14" pure date (no timezone shift). CustomerDemoDataSeeder.cs: all 8 `new DateTime(yyyy,mm,dd)` → `new DateOnly(yyyy,mm,dd)`.
   - **TransactionService.Tests new tests**: `JournalControllerTests.cs` (T-08 GetByNumber found/404, T-10 DailySummary 366-day limit + from>to guard) + `LedgerControllerTests.cs` (T-11 GetAllBalances 3 accounts, T-12 debit-normal balance calc, T-13 unknown code 404, bonus credit-normal balance calc). Total: 22 → 30 tests.
@@ -542,8 +555,8 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
 
 ## Pending Next
 - Fix Kaspersky Application Control blocking `dotnet test` locally: Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`.
-- E2E smoke on demobank: `/customers`, `/reports` (all 5 tabs including Overdue Loans), EMI Collection card on DISBURSED loan.
-- Next feature: SAAR-NPA-001 (NPA classification board) or SAAR-STMT-001 (Account Statement).
+- E2E smoke on demobank: `/accounts` (Statement dialog → Load → see entries), `/reports` (all 5 tabs), EMI Collection card on DISBURSED loan.
+- Next feature: SAAR-NPA-001 (NPA classification board) or SAAR-ACC-002 (Account Statement pagination + search).
 
 ## Notes
 - Eligibility expression ID currently in use: EXPR_1755237353842.

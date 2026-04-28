@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-28 (session 53 — Production-grade testing overhaul + DOB bug fix)
+**Last Updated:** 2026-04-28 (session 54 — SAAR-STMT-001 Account Statement + Cypress T-13 fix)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -50,7 +50,7 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 
 ### Partially Implemented
 - **LoanService** (~35%) — eligibility, interest rate, origination, workflow steps; disbursement missing
-- **AccountService** (~30%) — full CRUD with nominees/passbooks/restrictions/lifecycle; statements missing
+- **AccountService** (~35%) — full CRUD with nominees/passbooks/restrictions/lifecycle; statements live (SAAR-STMT-001); NPA/dormancy missing
 - **CustomerService** (~25%) — CRUD, KYC stub, PAN/Aadhaar validation; full KYC workflow missing
 - **UserAccessManagementService** (~40%) — JWT login, seed users, role CRUD; password reset, MFA missing
 - **WorkflowOrchestrationService** (~45%) — EF9 persistence, multi-tenancy, real Load/Save, expression routing

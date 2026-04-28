@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-28 (session 53 — Production-grade testing overhaul + DOB fix)
+**Last Updated:** 2026-04-28 (session 54 — SAAR-STMT-001 Account Statement + Cypress T-13 fix)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,19 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **E2E smoke on demobank**: DOB test (POST /api/customer with `"dateOfBirth":"1990-05-15"` → GET → verify pure date) | Verify DOB fix live on Hetzner |
-| 2 | **Next feature**: SAAR-NPA-001 (NPA classification board) or SAAR-STMT-001 (Account Statement) | Logical continuation |
+| 1 | **E2E smoke on demobank**: Account Statement dialog on `/accounts` — click View Statement, Load, verify entries | Verify SAAR-STMT-001 e2e |
+| 2 | **Next feature**: SAAR-NPA-001 (NPA classification board) | Logical continuation from repayment + SMA |
 | 3 | **Fix Kaspersky Application Control** (local only): Add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops` | Enables local `dotnet test` |
+
+### Recently Completed (session 54 — 2026-04-28)
+- [x] **SAAR-STMT-001 — Account Statement DEPLOYED** (commits dc9a9be, 71f26e7):
+  - TransactionService: `GET /api/journal/by-reference/{referenceId}` (JournalPagedResult, max 200/page).
+  - AccountService: auto-generate `AccountNumber = ACC{id:D8}` on CreateAccount; `GET /api/account/{id}/statement` (fail-open; empty entries + warning when TransactionService down).
+  - Empty AccountNumber fix: `!string.IsNullOrWhiteSpace()` replaces `??` for existing `""` DB values.
+  - Frontend: purple "View Statement" button per row; modal with from/to pickers, table (Date/Desc/Credit/Debit/Journal#), Export CSV.
+  - 5 NUnit tests (TransactionService.Tests + AccountService.Tests) + 3 Cypress tests.
+  - Smoke: `GET /api/account/1/statement` → `{"total":0,"entries":[],"warning":null}` ✅ LIVE.
+- [x] **Cypress T-13 fix** (commit 2f658e7): `contains('Collect')` → `contains('button','Collect')` + `clear().type().blur()` + `should('not.be.disabled')` in 04-loans.cy.ts.
 
 ### Recently Completed (session 53 — 2026-04-28)
 - [x] **SAAR-TESTING-001 — Production-grade testing overhaul + DOB bug fix** (commits ddbbf75, 2ebfc1b, a594cac):
