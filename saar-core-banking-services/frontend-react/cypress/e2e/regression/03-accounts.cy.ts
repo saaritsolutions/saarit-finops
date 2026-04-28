@@ -266,3 +266,100 @@ describe('[REGRESSION] Account Management — FD Maturity & Premature Closure', 
     cy.contains(/JNL-2026-00050|journal|matured|success/i, { timeout: 10000 }).should('exist');
   });
 });
+
+// =============================================================================
+// [REGRESSION] Account Statement — SAAR-STMT-001
+// =============================================================================
+
+const STATEMENT_ENTRIES = [
+  {
+    journalId:     1,
+    journalNumber: 'JNL-20260428-000001',
+    postedAt:      '2026-04-25T10:00:00Z',
+    description:   'FD Maturity Payout',
+    debit:         100000,
+    credit:        0,
+  },
+  {
+    journalId:     2,
+    journalNumber: 'JNL-20260428-000002',
+    postedAt:      '2026-04-27T15:30:00Z',
+    description:   'Account Maintenance Fee',
+    debit:         0,
+    credit:        150,
+  },
+];
+
+const STATEMENT_RESPONSE = {
+  accountId:      1,
+  accountNumber:  'SB-UCB-0001',
+  productType:    'Savings',
+  currentBalance: 25000,
+  from:           '2026-03-30',
+  to:             '2026-04-28',
+  total:          2,
+  page:           1,
+  pageSize:       50,
+  entries:        STATEMENT_ENTRIES,
+};
+
+describe('[REGRESSION] Account Statement', () => {
+  beforeEach(() => {
+    cy.loginAsDemo();
+    cy.intercept('GET', '**/api/account', { body: ACCOUNTS }).as('accounts');
+    cy.intercept('GET', '**/api/account/upcoming-maturities*', { body: [] }).as('maturities');
+  });
+
+  // T-06: Statement dialog opens with date range pickers
+  it('opens statement dialog with date range pickers when clicking Statement button', () => {
+    cy.visit('/accounts');
+    cy.wait('@accounts', { timeout: 15000 });
+
+    cy.get('[aria-label="View Statement"]', { timeout: 10000 })
+      .first().click();
+
+    // Dialog should open
+    cy.contains(/Account Statement/i, { timeout: 5000 }).should('be.visible');
+    // Date pickers should be present
+    cy.get('input[type="date"]').should('have.length.at.least', 2);
+    // Load button should be present
+    cy.contains(/^Load$/i).should('exist');
+  });
+
+  // T-07: Statement dialog shows entries returned from stub
+  it('shows statement entries after clicking Load', () => {
+    cy.intercept('GET', '**/api/account/1/statement*', { body: STATEMENT_RESPONSE }).as('statement');
+
+    cy.visit('/accounts');
+    cy.wait('@accounts', { timeout: 15000 });
+
+    cy.get('[aria-label="View Statement"]', { timeout: 10000 })
+      .first().click();
+
+    cy.contains(/^Load$/i).click();
+    cy.wait('@statement', { timeout: 10000 });
+
+    // Entries should appear
+    cy.contains('FD Maturity Payout').should('exist');
+    cy.contains('Account Maintenance Fee').should('exist');
+    cy.contains('JNL-20260428-000001').should('exist');
+    // Totals row info
+    cy.contains(/2 of 2/i).should('exist');
+  });
+
+  // T-08: Export CSV button appears and is clickable when entries present
+  it('Export CSV button is visible when entries are loaded', () => {
+    cy.intercept('GET', '**/api/account/1/statement*', { body: STATEMENT_RESPONSE }).as('statement');
+
+    cy.visit('/accounts');
+    cy.wait('@accounts', { timeout: 15000 });
+
+    cy.get('[aria-label="View Statement"]', { timeout: 10000 })
+      .first().click();
+
+    cy.contains(/^Load$/i).click();
+    cy.wait('@statement', { timeout: 10000 });
+
+    cy.get('[aria-label="Export CSV"]', { timeout: 5000 }).should('be.visible');
+  });
+});

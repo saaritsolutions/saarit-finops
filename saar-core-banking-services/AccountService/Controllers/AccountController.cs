@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using AccountService.Models;
@@ -79,6 +80,13 @@ namespace AccountService.Controllers
             account.CreatedAt    = DateTime.UtcNow;
             _context.Accounts.Add(account);
             await _context.SaveChangesAsync();
+
+            // ── Auto-assign AccountNumber if not provided ─────────────────────
+            if (string.IsNullOrWhiteSpace(account.AccountNumber))
+            {
+                account.AccountNumber = $"ACC{account.AccountId:D8}";
+                await _context.SaveChangesAsync();
+            }
 
             // ── Fetch deposit interest rate from expression engine (fire-and-forget) ──
             if (isDeposit && account.TermMonths.HasValue)
@@ -831,6 +839,48 @@ namespace AccountService.Controllers
             account.AccruedInterest += delta;
             await _context.SaveChangesAsync();
             return Ok(new { account.AccountId, account.AccruedInterest });
+        }
+
+        /// <summary>
+        /// Account statement: returns journals posted to TransactionService with this account's
+        /// referenceId, within the given date range.
+        /// </summary>
+        [HttpGet("{id}/statement")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetStatement(
+            int id,
+            [FromQuery] DateTime? from     = null,
+            [FromQuery] DateTime? to       = null,
+            [FromQuery] int       page     = 1,
+            [FromQuery] int       pageSize = 50,
+            CancellationToken ct           = default)
+        {
+            var account = await _context.Accounts
+                .Include(a => a.ProductType)
+                .FirstOrDefaultAsync(a => a.AccountId == id, ct);
+            if (account == null) return NotFound(new { error = $"Account {id} not found." });
+
+            var toDate   = (to   ?? DateTime.UtcNow).Date;
+            var fromDate = (from ?? toDate.AddDays(-29)).Date;   // default: last 30 days
+            pageSize = Math.Clamp(pageSize, 1, 200);
+
+            var referenceId = account.AccountNumber ?? account.AccountId.ToString();
+            var statement   = await _transactions.GetStatementAsync(referenceId, fromDate, toDate, page, pageSize, ct);
+
+            return Ok(new
+            {
+                accountId      = account.AccountId,
+                accountNumber  = account.AccountNumber,
+                productType    = account.ProductType?.Name,
+                currentBalance = account.Balance,
+                from           = fromDate,
+                to             = toDate,
+                total          = statement.Total,
+                page           = statement.Page,
+                pageSize       = statement.PageSize,
+                entries        = statement.Items,
+                warning        = statement.Warning,
+            });
         }
     }
 

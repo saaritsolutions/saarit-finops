@@ -42,6 +42,11 @@ file sealed class MaNoOpTransactions : ITransactionServiceClient
         string accountNumber, decimal fee, string postedBy,
         CancellationToken ct = default)
         => Task.FromResult(new DepositJournalResult(true, "JNL-AMC-TEST", null));
+
+    public Task<StatementResult> GetStatementAsync(
+        string referenceId, DateTime from, DateTime to,
+        int page = 1, int pageSize = 50, CancellationToken ct = default)
+        => Task.FromResult(new StatementResult());
 }
 
 file sealed class MaNoOpWorkflow : IWorkflowClient

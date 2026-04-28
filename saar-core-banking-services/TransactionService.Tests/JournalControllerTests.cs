@@ -56,6 +56,78 @@ public class JournalControllerTests
             }
         };
 
+    // T-STMT-01: GET /api/journal/by-reference/{referenceId} — matching journals → 200 paged result
+    [Test]
+    public async Task GetByReference_WithMatchingJournals_ReturnsPaged()
+    {
+        var db   = CtrlDbFactory.Create();
+        var ctrl = BuildController(db);
+
+        // Post two journals with the same referenceId
+        var engine = CtrlEngineFactory.MakeEngine(db);
+        await engine.PostAsync(new PostJournalRequest
+        {
+            IdempotencyKey = "STMT-REF-001",
+            Description    = "Maturity payout",
+            ReferenceType  = "DepositMaturity",
+            ReferenceId    = "ACC00000001",
+            PostedBy       = "AccountService",
+            Entries        = new()
+            {
+                new() { AccountCode = "2010", DebitAmount  = 100_000m, CreditAmount = 0m },
+                new() { AccountCode = "1010", DebitAmount  = 0m,      CreditAmount = 100_000m },
+            }
+        });
+        await engine.PostAsync(new PostJournalRequest
+        {
+            IdempotencyKey = "STMT-REF-002",
+            Description    = "Maintenance fee",
+            ReferenceType  = "MaintenanceFee",
+            ReferenceId    = "ACC00000001",
+            PostedBy       = "AccountService",
+            Entries        = new()
+            {
+                new() { AccountCode = "1010", DebitAmount  = 100m, CreditAmount = 0m },
+                new() { AccountCode = "4020", DebitAmount  = 0m,   CreditAmount = 100m },
+            }
+        });
+
+        var from = DateTime.UtcNow.AddDays(-1);
+        var to   = DateTime.UtcNow.AddDays(1);
+
+        var result = await ctrl.GetByReference("ACC00000001", from, to, 1, 50);
+
+        var ok = result as OkObjectResult;
+        Assert.That(ok, Is.Not.Null, "Expected 200 OK");
+
+        var paged = ok!.Value as JournalPagedResult;
+        Assert.That(paged, Is.Not.Null);
+        Assert.That(paged!.Total,      Is.EqualTo(2));
+        Assert.That(paged.Items.Count, Is.EqualTo(2));
+        Assert.That(paged.Items.All(j => j.ReferenceId == "ACC00000001"), Is.True);
+    }
+
+    // T-STMT-02: GET /api/journal/by-reference/{referenceId} — no matches → 200 with empty list
+    [Test]
+    public async Task GetByReference_NoMatchingJournals_ReturnsEmptyList()
+    {
+        var db   = CtrlDbFactory.Create();
+        var ctrl = BuildController(db);
+
+        var from = DateTime.UtcNow.AddDays(-1);
+        var to   = DateTime.UtcNow.AddDays(1);
+
+        var result = await ctrl.GetByReference("ACC99999999", from, to, 1, 50);
+
+        var ok = result as OkObjectResult;
+        Assert.That(ok, Is.Not.Null, "Expected 200 OK (not 404)");
+
+        var paged = ok!.Value as JournalPagedResult;
+        Assert.That(paged,             Is.Not.Null);
+        Assert.That(paged!.Total,      Is.EqualTo(0));
+        Assert.That(paged.Items.Count, Is.EqualTo(0));
+    }
+
     // T-08: GET /api/journal/by-number/{number} — found → 200, not-found → 404
     [Test]
     public async Task GetByNumber_PostedJournal_Returns200()

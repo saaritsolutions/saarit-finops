@@ -50,6 +50,39 @@ namespace AccountService.Services
             decimal fee,
             string postedBy,
             CancellationToken ct = default);
+
+        /// <summary>
+        /// Returns journals posted with referenceId matching the account number, within the given date range.
+        /// Fail-open: returns empty result on network failure.
+        /// </summary>
+        Task<StatementResult> GetStatementAsync(
+            string referenceId,
+            DateTime from,
+            DateTime to,
+            int page     = 1,
+            int pageSize = 50,
+            CancellationToken ct = default);
+    }
+
+    // ── DTOs for account statement ───────────────────────────────────────────────
+
+    public class StatementResult
+    {
+        public int                    Total      { get; set; }
+        public int                    Page       { get; set; }
+        public int                    PageSize   { get; set; }
+        public List<StatementEntry>   Items      { get; set; } = new();
+        public string?                Warning    { get; set; }
+    }
+
+    public class StatementEntry
+    {
+        public long     JournalId     { get; set; }
+        public string   JournalNumber { get; set; } = string.Empty;
+        public DateTime PostedAt      { get; set; }
+        public string   Description   { get; set; } = string.Empty;
+        public decimal  Debit         { get; set; }
+        public decimal  Credit        { get; set; }
     }
 
     public class TransactionServiceClient : ITransactionServiceClient
@@ -231,11 +264,82 @@ namespace AccountService.Services
             }
         }
 
+        public async Task<StatementResult> GetStatementAsync(
+            string referenceId, DateTime from, DateTime to,
+            int page = 1, int pageSize = 50, CancellationToken ct = default)
+        {
+            try
+            {
+                var baseUrl = _http.BaseAddress?.ToString().TrimEnd('/')
+                              ?? "http://localhost:5005";
+                var url = $"{baseUrl}/api/journal/by-reference/{Uri.EscapeDataString(referenceId)}" +
+                          $"?from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}&page={page}&pageSize={pageSize}";
+
+                var response = await _http.GetAsync(url, ct);
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("GetStatement failed for {RefId}: {Status}", referenceId, response.StatusCode);
+                    return new StatementResult { Warning = $"HTTP {(int)response.StatusCode}" };
+                }
+
+                var paged = await response.Content.ReadFromJsonAsync<TxnPagedResult>(cancellationToken: ct);
+                if (paged == null) return new StatementResult { Warning = "Empty response from TransactionService" };
+
+                var entries = paged.Items.Select(j => new StatementEntry
+                {
+                    JournalId     = j.JournalId,
+                    JournalNumber = j.JournalNumber,
+                    PostedAt      = j.PostedAt,
+                    Description   = j.Description,
+                    Debit         = j.Entries.Sum(e => e.DebitAmount),
+                    Credit        = j.Entries.Sum(e => e.CreditAmount),
+                }).ToList();
+
+                return new StatementResult
+                {
+                    Total    = paged.Total,
+                    Page     = paged.Page,
+                    PageSize = paged.PageSize,
+                    Items    = entries,
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "TransactionService unreachable fetching statement for {RefId}", referenceId);
+                return new StatementResult { Warning = "Transaction service unavailable" };
+            }
+        }
+
+        // ── Local DTOs for deserializing TransactionService responses ────────
+
         private sealed class JournalPostResponse
         {
             public long   JournalId     { get; set; }
             public string JournalNumber { get; set; } = string.Empty;
             public string Status        { get; set; } = string.Empty;
+        }
+
+        private sealed class TxnPagedResult
+        {
+            public int               Total    { get; set; }
+            public int               Page     { get; set; }
+            public int               PageSize { get; set; }
+            public List<TxnJournal>  Items    { get; set; } = new();
+        }
+
+        private sealed class TxnJournal
+        {
+            public long               JournalId     { get; set; }
+            public string             JournalNumber { get; set; } = string.Empty;
+            public DateTime           PostedAt      { get; set; }
+            public string             Description   { get; set; } = string.Empty;
+            public List<TxnEntry>     Entries       { get; set; } = new();
+        }
+
+        private sealed class TxnEntry
+        {
+            public decimal DebitAmount  { get; set; }
+            public decimal CreditAmount { get; set; }
         }
     }
 }

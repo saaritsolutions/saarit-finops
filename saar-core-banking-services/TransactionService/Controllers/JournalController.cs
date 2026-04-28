@@ -69,6 +69,25 @@ namespace TransactionService.Controllers
             return journal == null ? NotFound() : Ok(journal);
         }
 
+        /// <summary>Get journals by referenceId (account number or loan number) with optional date range.</summary>
+        [HttpGet("by-reference/{referenceId}")]
+        [ProducesResponseType(typeof(JournalPagedResult), 200)]
+        public async Task<IActionResult> GetByReference(
+            string referenceId,
+            [FromQuery] DateTime? from     = null,
+            [FromQuery] DateTime? to       = null,
+            [FromQuery] int       page     = 1,
+            [FromQuery] int       pageSize = 50,
+            CancellationToken ct           = default)
+        {
+            var toDate   = (to   ?? DateTime.UtcNow).Date;
+            var fromDate = (from ?? toDate.AddDays(-89)).Date;   // default: last 90 days
+            pageSize = Math.Clamp(pageSize, 1, 200);
+
+            var result = await _engine.GetByReferenceAsync(referenceId, fromDate, toDate, page, pageSize, ct);
+            return Ok(result);
+        }
+
         /// <summary>List recent journals, newest first.</summary>
         [HttpGet]
         [ProducesResponseType(typeof(IReadOnlyList<Journal>), 200)]
