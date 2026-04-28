@@ -167,6 +167,7 @@ const CUSTOMERS_KYC = [
   { customerId: 201, firstName: 'Suresh', lastName: 'Nair',   kycStatus: 0, dateOfBirth: '1980-01-01', createdAt: '2026-01-01T00:00:00Z' },
   { customerId: 202, firstName: 'Meena',  lastName: 'Pillai', kycStatus: 1, dateOfBirth: '1990-01-01', createdAt: '2026-01-02T00:00:00Z' },
   { customerId: 203, firstName: 'Ravi',   lastName: 'Verma',  kycStatus: 2, dateOfBirth: '1985-01-01', createdAt: '2026-01-03T00:00:00Z' },
+  { customerId: 204, firstName: 'Kavita', lastName: 'Rao',    kycStatus: 3, dateOfBirth: '1978-05-20', createdAt: '2026-01-04T00:00:00Z' },
 ];
 
 describe('[REGRESSION] Customer KYC Workflow — action buttons', () => {
@@ -208,6 +209,26 @@ describe('[REGRESSION] Customer KYC Workflow — action buttons', () => {
     cy.get('[aria-label="Initiate KYC"]').first().click();
     cy.wait('@initiate', { timeout: 10000 });
     cy.contains(/KYC initiated/i, { timeout: 10000 }).should('exist');
+  });
+
+  it('shows Expire KYC button for Verified customer', () => {
+    cy.visit('/customers');
+    cy.wait('@customers', { timeout: 15000 });
+    cy.get('[aria-label="Expire KYC"]').should('exist');
+  });
+
+  it('Expire KYC calls API and shows success message', () => {
+    cy.intercept('POST', '**/api/customer/204/kyc/expire', {
+      statusCode: 200,
+      body: { kycStatus: 5, message: 'KYC has been marked as expired.' },
+    }).as('expire');
+    cy.intercept('GET', '**/api/customer**', { body: paged(CUSTOMERS_KYC.map(c => c.customerId === 204 ? { ...c, kycStatus: 5 } : c)) }).as('reload');
+
+    cy.visit('/customers');
+    cy.wait('@customers', { timeout: 15000 });
+    cy.get('[aria-label="Expire KYC"]').first().click();
+    cy.wait('@expire', { timeout: 10000 });
+    cy.contains(/expired/i, { timeout: 10000 }).should('exist');
   });
 
   it('Verify KYC dialog requires Verified By and confirms on submit', () => {
