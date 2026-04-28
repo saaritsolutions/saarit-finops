@@ -28,6 +28,8 @@ Part of `CoreBankingApi`. Module path: `CoreBankingApi/Modules/GeneralLedger/`
 | GET | `/api/gl/profit-loss` | P&L for period |
 | GET | `/api/gl/balance-sheet` | Balance sheet as of date |
 | GET | `/api/journal/{id}` | Get journal entry |
+| GET | `/api/journal/by-number/{number}` | Get journal by JNL number |
+| GET | `/api/journal/by-reference/{referenceId}` | Get journals by referenceId (account/loan number) with date range + pagination — SAAR-STMT-001 |
 | GET | `/api/ledger/{accountId}/statement` | Account statement |
 
 ## Chart of Accounts Structure

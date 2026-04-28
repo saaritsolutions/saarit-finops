@@ -22,12 +22,12 @@ Part of `CoreBankingApi` (not a standalone service). Module path: `CoreBankingAp
 |---|---|---|
 | GET | `/api/account` | List accounts (branch-scoped) |
 | GET | `/api/account/{id}` | Get account details + balance |
-| POST | `/api/account` | Open new account |
+| POST | `/api/account` | Open new account (auto-generates AccountNumber = "ACC{id:D8}" if not provided — SAAR-STMT-001) |
 | POST | `/api/account/{id}/deposit` | Cash deposit |
 | POST | `/api/account/{id}/withdraw` | Cash withdrawal |
 | POST | `/api/account/{id}/transfer` | Inter-account transfer |
 | GET | `/api/account/{id}/transactions` | Transaction history (paginated) |
-| GET | `/api/account/{id}/statement` | Account statement (date range) |
+| GET | `/api/account/{id}/statement` | Account statement (date range, proxies TransactionService by-reference — SAAR-STMT-001) |
 | POST | `/api/account/{id}/close` | Initiate account closure |
 | POST | `/api/account/{id}/standing-instruction` | Create SI |
 | GET | `/api/account/{id}/standing-instructions` | List SIs |

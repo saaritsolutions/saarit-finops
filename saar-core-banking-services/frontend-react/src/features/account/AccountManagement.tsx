@@ -42,8 +42,10 @@ import SearchIcon       from '@mui/icons-material/Search';
 import AccountBoxIcon   from '@mui/icons-material/AccountBox';
 import SavingsIcon      from '@mui/icons-material/Savings';
 import MoneyOffIcon     from '@mui/icons-material/MoneyOff';
-import PaymentsIcon     from '@mui/icons-material/Payments';
-import { accountService, AccountRecord, CreateAccountDto, MatureResult, PrematureCloseResult } from '../../services/accountService';
+import PaymentsIcon        from '@mui/icons-material/Payments';
+import ReceiptLongIcon     from '@mui/icons-material/ReceiptLong';
+import DownloadIcon        from '@mui/icons-material/Download';
+import { accountService, AccountRecord, CreateAccountDto, MatureResult, PrematureCloseResult, AccountStatement } from '../../services/accountService';
 import PageHeader from '../../components/common/PageHeader';
 import EmptyState from '../../components/common/EmptyState';
 import JournalDetailDialog from '../../components/dialogs/JournalDetailDialog';
@@ -124,7 +126,15 @@ const AccountManagement: React.FC = () => {
   const [successMsg,    setSuccessMsg]    = useState<string | null>(null);
   const [searchQuery,   setSearchQuery]   = useState('');
   const [statusFilter,  setStatusFilter]  = useState<StatusFilter>('All');
-  const [journalNumber, setJournalNumber] = useState<string | null>(null);
+  const [journalNumber,    setJournalNumber]    = useState<string | null>(null);
+  const [stmtAccount,      setStmtAccount]      = useState<AccountRecord | null>(null);
+  const [stmtOpen,         setStmtOpen]         = useState(false);
+  const [stmtFrom,         setStmtFrom]         = useState(() => {
+    const d = new Date(); d.setDate(d.getDate() - 29); return d.toISOString().slice(0, 10);
+  });
+  const [stmtTo,           setStmtTo]           = useState(() => new Date().toISOString().slice(0, 10));
+  const [stmtData,         setStmtData]         = useState<AccountStatement | null>(null);
+  const [stmtLoading,      setStmtLoading]      = useState(false);
 
   // ── Load ──────────────────────────────────────────────────────────────────
   const load = useCallback(async () => {
@@ -151,6 +161,49 @@ const AccountManagement: React.FC = () => {
     const matchStatus = statusFilter === 'All' || acc.status === statusFilter;
     return matchSearch && matchStatus;
   });
+
+  // ── Statement helpers ─────────────────────────────────────────────────────
+  const openStatement = (acc: AccountRecord) => {
+    setStmtAccount(acc);
+    setStmtData(null);
+    setStmtOpen(true);
+  };
+  const closeStatement = () => { setStmtOpen(false); setStmtAccount(null); setStmtData(null); };
+
+  const loadStatement = async () => {
+    if (!stmtAccount) return;
+    setStmtLoading(true);
+    try {
+      const data = await accountService.getStatement(stmtAccount.accountId, stmtFrom, stmtTo);
+      setStmtData(data);
+    } catch {
+      setStmtData(null);
+    } finally {
+      setStmtLoading(false);
+    }
+  };
+
+  const exportStatementCsv = () => {
+    if (!stmtData) return;
+    const rows = [
+      ['Date', 'Description', 'Credit (INR)', 'Debit (INR)', 'Journal Number'],
+      ...stmtData.entries.map(e => [
+        new Date(e.postedAt).toLocaleDateString('en-IN'),
+        `"${e.description.replace(/"/g, '""')}"`,
+        e.credit > 0 ? e.credit.toFixed(2) : '',
+        e.debit  > 0 ? e.debit.toFixed(2)  : '',
+        e.journalNumber,
+      ]),
+    ];
+    const csv  = rows.map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `statement-${stmtData.accountNumber ?? stmtAccount?.accountId}-${stmtFrom}-${stmtTo}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // ── Dialog helpers ────────────────────────────────────────────────────────
   const openCreate = () => {
@@ -457,6 +510,11 @@ const AccountManagement: React.FC = () => {
                           </IconButton>
                         </Tooltip>
                       )}
+                      <Tooltip title="View Statement">
+                        <IconButton aria-label="View Statement" size="small" onClick={() => openStatement(acc)} sx={{ color: '#7C3AED', '&:hover': { color: '#6D28D9', backgroundColor: '#F5F3FF' } }}>
+                          <ReceiptLongIcon sx={{ fontSize: '1rem' }} />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="Delete">
                         <IconButton size="small" onClick={() => handleDelete(acc)} sx={{ color: isDark ? SLATE_500 : SLATE_400, '&:hover': { color: '#DC2626', backgroundColor: '#FEF2F2' } }}>
                           <DeleteIcon sx={{ fontSize: '1rem' }} />
@@ -535,6 +593,120 @@ const AccountManagement: React.FC = () => {
           onClose={() => setJournalNumber(null)}
         />
       )}
+
+      {/* Account Statement Dialog */}
+      <Dialog open={stmtOpen} onClose={closeStatement} maxWidth="md" fullWidth>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box>
+              <Typography variant="h6" fontWeight={600}>Account Statement</Typography>
+              {stmtAccount && (
+                <Typography variant="body2" color="text.secondary">
+                  {stmtAccount.accountNumber ?? `ACC${String(stmtAccount.accountId).padStart(8,'0')}`}
+                  {stmtAccount.productType ? ` · ${stmtAccount.productType.name}` : ''}
+                  {' · Balance: ₹'}
+                  {stmtAccount.balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </Typography>
+              )}
+            </Box>
+            {stmtData && stmtData.entries.length > 0 && (
+              <Button
+                aria-label="Export CSV"
+                size="small"
+                startIcon={<DownloadIcon />}
+                onClick={exportStatementCsv}
+                variant="outlined"
+                sx={{ borderRadius: 2 }}
+              >
+                Export CSV
+              </Button>
+            )}
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          {/* Date range row */}
+          <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+            <TextField
+              label="From"
+              type="date"
+              size="small"
+              value={stmtFrom}
+              onChange={e => setStmtFrom(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              label="To"
+              type="date"
+              size="small"
+              value={stmtTo}
+              onChange={e => setStmtTo(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+            <Button variant="contained" size="small" onClick={loadStatement} disabled={stmtLoading} sx={{ borderRadius: 2 }}>
+              {stmtLoading ? <CircularProgress size={16} /> : 'Load'}
+            </Button>
+          </Box>
+
+          {stmtData?.warning && (
+            <Alert severity="warning" sx={{ mb: 2 }}>{stmtData.warning}</Alert>
+          )}
+
+          {stmtData && !stmtLoading && (
+            stmtData.entries.length === 0 ? (
+              <Typography color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+                No transactions found for this period.
+              </Typography>
+            ) : (
+              <>
+                <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                  Showing {stmtData.entries.length} of {stmtData.total} transactions
+                </Typography>
+                <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: isDark ? '#1E293B' : '#F8FAFC' }}>
+                        <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>Description</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700, color: '#059669' }}>Credit (₹)</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700, color: '#DC2626' }}>Debit (₹)</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>Journal #</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {stmtData.entries.map(entry => (
+                        <TableRow key={entry.journalId} hover>
+                          <TableCell sx={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                            {new Date(entry.postedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </TableCell>
+                          <TableCell sx={{ fontSize: '0.8rem' }}>{entry.description}</TableCell>
+                          <TableCell align="right" sx={{ fontSize: '0.8rem', color: '#059669', fontWeight: entry.credit > 0 ? 600 : 400 }}>
+                            {entry.credit > 0 ? entry.credit.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '—'}
+                          </TableCell>
+                          <TableCell align="right" sx={{ fontSize: '0.8rem', color: '#DC2626', fontWeight: entry.debit > 0 ? 600 : 400 }}>
+                            {entry.debit > 0 ? entry.debit.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '—'}
+                          </TableCell>
+                          <TableCell sx={{ fontSize: '0.75rem', color: '#64748B', fontFamily: 'monospace' }}>
+                            {entry.journalNumber}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </>
+            )
+          )}
+
+          {!stmtData && !stmtLoading && (
+            <Typography color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+              Select a date range and click Load to view transactions.
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeStatement}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

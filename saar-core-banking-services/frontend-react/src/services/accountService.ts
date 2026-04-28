@@ -97,4 +97,32 @@ export const accountService = {
   freeze: (id: number) => apiService.post<{ accountId: number; accountNumber?: string; status: string }>(`${BASE}/${id}/freeze`, {}),
 
   unfreeze: (id: number) => apiService.post<{ accountId: number; accountNumber?: string; status: string }>(`${BASE}/${id}/unfreeze`, {}),
+
+  getStatement: (id: number, from: string, to: string, page = 1, pageSize = 50) =>
+    apiService.get<AccountStatement>(`${BASE}/${id}/statement?from=${from}&to=${to}&page=${page}&pageSize=${pageSize}`),
 };
+
+// ── Account statement types ─────────────────────────────────────────────────
+
+export interface StatementEntry {
+  journalId:     number;
+  journalNumber: string;
+  postedAt:      string;
+  description:   string;
+  debit:         number;
+  credit:        number;
+}
+
+export interface AccountStatement {
+  accountId:      number;
+  accountNumber?: string;
+  productType?:   string;
+  currentBalance: number;
+  from:           string;
+  to:             string;
+  total:          number;
+  page:           number;
+  pageSize:       number;
+  entries:        StatementEntry[];
+  warning?:       string;
+}

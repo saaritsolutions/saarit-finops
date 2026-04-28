@@ -14,6 +14,7 @@ namespace TransactionService.Services
         Task<Journal?> GetByJournalNumberAsync(string journalNumber, CancellationToken ct = default);
         Task<IReadOnlyList<Journal>> GetRecentAsync(int page, int pageSize, CancellationToken ct = default);
         Task<DailySummaryReport> GetDailySummaryAsync(DateTime from, DateTime to, CancellationToken ct = default);
+        Task<JournalPagedResult> GetByReferenceAsync(string referenceId, DateTime from, DateTime to, int page, int pageSize, CancellationToken ct = default);
     }
 
     // ── Request DTOs ────────────────────────────────────────────────────────
@@ -300,6 +301,36 @@ namespace TransactionService.Services
                      .Take(pageSize)
                      .ToListAsync(ct);
 
+        public async Task<JournalPagedResult> GetByReferenceAsync(
+            string referenceId, DateTime from, DateTime to,
+            int page, int pageSize, CancellationToken ct = default)
+        {
+            pageSize = Math.Min(pageSize, 200);
+            var fromUtc = from.Date.ToUniversalTime();
+            var toUtc   = to.Date.AddDays(1).ToUniversalTime();
+
+            var query = _db.Journals
+                .Include(j => j.Entries)
+                .Where(j => j.ReferenceId == referenceId
+                         && j.PostedAt >= fromUtc
+                         && j.PostedAt < toUtc);
+
+            var total = await query.CountAsync(ct);
+            var items = await query
+                .OrderByDescending(j => j.PostedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(ct);
+
+            return new JournalPagedResult
+            {
+                Total    = total,
+                Page     = page,
+                PageSize = pageSize,
+                Items    = items,
+            };
+        }
+
         public async Task<DailySummaryReport> GetDailySummaryAsync(
             DateTime from, DateTime to, CancellationToken ct = default)
         {
@@ -334,6 +365,16 @@ namespace TransactionService.Services
                 GrandTotalCredit = days.Sum(d => d.TotalCredit),
             };
         }
+    }
+
+    // ── DTO for journal-by-reference paged results ───────────────────────────────
+
+    public class JournalPagedResult
+    {
+        public int              Total    { get; set; }
+        public int              Page     { get; set; }
+        public int              PageSize { get; set; }
+        public List<Journal>    Items    { get; set; } = new();
     }
 
     // ── DTOs for MIS daily summary report ────────────────────────────────────────
