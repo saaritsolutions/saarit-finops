@@ -293,6 +293,17 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
 - (none)
 
 ## Completed (continued)
+- SAAR-TESTING-001 — Production-grade testing overhaul (session 53, 2026-04-28, commit a594cac + pending Angular fix):
+  - **Bug fix — DateOfBirth timezone drift**: `Customer.DateOfBirth` DateTime→DateOnly + `.HasColumnType("date")` in CustomerDbContext + EF migration `FixDateOfBirthToDate`. `Nominee.DateOfBirth` DateTime?→DateOnly? + `.HasColumnType("date")` in AccountDbContext + EF migration `FixNomineeDateOfBirthToDate`. Deployed to Hetzner (commit ddbbf75). Smoke tested: DOB returns "1987-08-14" pure date (no timezone shift). CustomerDemoDataSeeder.cs: all 8 `new DateTime(yyyy,mm,dd)` → `new DateOnly(yyyy,mm,dd)`.
+  - **TransactionService.Tests new tests**: `JournalControllerTests.cs` (T-08 GetByNumber found/404, T-10 DailySummary 366-day limit + from>to guard) + `LedgerControllerTests.cs` (T-11 GetAllBalances 3 accounts, T-12 debit-normal balance calc, T-13 unknown code 404, bonus credit-normal balance calc). Total: 22 → 30 tests.
+  - **AccountService.Tests new tests**: `MaturityTests.cs` (T-01 mature FD past maturity date → status=Mature + journal saved, T-02 already-closed → 400, T-03 savings account no TermMonths → 400, T-04 premature close → status=Closed + penalty journal, T-05 auto-renewal → status=Active + MaturityDate extended). Total: 24 → 29 tests.
+  - **CustomerService.Tests new tests**: `CustomerValidationTests.cs` (T-01 duplicate PAN → 400, T-02 duplicate UID → 400, T-03 DateOfBirth round-trips as DateOnly, T-04 KycInitiate from NotStarted → 200, T-05 KycInitiate from InProgress → 422). Total: 21 → 26 tests.
+  - **TransactionService.IntegrationTests** (new project): 5 integration tests via WebApplicationFactory<Program> + TXN_USE_INMEMORY_DB=true (CI-safe). IT-01 duplicate idempotency key → same JournalId; IT-02 ledger balance updated after journal post; IT-03 X-Tenant-ID header accepted; IT-04 expression service disabled fail-open; IT-05 daily summary grandTotalCount ≥ 3.
+  - **ReferenceHandler.IgnoreCycles fix** added to TransactionService/Program.cs (was missing, caused IT-01+IT-05 JSON cycle failures).
+  - **Angular spec dateOfBirth fix**: customer-create.component.spec.ts + customer-create.integration.spec.ts changed `'1990-01-01T00:00:00Z'` → `'1990-01-01'` to match DateOnly API.
+  - CI: 3/4 workflows green (CI ✅, Backend CI/CD ✅, Security Scan ✅, Full Stack CI/CD ✅ after Angular spec fix pushed).
+
+## Completed (continued)
 - SAAR-CST-001 — CustomerService Pagination, Search & Demo Seeder (session 47, 2026-04-26):
   - **`SAAR_CST_001_REQUIREMENTS.md`**: JIRA-format requirement doc (7 FRs, 3 NFRs, test plan — 4 NUnit + 3 new Cypress)
   - **`CustomerController.cs`**: `GetCustomers()` now accepts `?search=&kycStatus=&customerType=&page=&pageSize=`. Returns `CustomerListResponse { Total, Items, Page, PageSize }`. Case-insensitive LINQ Contains search over FirstName/LastName/Mobile/Email/PAN. Filter by KycStatus int (0–5) or "ALL". Filter by CustomerType string or "ALL". `OrderByDescending(CreatedAt)` with Skip/Take pagination.

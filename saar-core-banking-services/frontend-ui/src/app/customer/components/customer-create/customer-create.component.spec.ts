@@ -72,7 +72,7 @@ describe('CustomerCreateComponent - API Connectivity Test', () => {
           firstName: 'Test',
           lastName: 'User',
           email: testEmail,
-          dateOfBirth: '1990-01-01T00:00:00Z',
+          dateOfBirth: '1990-01-01',
           gender: 'M',
           customerType: 'Individual',
           postalAddress: '123 Test St',

@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-27 (session 52 — SAAR-LRP-002 Overdue Loans Report implemented)
+**Last Updated:** 2026-04-28 (session 53 — Production-grade testing overhaul + DOB fix)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,20 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Deploy SAAR-LRP-002 to Hetzner**: `docker compose up --build -d loanservice frontend` | Implementation complete — needs to go live |
-| 2 | **E2E smoke on demobank**: `/reports` Tab 4 Overdue Loans, EMI card on UCB-GL-2026-004 | Verify after deploy |
-| 3 | **Next feature**: SAAR-NPA-001 (NPA classification board) or SAAR-STMT-001 (Account Statement) | Logical post-LRP-002 continuation |
+| 1 | **E2E smoke on demobank**: DOB test (POST /api/customer with `"dateOfBirth":"1990-05-15"` → GET → verify pure date) | Verify DOB fix live on Hetzner |
+| 2 | **Next feature**: SAAR-NPA-001 (NPA classification board) or SAAR-STMT-001 (Account Statement) | Logical continuation |
+| 3 | **Fix Kaspersky Application Control** (local only): Add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops` | Enables local `dotnet test` |
+
+### Recently Completed (session 53 — 2026-04-28)
+- [x] **SAAR-TESTING-001 — Production-grade testing overhaul + DOB bug fix** (commits ddbbf75, 2ebfc1b, a594cac):
+  - **DOB bug**: Customer.DateOfBirth + Nominee.DateOfBirth DateTime→DateOnly; EF migrations FixDateOfBirthToDate + FixNomineeDateOfBirthToDate; deployed to Hetzner; smoke: DOB returns "1987-08-14" (pure date, no TZ)
+  - **TransactionService.Tests**: `JournalControllerTests.cs` (4 tests) + `LedgerControllerTests.cs` (4 tests); 22→30 total
+  - **AccountService.Tests**: `MaturityTests.cs` (5 tests); 24→29 total
+  - **CustomerService.Tests**: `CustomerValidationTests.cs` (5 tests); 21→26 total
+  - **TransactionService.IntegrationTests** (new project, 5 IT tests): WebApplicationFactory<Program> + TXN_USE_INMEMORY_DB=true; IT-01..IT-05 all passing on CI
+  - **ReferenceHandler.IgnoreCycles** added to TransactionService/Program.cs (fixed IT-01+IT-05 JSON cycle crash)
+  - **Angular spec fix**: dateOfBirth timestamp → date-only string in 2 spec files
+  - **CI**: CI ✅ Backend CI/CD ✅ Security Scan ✅ Full Stack CI/CD ✅ (after Angular fix)
 
 ### Recently Completed (session 52 — 2026-04-27)
 - [x] **SAAR-LRP-002 — Overdue Loans Report DEPLOYED** (session 52, commit `ce46b5e`): `GET /api/loans/applications/overdue` endpoint. Tab 4 "Overdue Loans" in Reports.tsx with SMA chips, CSV export, fail-open empty state. 3 NUnit tests + 4 Cypress tests. Smoke: `GET /api/loans/applications/overdue` → `{"total":0,...}` ✅ LIVE.

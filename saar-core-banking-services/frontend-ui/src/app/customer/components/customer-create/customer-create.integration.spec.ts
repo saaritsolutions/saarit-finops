@@ -29,7 +29,7 @@ describe('CustomerCreateComponent Integration Test', () => {
       firstName: 'Integration',
       lastName: 'Test',
       email: testEmail,
-      dateOfBirth: '1990-01-01T00:00:00Z',
+      dateOfBirth: '1990-01-01',
       gender: 'F',
       customerType: 'Individual',
       postalAddress: '123 Integration St',
