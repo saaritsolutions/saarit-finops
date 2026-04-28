@@ -293,8 +293,12 @@ describe('[REGRESSION] Loan Repayment (SAAR-LRP-001)', () => {
     cy.wait('@history', { timeout: 10000 });
     cy.contains('Collect EMI', { timeout: 10000 }).click({ force: true });
     cy.get('[role="dialog"]', { timeout: 8000 }).should('be.visible');
-    cy.get('[role="dialog"]').find('input[type="number"]').type('10000');
-    cy.get('[role="dialog"]').contains('Collect').click({ force: true });
+    // clear + blur ensures React controlled-input onChange fires before clicking submit
+    cy.get('[role="dialog"]').find('input[type="number"]').clear().type('10000').blur();
+    // Target the <button> element specifically to avoid matching DialogTitle text
+    cy.get('[role="dialog"]').contains('button', 'Collect')
+      .should('not.be.disabled')
+      .click();
     cy.wait('@collectEmi', { timeout: 10000 });
     cy.get('[role="dialog"]').should('not.exist');
   });
