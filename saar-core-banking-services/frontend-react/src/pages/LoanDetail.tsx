@@ -24,10 +24,11 @@ import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import DescriptionIcon   from '@mui/icons-material/Description';
 import CalculateIcon     from '@mui/icons-material/Calculate';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
+import AutorenewIcon from '@mui/icons-material/Autorenew';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  getApplicationDetail, takeApplicationAction, getRepaymentHistory, collectEmi,
-  type ApplicationDetail, type ApprovalAction, type RepaymentHistoryResponse,
+  getApplicationDetail, takeApplicationAction, getRepaymentHistory, collectEmi, restructureLoan,
+  type ApplicationDetail, type ApprovalAction, type RepaymentHistoryResponse, type RestructureRequest,
 } from '../services/loanOriginationService';
 import JournalDetailDialog from '../components/dialogs/JournalDetailDialog';
 
@@ -234,6 +235,13 @@ const LoanDetail: React.FC = () => {
   const [collectRef, setCollectRef]               = useState('');
   const [collecting, setCollecting]               = useState(false);
   const [collectMsg, setCollectMsg]               = useState<string | null>(null);
+  const [restructureOpen, setRestructureOpen]     = useState(false);
+  const [restructureEmi, setRestructureEmi]       = useState('');
+  const [restructureTenure, setRestructureTenure] = useState('');
+  const [restructureRate, setRestructureRate]     = useState('');
+  const [restructureReason, setRestructureReason] = useState('');
+  const [restructuring, setRestructuring]         = useState(false);
+  const [restructureError, setRestructureError]   = useState<string | null>(null);
 
   const app = detail?.application ?? null;
 
@@ -296,6 +304,31 @@ const LoanDetail: React.FC = () => {
       setCollectMsg(e?.response?.data?.error ?? 'EMI collection failed');
     } finally {
       setCollecting(false);
+    }
+  };
+
+  const handleRestructure = async () => {
+    if (!id) return;
+    setRestructuring(true);
+    setRestructureError(null);
+    try {
+      await restructureLoan(id, {
+        newMonthlyEmi:   parseFloat(restructureEmi),
+        newTenureMonths: parseInt(restructureTenure, 10),
+        newInterestRate: parseFloat(restructureRate),
+        reason:          restructureReason,
+      } as RestructureRequest);
+      await load();
+      setRestructureOpen(false);
+      setRestructureEmi('');
+      setRestructureTenure('');
+      setRestructureRate('');
+      setRestructureReason('');
+      setSuccessMsg('Loan restructured successfully');
+    } catch (e: any) {
+      setRestructureError(e?.response?.data?.error ?? 'Restructure failed. Please try again.');
+    } finally {
+      setRestructuring(false);
     }
   };
 
@@ -362,6 +395,9 @@ const LoanDetail: React.FC = () => {
               {f('applicationNumber') || 'Loan Application'}
             </Typography>
             <Chip label={statusCfg.label} color={statusCfg.color} sx={{ fontWeight: 700 }} />
+            {f('isRestructured') && (
+              <Chip label="RESTRUCTURED" color="warning" sx={{ fontWeight: 700 }} />
+            )}
           </Stack>
           <Typography variant="body2" color={SLATE_500}>
             {f('applicantName')} · {f('productType')} · Applied {fmtDate(f('createdAt'))}
@@ -369,7 +405,7 @@ const LoanDetail: React.FC = () => {
         </Box>
 
         {/* Action Buttons */}
-        {availActions.length > 0 && (
+        {(availActions.length > 0 || (status === 'DISBURSED' && !f('isRestructured'))) && (
           <Stack direction="row" spacing={1} flexWrap="wrap">
             {availActions.map(a => (
               <Button
@@ -383,6 +419,19 @@ const LoanDetail: React.FC = () => {
                 {a.label}
               </Button>
             ))}
+            {status === 'DISBURSED' && !f('isRestructured') && (
+              <Button
+                variant="outlined"
+                color="warning"
+                size="small"
+                startIcon={<AutorenewIcon />}
+                onClick={() => setRestructureOpen(true)}
+                sx={{ fontWeight: 600 }}
+                aria-label="restructure loan"
+              >
+                Restructure Loan
+              </Button>
+            )}
           </Stack>
         )}
       </Stack>
@@ -860,6 +909,48 @@ const LoanDetail: React.FC = () => {
         </Box>
       )}
 
+      {/* Restructured Terms Card */}
+      {f('isRestructured') && (
+        <Box mt={3}>
+          <Card sx={{ border: `2px solid #F59E0B`, boxShadow: 'none', borderRadius: 2, bgcolor: '#FFFBEB' }}>
+            <CardContent sx={{ p: 2.5 }}>
+              <Stack direction="row" spacing={1} alignItems="center" mb={1.5}>
+                <AutorenewIcon sx={{ color: '#D97706' }} />
+                <Typography variant="subtitle2" fontWeight={700} color="#92400E">
+                  Restructured Terms
+                </Typography>
+                <Chip label="RBI 5% Provisioning" size="small" color="warning" variant="outlined"
+                  sx={{ fontWeight: 600, fontSize: '0.7rem', height: 20 }} />
+              </Stack>
+              <Divider sx={{ mb: 1.5, borderColor: '#FDE68A' }} />
+              <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                <Box>
+                  <Typography variant="caption" color="#92400E">New Monthly EMI</Typography>
+                  <Typography variant="h6" fontWeight={700} color="#92400E">{INR(f('restructuredNewEmi'))}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="#92400E">New Tenure</Typography>
+                  <Typography variant="h6" fontWeight={700} color="#92400E">{f('restructuredNewTenureMonths') ? `${f('restructuredNewTenureMonths')} months` : '—'}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="#92400E">New Interest Rate</Typography>
+                  <Typography variant="h6" fontWeight={700} color="#92400E">{f('restructuredNewInterestRate') ? `${f('restructuredNewInterestRate')}% p.a.` : '—'}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="#92400E">Restructured On</Typography>
+                  <Typography variant="h6" fontWeight={700} color="#92400E">{fmtDateOnly(f('restructuredDate'))}</Typography>
+                </Box>
+              </Box>
+              {f('restructuredReason') && (
+                <Typography variant="body2" color="#92400E" mt={1.5} fontStyle="italic">
+                  Reason: {f('restructuredReason')}
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+        </Box>
+      )}
+
       {/* Collect EMI Dialog */}
       <Dialog open={collectOpen} onClose={() => setCollectOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle sx={{ fontWeight: 700 }}>Collect EMI Payment</DialogTitle>
@@ -901,6 +992,72 @@ const LoanDetail: React.FC = () => {
             disabled={collecting || !collectAmount || parseFloat(collectAmount) <= 0}
           >
             {collecting ? <CircularProgress size={18} color="inherit" /> : 'Collect'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Restructure Loan Dialog */}
+      <Dialog open={restructureOpen} onClose={() => setRestructureOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700 }}>Restructure Loan</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" mb={2}>
+            Enter revised loan terms agreed with the borrower. This action cannot be undone.
+          </Typography>
+          {restructureError && <Alert severity="error" sx={{ mb: 2 }}>{restructureError}</Alert>}
+          <Stack spacing={2} mt={1}>
+            <TextField
+              label="New Monthly EMI (₹)"
+              type="number"
+              fullWidth
+              value={restructureEmi}
+              onChange={e => setRestructureEmi(e.target.value)}
+              slotProps={{ htmlInput: { min: 1, step: '0.01' } }}
+            />
+            <TextField
+              label="New Tenure (months)"
+              type="number"
+              fullWidth
+              value={restructureTenure}
+              onChange={e => setRestructureTenure(e.target.value)}
+              slotProps={{ htmlInput: { min: 1, step: 1 } }}
+            />
+            <TextField
+              label="New Interest Rate (% p.a.)"
+              type="number"
+              fullWidth
+              value={restructureRate}
+              onChange={e => setRestructureRate(e.target.value)}
+              slotProps={{ htmlInput: { min: 0, step: '0.01' } }}
+            />
+            <TextField
+              label="Reason"
+              fullWidth
+              multiline
+              rows={3}
+              value={restructureReason}
+              onChange={e => setRestructureReason(e.target.value)}
+              placeholder="e.g. Borrower lost primary income source — revised repayment agreed"
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setRestructureOpen(false)} variant="outlined" sx={{ borderColor: SLATE_200 }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="warning"
+            aria-label="confirm restructure"
+            onClick={handleRestructure}
+            disabled={
+              restructuring ||
+              !restructureEmi   || parseFloat(restructureEmi)    <= 0 ||
+              !restructureTenure || parseInt(restructureTenure, 10) < 1 ||
+              !restructureRate  || parseFloat(restructureRate)   < 0  ||
+              !restructureReason.trim()
+            }
+          >
+            {restructuring ? <CircularProgress size={18} color="inherit" /> : 'Restructure Loan'}
           </Button>
         </DialogActions>
       </Dialog>

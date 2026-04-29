@@ -221,6 +221,105 @@ namespace LoanService.Controllers
             return Ok(new { total, page, pageSize, items = rows });
         }
 
+        // ── GET /api/loans/applications/restructured ─────────────────────────────
+        /// <summary>
+        /// All restructured loans — any status — ordered by restructured date descending.
+        /// </summary>
+        [HttpGet("restructured")]
+        public async Task<IActionResult> GetRestructuredLoans(CancellationToken ct = default)
+        {
+            var today = DateTime.UtcNow.Date;
+
+            var rows = await _db.LoanApplications
+                .Where(a => a.IsRestructured)
+                .OrderByDescending(a => a.RestructuredDate)
+                .ToListAsync(ct);
+
+            var items = rows.Select(a =>
+            {
+                var overdueDays = a.NextDueDate.HasValue && a.NextDueDate.Value.Date < today
+                    ? (int)(today - a.NextDueDate.Value.Date).TotalDays : 0;
+                var smaStatus = overdueDays switch
+                {
+                    0     => "STANDARD",
+                    <= 30 => "SMA-0",
+                    <= 60 => "SMA-1",
+                    <= 90 => "SMA-2",
+                    _     => "NPA"
+                };
+                var provisioningPct = smaStatus == "NPA" ? a.RequiredProvisioningPct : 5m;
+                return new RestructuredLoanDto
+                {
+                    Id                          = a.Id,
+                    ApplicationNumber           = a.ApplicationNumber,
+                    ApplicantName               = a.ApplicantName,
+                    ProductType                 = a.ProductType,
+                    OutstandingPrincipal        = a.OutstandingPrincipal ?? 0m,
+                    SmaStatus                   = smaStatus,
+                    OverdueDays                 = overdueDays,
+                    RestructuredDate            = a.RestructuredDate,
+                    RestructuredNewEmi          = a.RestructuredNewEmi,
+                    RestructuredNewTenureMonths = a.RestructuredNewTenureMonths,
+                    RestructuredNewInterestRate = a.RestructuredNewInterestRate,
+                    RestructuredReason          = a.RestructuredReason,
+                    RequiredProvisioningPct     = provisioningPct,
+                    RequiredProvisioning        = Math.Round((a.OutstandingPrincipal ?? 0m) * provisioningPct / 100m, 2),
+                };
+            }).ToList();
+
+            return Ok(new { total = items.Count, items });
+        }
+
+        // ── POST /api/loans/{id}/restructure ─────────────────────────────────────
+        /// <summary>
+        /// Restructure a DISBURSED loan: record revised EMI / tenure / rate and mark IsRestructured=true.
+        /// No GL journal — administrative action with no immediate cash movement.
+        /// </summary>
+        [HttpPost("/api/loans/{id:guid}/restructure")]
+        [AllowAnonymous]
+        public async Task<IActionResult> RestructureLoan(
+            Guid id,
+            [FromBody] RestructureRequest req,
+            CancellationToken ct = default)
+        {
+            var app = await _db.LoanApplications.FindAsync(new object[] { id }, ct);
+            if (app == null) return NotFound(new { error = "Loan not found" });
+
+            if (app.Status != "DISBURSED")
+                return BadRequest(new { error = "Only DISBURSED loans can be restructured" });
+
+            if (app.IsRestructured)
+                return BadRequest(new { error = "Loan is already restructured" });
+
+            app.IsRestructured               = true;
+            app.RestructuredDate             = DateTime.UtcNow;
+            app.RestructuredReason           = req.Reason;
+            app.RestructuredNewEmi           = req.NewMonthlyEmi;
+            app.RestructuredNewTenureMonths  = req.NewTenureMonths;
+            app.RestructuredNewInterestRate  = req.NewInterestRate;
+            app.TenureMonths                 = req.NewTenureMonths;
+            app.InterestRate                 = req.NewInterestRate;
+            // Reset NextDueDate to today+1 month to give borrower a fresh start
+            app.NextDueDate                  = DateTime.UtcNow.Date.AddMonths(1);
+            app.UpdatedAt                    = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync(ct);
+
+            _logger.LogInformation(
+                "Loan {AppNo} restructured — newEmi={Emi}, newTenure={Tenure}, newRate={Rate}",
+                app.ApplicationNumber, req.NewMonthlyEmi, req.NewTenureMonths, req.NewInterestRate);
+
+            return Ok(new
+            {
+                applicationNumber           = app.ApplicationNumber,
+                isRestructured              = app.IsRestructured,
+                restructuredDate            = app.RestructuredDate,
+                newMonthlyEmi               = app.RestructuredNewEmi,
+                newTenureMonths             = app.RestructuredNewTenureMonths,
+                newInterestRate             = app.RestructuredNewInterestRate,
+            });
+        }
+
         // ── GET /api/loans/npa-board ─────────────────────────────────────────────
         /// <summary>
         /// Portfolio NPA summary with sub-classification and provisioning per RBI IRAC norms.
@@ -810,5 +909,33 @@ namespace LoanService.Controllers
     {
         public string Reason       { get; set; } = "";
         public string AuthorizedBy { get; set; } = "";
+    }
+
+    // ── SAAR-LRP-003 DTOs ────────────────────────────────────────────────────
+
+    public class RestructuredLoanDto
+    {
+        public Guid      Id                          { get; set; }
+        public string    ApplicationNumber           { get; set; } = "";
+        public string    ApplicantName               { get; set; } = "";
+        public string    ProductType                 { get; set; } = "";
+        public decimal   OutstandingPrincipal        { get; set; }
+        public string    SmaStatus                   { get; set; } = "";
+        public int       OverdueDays                 { get; set; }
+        public DateTime? RestructuredDate            { get; set; }
+        public decimal?  RestructuredNewEmi          { get; set; }
+        public int?      RestructuredNewTenureMonths { get; set; }
+        public decimal?  RestructuredNewInterestRate { get; set; }
+        public string?   RestructuredReason          { get; set; }
+        public decimal   RequiredProvisioningPct     { get; set; }
+        public decimal   RequiredProvisioning        { get; set; }
+    }
+
+    public class RestructureRequest
+    {
+        public decimal NewMonthlyEmi    { get; set; }
+        public int     NewTenureMonths  { get; set; }
+        public decimal NewInterestRate  { get; set; }
+        public string  Reason           { get; set; } = "";
     }
 }
