@@ -59,6 +59,17 @@ namespace LoanService.Services
             decimal principalAmount,
             decimal interestAmount,
             CancellationToken ct = default);
+
+        /// <summary>
+        /// Posts NPA write-off journal (2-line):
+        ///   DR 5040 Loan Loss Provision (consumes provisioned amount)
+        ///   CR 1020 Loans and Advances (removes asset from balance sheet)
+        /// Idempotency key: WRITEOFF-{applicationNumber}.
+        /// </summary>
+        Task<DisbursalJournalResult> PostWriteOffJournalAsync(
+            string applicationNumber,
+            decimal outstanding,
+            CancellationToken ct = default);
     }
 
     public class TransactionServiceClient : ITransactionServiceClient
@@ -171,6 +182,29 @@ namespace LoanService.Services
                           currency = "INR", narration = $"Principal repaid — {applicationNumber} #{installmentNumber:D3}" },
                     new { accountCode = "4010", debitAmount = 0m,              creditAmount = interestAmount,
                           currency = "INR", narration = $"Interest income — {applicationNumber} #{installmentNumber:D3}" }
+                }
+            };
+            return await PostJournalAsync(applicationNumber, payload, ct);
+        }
+
+        public async Task<DisbursalJournalResult> PostWriteOffJournalAsync(
+            string applicationNumber,
+            decimal outstanding,
+            CancellationToken ct = default)
+        {
+            var payload = new
+            {
+                idempotencyKey = $"WRITEOFF-{applicationNumber}",
+                description    = $"NPA Write-Off — {applicationNumber}",
+                referenceType  = "NpaWriteOff",
+                referenceId    = applicationNumber,
+                postedBy       = "LoanService",
+                entries        = new[]
+                {
+                    new { accountCode = "5040", debitAmount = outstanding, creditAmount = 0m,
+                          currency = "INR", narration = $"Provision consumed on write-off — {applicationNumber}" },
+                    new { accountCode = "1020", debitAmount = 0m,          creditAmount = outstanding,
+                          currency = "INR", narration = $"Loan written off balance sheet — {applicationNumber}" }
                 }
             };
             return await PostJournalAsync(applicationNumber, payload, ct);

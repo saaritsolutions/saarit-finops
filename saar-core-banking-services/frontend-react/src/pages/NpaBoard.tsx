@@ -1,14 +1,21 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Alert, Box, Chip, CircularProgress, IconButton, Paper, Skeleton,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Tooltip, Typography,
+  Alert, Box, Button, Chip, CircularProgress, Collapse, Dialog,
+  DialogActions, DialogContent, DialogTitle, IconButton, Paper,
+  Skeleton, Table, TableBody, TableCell, TableContainer, TableHead,
+  TableRow, TextField, Tooltip, Typography,
 } from '@mui/material';
-import RefreshIcon    from '@mui/icons-material/Refresh';
-import WarningIcon    from '@mui/icons-material/Warning';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import RefreshIcon         from '@mui/icons-material/Refresh';
+import WarningIcon         from '@mui/icons-material/Warning';
+import CheckCircleIcon     from '@mui/icons-material/CheckCircle';
+import DeleteForeverIcon   from '@mui/icons-material/DeleteForever';
+import ExpandMoreIcon      from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon      from '@mui/icons-material/ExpandLess';
 import PageHeader from '../components/common/PageHeader';
-import { getNpaBoard, NpaBoardResult } from '../services/npaBoardService';
+import {
+  getNpaBoard, writeOffLoan,
+  NpaBoardResult, NpaLoanItem,
+} from '../services/npaBoardService';
 
 // ── colour palette ────────────────────────────────────────────────────────────
 const SLATE_50  = '#f8fafc';
@@ -30,6 +37,11 @@ const INR = (n?: number | null) =>
     : '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const PCT = (n: number) => (n * 100).toFixed(2) + '%';
+
+const FMT_DATE = (s?: string | null) => {
+  if (!s) return '—';
+  return new Date(s).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+};
 
 // ── NPA sub-class chip ────────────────────────────────────────────────────────
 const NPA_CHIP_COLORS: Record<string, { bg: string; color: string }> = {
@@ -105,11 +117,95 @@ const KpiCard: React.FC<KpiCardProps> = ({ label, value, sub, alert }) => (
   </Paper>
 );
 
+// ── Write-Off Confirmation Dialog ─────────────────────────────────────────────
+interface WriteOffDialogProps {
+  open:        boolean;
+  loan:        NpaLoanItem | null;
+  onClose:     () => void;
+  onConfirmed: () => void;
+}
+const WriteOffDialog: React.FC<WriteOffDialogProps> = ({ open, loan, onClose, onConfirmed }) => {
+  const [reason,       setReason]       = useState('');
+  const [authorizedBy, setAuthorizedBy] = useState('');
+  const [submitting,   setSubmitting]   = useState(false);
+  const [err,          setErr]          = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) { setReason(''); setAuthorizedBy(''); setErr(null); }
+  }, [open]);
+
+  const handleSubmit = async () => {
+    if (!loan) return;
+    if (!reason.trim())       { setErr('Reason is required'); return; }
+    if (!authorizedBy.trim()) { setErr('Authorized by is required'); return; }
+    setSubmitting(true);
+    setErr(null);
+    try {
+      await writeOffLoan(String(loan.id), { reason: reason.trim(), authorizedBy: authorizedBy.trim() });
+      onConfirmed();
+      onClose();
+    } catch (e: any) {
+      setErr(e?.response?.data?.error ?? e?.message ?? 'Write-off failed');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ color: RED_800, fontWeight: 700 }}>
+        Confirm NPA Write-Off
+      </DialogTitle>
+      <DialogContent>
+        {loan && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            You are about to write off <strong>{loan.applicationNumber}</strong> ({loan.applicantName}) —
+            outstanding <strong>{INR(loan.outstandingPrincipal)}</strong>.
+            This action is <strong>irreversible</strong>.
+          </Alert>
+        )}
+        {err && <Alert severity="error" sx={{ mb: 2 }}>{err}</Alert>}
+        <TextField
+          label="Reason for Write-Off"
+          fullWidth
+          multiline
+          minRows={2}
+          value={reason}
+          onChange={e => setReason(e.target.value)}
+          sx={{ mb: 2 }}
+          aria-label="write-off reason"
+        />
+        <TextField
+          label="Authorized By (user/designation)"
+          fullWidth
+          value={authorizedBy}
+          onChange={e => setAuthorizedBy(e.target.value)}
+          aria-label="write-off authorized by"
+        />
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button onClick={onClose} disabled={submitting}>Cancel</Button>
+        <Button
+          variant="contained"
+          color="error"
+          onClick={handleSubmit}
+          disabled={submitting}
+          aria-label="confirm write off"
+        >
+          {submitting ? <CircularProgress size={18} color="inherit" /> : 'Write Off Loan'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 const NpaBoard: React.FC = () => {
-  const [data, setData]       = useState<NpaBoardResult | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState<string | null>(null);
+  const [data, setData]                     = useState<NpaBoardResult | null>(null);
+  const [loading, setLoading]               = useState(true);
+  const [error, setError]                   = useState<string | null>(null);
+  const [writeOffTarget, setWriteOffTarget] = useState<NpaLoanItem | null>(null);
+  const [writtenOffOpen, setWrittenOffOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -148,7 +244,7 @@ const NpaBoard: React.FC = () => {
       {/* ── KPI Cards ── */}
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3 }}>
         {loading ? (
-          [1,2,3,4].map(i => (
+          [1,2,3,4,5].map(i => (
             <Skeleton key={i} variant="rectangular" height={88} sx={{ flex: 1, minWidth: 160, borderRadius: 2 }} />
           ))
         ) : (
@@ -173,6 +269,11 @@ const NpaBoard: React.FC = () => {
               label="SMA Watch Count"
               value={String(data?.smaWatchCount ?? 0)}
               sub={`${INR(data?.smaWatchOutstanding)} outstanding`}
+            />
+            <KpiCard
+              label="Written Off (YTD)"
+              value={String(data?.writtenOffCount ?? 0)}
+              sub={`${INR(data?.writtenOffOutstanding)} written off`}
             />
           </>
         )}
@@ -216,6 +317,7 @@ const NpaBoard: React.FC = () => {
                   <TableCell sx={{ fontWeight: 600, color: SLATE_700 }} align="right">DPD</TableCell>
                   <TableCell sx={{ fontWeight: 600, color: SLATE_700 }}>Sub-Class</TableCell>
                   <TableCell sx={{ fontWeight: 600, color: SLATE_700 }} align="right">Provisioning</TableCell>
+                  <TableCell sx={{ fontWeight: 600, color: SLATE_700 }} align="center">Action</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -230,6 +332,20 @@ const NpaBoard: React.FC = () => {
                     </TableCell>
                     <TableCell><NpaSubChip code={row.npaSubClassification} /></TableCell>
                     <TableCell align="right" sx={{ fontWeight: 600, color: RED_700 }}>{INR(row.requiredProvisioning)}</TableCell>
+                    <TableCell align="center">
+                      {row.npaSubClassification === 'DOUBTFUL_3' && (
+                        <Tooltip title={`Write off ${row.applicationNumber}`}>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            aria-label={`Write off ${row.applicationNumber}`}
+                            onClick={() => setWriteOffTarget(row)}
+                          >
+                            <DeleteForeverIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -239,7 +355,7 @@ const NpaBoard: React.FC = () => {
       </Paper>
 
       {/* ── SMA Watch List ── */}
-      <Paper elevation={0} sx={{ border: `1px solid ${SLATE_200}`, borderRadius: 2 }}>
+      <Paper elevation={0} sx={{ border: `1px solid ${SLATE_200}`, borderRadius: 2, mb: 3 }}>
         <Box sx={{ px: 2.5, py: 2, borderBottom: `1px solid ${SLATE_200}`, display: 'flex', alignItems: 'center', gap: 1 }}>
           <WarningIcon sx={{ color: AMBER_600, fontSize: 20 }} />
           <Typography variant="subtitle1" fontWeight={700} color={SLATE_900}>
@@ -298,6 +414,76 @@ const NpaBoard: React.FC = () => {
           </TableContainer>
         )}
       </Paper>
+
+      {/* ── Written-Off Loans (collapsible) ── */}
+      {data && data.writtenOffLoans.length > 0 && (
+        <Paper elevation={0} sx={{ border: `1px solid ${SLATE_200}`, borderRadius: 2, opacity: 0.85 }}>
+          <Box
+            sx={{ px: 2.5, py: 2,
+                  borderBottom: writtenOffOpen ? `1px solid ${SLATE_200}` : 'none',
+                  display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer' }}
+            onClick={() => setWrittenOffOpen(o => !o)}
+          >
+            <DeleteForeverIcon sx={{ color: SLATE_500, fontSize: 20 }} />
+            <Typography variant="subtitle1" fontWeight={700} color={SLATE_700}>
+              Written-Off Loans
+            </Typography>
+            <Typography variant="caption" color={SLATE_500} sx={{ ml: 1 }}>
+              Removed from active loan book
+            </Typography>
+            <Chip
+              label={data.writtenOffLoans.length}
+              size="small"
+              sx={{ ml: 'auto', backgroundColor: SLATE_100, color: SLATE_700 }}
+            />
+            <IconButton size="small" sx={{ ml: 0.5 }}>
+              {writtenOffOpen ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+            </IconButton>
+          </Box>
+          <Collapse in={writtenOffOpen}>
+            <TableContainer>
+              <Table size="small">
+                <TableHead sx={{ backgroundColor: SLATE_50 }}>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 600, color: SLATE_700 }}>Application #</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: SLATE_700 }}>Applicant</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: SLATE_700 }}>Product</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: SLATE_700 }} align="right">Outstanding (at write-off)</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: SLATE_700 }}>Write-Off Date</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: SLATE_700 }}>Reason</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: SLATE_700 }}>Journal #</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {data.writtenOffLoans.map(row => (
+                    <TableRow key={String(row.id)} hover>
+                      <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{row.applicationNumber}</TableCell>
+                      <TableCell>{row.applicantName}</TableCell>
+                      <TableCell>{row.productType}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 500 }}>{INR(row.outstandingPrincipal)}</TableCell>
+                      <TableCell>{FMT_DATE(row.writeOffDate)}</TableCell>
+                      <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {row.writeOffReason ?? '—'}
+                      </TableCell>
+                      <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.75rem', color: SLATE_500 }}>
+                        {row.writeOffJournalNumber ?? '—'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Collapse>
+        </Paper>
+      )}
+
+      {/* ── Write-Off Confirmation Dialog ── */}
+      <WriteOffDialog
+        open={writeOffTarget !== null}
+        loan={writeOffTarget}
+        onClose={() => setWriteOffTarget(null)}
+        onConfirmed={load}
+      />
     </Box>
   );
 };

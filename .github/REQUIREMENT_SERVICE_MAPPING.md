@@ -21,6 +21,7 @@ This file maps the major functional requirements from `CBS_Requirements_for_UCBs
 | KYC Workflow — SAAR-KYC-001                                  | CustomerService (5 KYC action endpoints: initiate/submit-docs/verify/reject/expire), React frontend (CustomerManagement.tsx KYC action buttons + verify/reject dialog) |
 | Account Statement — SAAR-STMT-001                            | AccountService (GET /api/account/{id}/statement, auto-generate AccountNumber), TransactionService (GET /api/journal/by-reference/{referenceId}), React frontend (AccountManagement.tsx Statement dialog) |
 | NPA Classification Board — SAAR-NPA-001                      | LoanService (GET /api/loans/npa-board, NpaSubClassification + provisioning [NotMapped] on LoanApplication), React frontend (NpaBoard.tsx — KPI cards + NPA table + SMA watch list) |
+| NPA Loan Write-Off Workflow — SAAR-NPA-002                    | LoanService (POST /api/loans/{id}/write-off, WriteOffDate/Reason/AuthorizedBy fields, AddWriteOffFields migration, PostWriteOffJournalAsync DR 5040/CR 1020), React frontend (NpaBoard.tsx — write-off dialog + WRITTEN_OFF section) |
 | 8. Bills                                                      | Transaction Service, GL & Accounting       |
 | 9. Remittances                                                | Remittance & Payment Service, Card & ATM Service |
 | 10. Interest and Fee Calculation                              | Interest & Fee Service, Deposit Service, GL & Accounting, Compliance Service |

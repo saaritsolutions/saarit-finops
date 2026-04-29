@@ -234,12 +234,16 @@ namespace LoanService.Controllers
                 .Where(a => a.Status == "DISBURSED" && a.OutstandingPrincipal.HasValue)
                 .ToListAsync(ct);
 
-            var totalLoanBook         = loans.Sum(a => a.OutstandingPrincipal ?? 0m);
-            var npaLoans              = loans.Where(a => a.SmaStatus == "NPA").ToList();
-            var smaWatch              = loans.Where(a => a.SmaStatus is "SMA-0" or "SMA-1" or "SMA-2").ToList();
-            var totalNpa              = npaLoans.Sum(a => a.OutstandingPrincipal ?? 0m);
-            var totalProvisioning     = npaLoans.Sum(a => a.RequiredProvisioning);
-            var npaRatio              = totalLoanBook > 0 ? Math.Round(totalNpa / totalLoanBook, 6) : 0m;
+            var writtenOff = await _db.LoanApplications
+                .Where(a => a.Status == "WRITTEN_OFF" && a.OutstandingPrincipal.HasValue)
+                .ToListAsync(ct);
+
+            var totalLoanBook     = loans.Sum(a => a.OutstandingPrincipal ?? 0m);
+            var npaLoans          = loans.Where(a => a.SmaStatus == "NPA").ToList();
+            var smaWatch          = loans.Where(a => a.SmaStatus is "SMA-0" or "SMA-1" or "SMA-2").ToList();
+            var totalNpa          = npaLoans.Sum(a => a.OutstandingPrincipal ?? 0m);
+            var totalProvisioning = npaLoans.Sum(a => a.RequiredProvisioning);
+            var npaRatio          = totalLoanBook > 0 ? Math.Round(totalNpa / totalLoanBook, 6) : 0m;
 
             return Ok(new NpaBoardResult
             {
@@ -250,6 +254,8 @@ namespace LoanService.Controllers
                 TotalRequiredProvisioning = totalProvisioning,
                 SmaWatchCount             = smaWatch.Count,
                 SmaWatchOutstanding       = smaWatch.Sum(a => a.OutstandingPrincipal ?? 0m),
+                WrittenOffCount           = writtenOff.Count,
+                WrittenOffOutstanding     = writtenOff.Sum(a => a.OutstandingPrincipal ?? 0m),
                 NpaLoans = npaLoans
                     .Select(a => new NpaLoanDto
                     {
@@ -278,6 +284,73 @@ namespace LoanService.Controllers
                     })
                     .OrderByDescending(a => a.OverdueDays)
                     .ToList(),
+                WrittenOffLoans = writtenOff
+                    .Select(a => new WrittenOffLoanDto
+                    {
+                        Id                   = a.Id,
+                        ApplicationNumber    = a.ApplicationNumber,
+                        ApplicantName        = a.ApplicantName,
+                        ProductType          = a.ProductType,
+                        OutstandingPrincipal = a.OutstandingPrincipal ?? 0m,
+                        WriteOffDate         = a.WriteOffDate,
+                        WriteOffReason       = a.WriteOffReason,
+                        WriteOffJournalNumber = a.WriteOffJournalNumber,
+                    })
+                    .OrderByDescending(a => a.WriteOffDate)
+                    .ToList(),
+            });
+        }
+
+        // ── POST /api/loans/{id}/write-off ─────────────────────────────────────
+        /// <summary>
+        /// Write off an NPA loan that is DOUBTFUL_3 (≥ 1096 DPD, 100% provisioned).
+        /// Posts DR 5040 / CR 1020 to the GL. Fail-open on TransactionService unavailability.
+        /// </summary>
+        [HttpPost("/api/loans/{id:guid}/write-off")]
+        [AllowAnonymous]
+        public async Task<IActionResult> WriteOffLoan(
+            Guid id,
+            [FromBody] WriteOffRequest req,
+            CancellationToken ct = default)
+        {
+            var app = await _db.LoanApplications.FindAsync(new object[] { id }, ct);
+            if (app == null) return NotFound(new { error = "Loan not found" });
+
+            if (app.Status == "WRITTEN_OFF")
+                return BadRequest(new { error = "Loan is already written off" });
+
+            if (app.Status != "DISBURSED")
+                return BadRequest(new { error = "Only DISBURSED loans can be written off" });
+
+            if (app.NpaSubClassification != "DOUBTFUL_3")
+                return BadRequest(new { error = $"Only DOUBTFUL_3 loans are eligible for write-off. This loan is classified as: {app.NpaSubClassification ?? app.SmaStatus}" });
+
+            var outstanding = app.OutstandingPrincipal ?? 0m;
+
+            // Post GL journal — fail-open
+            var journalResult = await _transactionService.PostWriteOffJournalAsync(
+                app.ApplicationNumber, outstanding, ct);
+
+            app.Status             = "WRITTEN_OFF";
+            app.WriteOffDate       = DateTime.UtcNow;
+            app.WriteOffReason     = req.Reason;
+            app.WriteOffAuthorizedBy = req.AuthorizedBy;
+            app.WriteOffJournalNumber = journalResult.JournalNumber;
+            app.UpdatedAt          = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync(ct);
+
+            _logger.LogInformation(
+                "Loan {AppNo} written off — outstanding={Amt}, journal={JNo}",
+                app.ApplicationNumber, outstanding, journalResult.JournalNumber ?? "failed");
+
+            return Ok(new
+            {
+                applicationNumber    = app.ApplicationNumber,
+                status               = app.Status,
+                writeOffDate         = app.WriteOffDate,
+                writeOffJournalNumber = app.WriteOffJournalNumber,
+                outstanding
             });
         }
 
@@ -679,7 +752,7 @@ namespace LoanService.Controllers
         public DateTime? DisbursedAt          { get; set; }
     }
 
-    // ── SAAR-NPA-001 DTOs ────────────────────────────────────────────────────
+    // ── SAAR-NPA-001 / SAAR-NPA-002 DTOs ────────────────────────────────────
 
     public class NpaBoardResult
     {
@@ -690,8 +763,11 @@ namespace LoanService.Controllers
         public decimal  TotalRequiredProvisioning { get; set; }
         public int      SmaWatchCount             { get; set; }
         public decimal  SmaWatchOutstanding       { get; set; }
-        public List<NpaLoanDto>  NpaLoans         { get; set; } = new();
-        public List<SmaWatchDto> SmaWatchList     { get; set; } = new();
+        public int      WrittenOffCount           { get; set; }
+        public decimal  WrittenOffOutstanding     { get; set; }
+        public List<NpaLoanDto>      NpaLoans      { get; set; } = new();
+        public List<SmaWatchDto>     SmaWatchList  { get; set; } = new();
+        public List<WrittenOffLoanDto> WrittenOffLoans { get; set; } = new();
     }
 
     public class NpaLoanDto
@@ -716,5 +792,23 @@ namespace LoanService.Controllers
         public decimal OutstandingPrincipal { get; set; }
         public int     OverdueDays          { get; set; }
         public string  SmaStatus            { get; set; } = "";
+    }
+
+    public class WrittenOffLoanDto
+    {
+        public Guid      Id                    { get; set; }
+        public string    ApplicationNumber     { get; set; } = "";
+        public string    ApplicantName         { get; set; } = "";
+        public string    ProductType           { get; set; } = "";
+        public decimal   OutstandingPrincipal  { get; set; }
+        public DateTime? WriteOffDate          { get; set; }
+        public string?   WriteOffReason        { get; set; }
+        public string?   WriteOffJournalNumber { get; set; }
+    }
+
+    public class WriteOffRequest
+    {
+        public string Reason       { get; set; } = "";
+        public string AuthorizedBy { get; set; } = "";
     }
 }
