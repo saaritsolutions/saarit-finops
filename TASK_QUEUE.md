@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-29 (session 56 — SAAR-NPA-002 NPA Write-Off Workflow)
+**Last Updated:** 2026-04-29 (session 57 — SAAR-LRP-003 Loan Restructuring Tracking)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,21 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Next feature**: SAAR-LRP-003 (restructured loan tracking) or SAAR-NPA-003 (NPA recovery tracking) | NPA lifecycle continuation |
+| 1 | **Next feature**: SAAR-LRP-004 (restructured loan upgrade after 1-year) or SAAR-RPT-002 (RBI regulatory reporting) or SAAR-NPA-003 (NPA recovery tracking) | Loan portfolio lifecycle continuation |
 | 2 | **Fix Kaspersky Application Control** (local only): Add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops` | Enables local `dotnet test` |
-| 3 | **CI watch**: verify eee799f (SAAR-NPA-002) is green across all 4 workflows | New migration + 3 new tests |
+| 3 | **CI watch**: verify 834e262 (SAAR-LRP-003) is green across all 4 workflows | New migration + 3 new NUnit tests |
+
+### Recently Completed (session 57 — 2026-04-29)
+- [x] **SAAR-LRP-003 — Loan Restructuring Tracking DEPLOYED** (commit 834e262):
+  - `LoanApplication.cs`: `IsRestructured`, `RestructuredDate`, `RestructuredReason`, `RestructuredNewEmi`, `RestructuredNewTenureMonths`, `RestructuredNewInterestRate` fields + `[NotMapped]` `RestructuredProvisioningPct` / `RestructuredProvisioning`.
+  - EF migration `AddRestructureFields` (6 columns, schema qualifiers stripped).
+  - `POST /api/loans/{id}/restructure` (absolute route): DISBURSED guard + idempotency guard; updates terms + NextDueDate. `GET /api/loans/applications/restructured`.
+  - `RestructuredLoanTests.cs`: 3 NUnit (T-01 success, T-02 already-restructured 400, T-03 non-DISBURSED 400).
+  - `loanOriginationService.ts`: `RestructuredLoanItem` / `RestructuredLoansResult` / `RestructureRequest` types + `getRestructuredLoans()` + `restructureLoan()`.
+  - `LoanDetail.tsx`: RESTRUCTURED amber chip + Restructure Loan button (DISBURSED+!isRestructured) + RestructureDialog (4 fields, all required) + Restructured Terms card (amber, RBI 5% label).
+  - `Reports.tsx`: Tab 5 "Restructured" — KPI row (count/outstanding/provisioning) + table + CSV export.
+  - `16-restructured-loans.cy.ts`: 3 Cypress tests (T-04/T-05/T-06).
+  - Smoke: `GET /api/loans/applications/restructured` → `{"total":0,"items":[]}` ✅ LIVE.
 
 ### Recently Completed (session 56 — 2026-04-29)
 - [x] **SAAR-NPA-002 — NPA Loan Write-Off Workflow DEPLOYED** (commit eee799f):
