@@ -34,6 +34,7 @@ import {
   PlayArrow as RunIcon,
   AccountBalanceWallet as PostIcon,
   WarningAmber as WarningAmberIcon,
+  Autorenew as AutorenewIcon,
 } from '@mui/icons-material';
 import {
   BarChart,
@@ -66,7 +67,9 @@ import {
 } from '../../services/interestFeeService';
 import {
   getOverdueLoans,
+  getRestructuredLoans,
   type OverdueLoanItem,
+  type RestructuredLoanItem,
 } from '../../services/loanOriginationService';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -162,6 +165,11 @@ const Reports: React.FC = () => {
   const [overdueLoading, setOverdueLoading]       = useState(false);
   const [smaFilter, setSmaFilter]                 = useState('ALL');
 
+  // ── Tab 5 — Restructured Loans (SAAR-LRP-003) ────────────────────────────
+  const [restructuredLoans, setRestructuredLoans]     = useState<RestructuredLoanItem[]>([]);
+  const [restructuredTotal, setRestructuredTotal]     = useState(0);
+  const [restructuredLoading, setRestructuredLoading] = useState(false);
+
   // ── Data loaders ──────────────────────────────────────────────────────────
 
   const loadBalances = useCallback(() => {
@@ -212,6 +220,14 @@ const Reports: React.FC = () => {
       .catch(() => { setOverdueLoans([]); setOverdueTotal(0); })
       .finally(() => setOverdueLoading(false));
   }, [smaFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadRestructured = useCallback(() => {
+    setRestructuredLoading(true);
+    getRestructuredLoans()
+      .then(r => { setRestructuredLoans(r.items); setRestructuredTotal(r.total); })
+      .catch(() => { setRestructuredLoans([]); setRestructuredTotal(0); })
+      .finally(() => setRestructuredLoading(false));
+  }, []);
 
   async function handleRunDailyAccrual() {
     setAccrualRunning(true);
@@ -264,6 +280,10 @@ const Reports: React.FC = () => {
     if (tab === 4) loadOverdue();
   }, [tab, smaFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (tab === 5) loadRestructured();
+  }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── CSV export ────────────────────────────────────────────────────────────
 
   function exportCsv() {
@@ -291,6 +311,20 @@ const Reports: React.FC = () => {
     const a    = document.createElement('a');
     a.href     = url;
     a.download = 'overdue-loans.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportRestructuredCsv() {
+    const header = 'Application No,Applicant,Product,Outstanding,SMA Status,DPD,Restructured Date,New EMI,New Tenure,New Rate,Required Provisioning\n';
+    const rows   = restructuredLoans.map(l =>
+      `${l.applicationNumber},${l.applicantName},${l.productType},${l.outstandingPrincipal},${l.smaStatus},${l.overdueDays},${l.restructuredDate ? String(l.restructuredDate).slice(0, 10) : ''},${l.restructuredNewEmi ?? ''},${l.restructuredNewTenureMonths ?? ''},${l.restructuredNewInterestRate ?? ''},${l.requiredProvisioning}`
+    ).join('\n');
+    const blob = new Blob([header + rows], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'restructured-loans.csv';
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -349,6 +383,7 @@ const Reports: React.FC = () => {
           <Tab icon={<SavingsIcon      fontSize="small" />} iconPosition="start" label="Deposit Maturity"  id="rpt-tab-2" />
           <Tab icon={<TrendingUpIcon   fontSize="small" />} iconPosition="start" label="Deposit Interest"  id="rpt-tab-3" />
           <Tab icon={<WarningAmberIcon fontSize="small" />} iconPosition="start" label="Overdue Loans"    id="rpt-tab-4" />
+          <Tab icon={<AutorenewIcon  fontSize="small" />} iconPosition="start" label="Restructured"     id="rpt-tab-5" />
         </Tabs>
 
         {/* ── Tab 0: Financial Reports ─────────────────────────────────────── */}
@@ -837,6 +872,93 @@ const Reports: React.FC = () => {
                       </TableCell>
                       <TableCell><Chip label={l.smaStatus} color={smaColor(l.smaStatus)} size="small" /></TableCell>
                       <TableCell>{l.nextDueDate ? String(l.nextDueDate).slice(0, 10) : '—'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </TabPanel>
+
+        {/* ── Tab 5: Restructured Loans (SAAR-LRP-003) ─────────────────────────── */}
+        <TabPanel value={tab} index={5}>
+          {/* Header row */}
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+            <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <AutorenewIcon color="warning" /> Restructured Loans ({restructuredTotal})
+            </Typography>
+            <Button
+              variant="outlined" size="small" startIcon={<DownloadIcon />}
+              onClick={exportRestructuredCsv} disabled={restructuredLoans.length === 0}
+              aria-label="Export Restructured CSV"
+            >Export CSV</Button>
+          </Box>
+
+          {/* KPI row */}
+          {!restructuredLoading && restructuredLoans.length > 0 && (() => {
+            const totalOutstanding   = restructuredLoans.reduce((s, l) => s + l.outstandingPrincipal, 0);
+            const totalProvisioning  = restructuredLoans.reduce((s, l) => s + l.requiredProvisioning, 0);
+            return (
+              <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: 'wrap' }}>
+                <Paper variant="outlined" sx={{ p: 2, minWidth: 160 }}>
+                  <Typography variant="caption" color="text.secondary">Restructured Count</Typography>
+                  <Typography variant="h6" fontWeight={700} color="warning.main">{restructuredTotal}</Typography>
+                </Paper>
+                <Paper variant="outlined" sx={{ p: 2, minWidth: 160 }}>
+                  <Typography variant="caption" color="text.secondary">Total Outstanding</Typography>
+                  <Typography variant="h6" fontWeight={700}>{INR(totalOutstanding)}</Typography>
+                </Paper>
+                <Paper variant="outlined" sx={{ p: 2, minWidth: 180 }}>
+                  <Typography variant="caption" color="text.secondary">Required Provisioning (5%)</Typography>
+                  <Typography variant="h6" fontWeight={700} color="error.main">{INR(totalProvisioning)}</Typography>
+                </Paper>
+              </Stack>
+            );
+          })()}
+
+          {/* Table */}
+          {restructuredLoading ? (
+            <Stack spacing={1}>{[1, 2, 3].map(i => <Skeleton key={i} height={40} />)}</Stack>
+          ) : restructuredLoans.length === 0 ? (
+            <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
+              No restructured loans on record.
+            </Typography>
+          ) : (
+            <TableContainer component={Paper} variant="outlined">
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ '& th': { fontWeight: 600, bgcolor: 'action.hover' } }}>
+                    <TableCell>Application No</TableCell>
+                    <TableCell>Applicant</TableCell>
+                    <TableCell>Product</TableCell>
+                    <TableCell align="right">Outstanding (₹)</TableCell>
+                    <TableCell>SMA Status</TableCell>
+                    <TableCell align="right">DPD</TableCell>
+                    <TableCell>Restructured Date</TableCell>
+                    <TableCell align="right">New EMI (₹)</TableCell>
+                    <TableCell align="right">Required Prov. (₹)</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {restructuredLoans.map(l => (
+                    <TableRow key={l.id} hover>
+                      <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{l.applicationNumber}</TableCell>
+                      <TableCell>{l.applicantName}</TableCell>
+                      <TableCell>{l.productType.replace(/_/g, ' ')}</TableCell>
+                      <TableCell align="right">{INR(l.outstandingPrincipal)}</TableCell>
+                      <TableCell>
+                        <Chip label={l.smaStatus} color={smaColor(l.smaStatus)} size="small" />
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold', color: l.overdueDays > 60 ? 'error.main' : 'warning.main' }}>
+                        {l.overdueDays}
+                      </TableCell>
+                      <TableCell sx={{ fontSize: '0.8rem' }}>
+                        {l.restructuredDate ? String(l.restructuredDate).slice(0, 10) : '—'}
+                      </TableCell>
+                      <TableCell align="right">{l.restructuredNewEmi != null ? INR(l.restructuredNewEmi) : '—'}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600, color: 'error.main' }}>
+                        {INR(l.requiredProvisioning)}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

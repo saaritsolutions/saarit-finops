@@ -284,6 +284,42 @@ namespace LoanService.Models
         [MaxLength(50)]
         public string? WriteOffJournalNumber { get; set; }
 
+        // ── Loan Restructuring (SAAR-LRP-003) ───────────────────────────────────
+        /// <summary>True when the loan has been restructured (revised terms agreed with borrower).</summary>
+        public bool IsRestructured { get; set; } = false;
+
+        /// <summary>UTC timestamp of restructuring.</summary>
+        public DateTime? RestructuredDate { get; set; }
+
+        /// <summary>Reason for restructuring (max 500 chars).</summary>
+        [MaxLength(500)]
+        public string? RestructuredReason { get; set; }
+
+        /// <summary>Revised monthly EMI agreed at restructuring.</summary>
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? RestructuredNewEmi { get; set; }
+
+        /// <summary>Revised tenure in months agreed at restructuring.</summary>
+        public int? RestructuredNewTenureMonths { get; set; }
+
+        /// <summary>Revised annual interest rate agreed at restructuring.</summary>
+        [Column(TypeName = "decimal(6,4)")]
+        public decimal? RestructuredNewInterestRate { get; set; }
+
+        /// <summary>
+        /// Required provisioning % for restructured loans per RBI:
+        /// 5% if standard/SMA; same as NpaSubClassification rate if NPA.
+        /// </summary>
+        [NotMapped]
+        public decimal RestructuredProvisioningPct =>
+            !IsRestructured ? 0m :
+            SmaStatus == "NPA" ? RequiredProvisioningPct : 5m;
+
+        /// <summary>Provisioning amount = OutstandingPrincipal × RestructuredProvisioningPct / 100.</summary>
+        [NotMapped]
+        public decimal RestructuredProvisioning =>
+            Math.Round((OutstandingPrincipal ?? 0m) * RestructuredProvisioningPct / 100m, 2);
+
         // ── Navigation ──────────────────────────────────────────────────────────
         public List<LoanDocument> Documents { get; set; } = new();
         public List<LoanApprovalAction> ApprovalActions { get; set; } = new();

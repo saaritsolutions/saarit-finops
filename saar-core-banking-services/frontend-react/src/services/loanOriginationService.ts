@@ -472,6 +472,65 @@ export async function getOverdueLoans(params?: {
   };
 }
 
+// ── Loan Restructuring (SAAR-LRP-003) ───────────────────────────────────────
+
+export interface RestructuredLoanItem {
+  id: string;
+  applicationNumber: string;
+  applicantName: string;
+  productType: string;
+  outstandingPrincipal: number;
+  smaStatus: string;
+  overdueDays: number;
+  restructuredDate: string | null;
+  restructuredNewEmi: number | null;
+  restructuredNewTenureMonths: number | null;
+  restructuredNewInterestRate: number | null;
+  restructuredReason: string | null;
+  requiredProvisioningPct: number;
+  requiredProvisioning: number;
+}
+
+export interface RestructuredLoansResult {
+  total: number;
+  items: RestructuredLoanItem[];
+}
+
+export interface RestructureRequest {
+  newMonthlyEmi: number;
+  newTenureMonths: number;
+  newInterestRate: number;
+  reason: string;
+}
+
+export async function getRestructuredLoans(): Promise<RestructuredLoansResult> {
+  const res = await axios.get(`${APPS_ROOT}/restructured`);
+  const d = res.data;
+  return {
+    total: d.total ?? d.Total ?? 0,
+    items: (d.items ?? d.Items ?? []).map((a: any) => ({
+      id:                          a.id                          ?? a.Id,
+      applicationNumber:           a.applicationNumber           ?? a.ApplicationNumber ?? '',
+      applicantName:               a.applicantName               ?? a.ApplicantName     ?? '',
+      productType:                 a.productType                 ?? a.ProductType       ?? '',
+      outstandingPrincipal:        a.outstandingPrincipal        ?? a.OutstandingPrincipal ?? 0,
+      smaStatus:                   a.smaStatus                   ?? a.SmaStatus         ?? 'STANDARD',
+      overdueDays:                 a.overdueDays                 ?? a.OverdueDays        ?? 0,
+      restructuredDate:            a.restructuredDate             ?? a.RestructuredDate  ?? null,
+      restructuredNewEmi:          a.restructuredNewEmi          ?? a.RestructuredNewEmi ?? null,
+      restructuredNewTenureMonths: a.restructuredNewTenureMonths ?? a.RestructuredNewTenureMonths ?? null,
+      restructuredNewInterestRate: a.restructuredNewInterestRate ?? a.RestructuredNewInterestRate ?? null,
+      restructuredReason:          a.restructuredReason          ?? a.RestructuredReason ?? null,
+      requiredProvisioningPct:     a.requiredProvisioningPct     ?? a.RequiredProvisioningPct ?? 5,
+      requiredProvisioning:        a.requiredProvisioning        ?? a.RequiredProvisioning ?? 0,
+    })),
+  };
+}
+
+export async function restructureLoan(id: string, req: RestructureRequest): Promise<void> {
+  await axios.post(`${BASE_URL}/api/loans/${id}/restructure`, req);
+}
+
 // ── Legacy exports (backward compat with old LoanOrigination.tsx) ──────────
 export type { PreValidateRequest } from './loanOriginationServiceLegacy';
 export type { ServerField }        from './loanOriginationServiceLegacy';
