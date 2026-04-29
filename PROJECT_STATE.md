@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-28 (session 55 — SAAR-NPA-001 NPA Classification Board)
+**Last Updated:** 2026-04-29 (session 56 — SAAR-NPA-002 NPA Write-Off Workflow)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -146,6 +146,24 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 56 — 2026-04-29 (SAAR-NPA-002 — NPA Loan Write-Off Workflow)
+- **`LoanApplication.cs`**: Added `WriteOffDate` (DateTime?), `WriteOffReason` (string?500), `WriteOffAuthorizedBy` (string?150), `WriteOffJournalNumber` (string?50) persisted fields.
+- **EF migration `AddWriteOffFields`** (20260428172922): Adds 4 columns to `LoanApplications` — schema qualifiers stripped for multi-tenancy.
+- **`TransactionServiceClient.cs`**: Added `PostWriteOffJournalAsync` to interface + implementation — DR 5040 Loan Loss Provision / CR 1020 Loans & Advances; idempotency key `WRITEOFF-{appNo}`; fail-open.
+- **`POST /api/loans/{id}/write-off`** (absolute route, AllowAnonymous): Guards — not DISBURSED (400), already WRITTEN_OFF (400), not DOUBTFUL_3 (400). On success: posts GL journal fail-open, sets Status=WRITTEN_OFF + audit fields, saves.
+- **`GET /api/loans/npa-board`**: Updated to also query WRITTEN_OFF loans and return `writtenOffLoans[]`, `writtenOffCount`, `writtenOffOutstanding` — no double-counting with npaLoans.
+- **New DTOs**: `WrittenOffLoanDto`, `WriteOffRequest` added to controller file.
+- **`WriteOffTests.cs`**: 3 NUnit tests — T-01 DOUBTFUL_3 write-off succeeds + persists audit fields, T-02 SUB_STANDARD 400, T-03 already-WRITTEN_OFF 400.
+- **All 5 ITransactionServiceClient stubs** updated with `PostWriteOffJournalAsync` no-op across EligibilityAndWorkflowTests / GoldLoanTests / NpaBoardTests / OverdueLoansTests / RepaymentTests.
+- **`NpaBoard.tsx`**: Added `WriteOffDialog` component (reason + authorizedBy fields, error handling), write-off `IconButton` (aria-label) on DOUBTFUL_3 rows only, collapsible "Written-Off Loans" section, "Written Off (YTD)" KPI card.
+- **`npaBoardService.ts`**: Added `WrittenOffLoanItem`, `WriteOffRequest` interfaces and `writeOffLoan(id, req)` API function.
+- **`15-npa-board.cy.ts`**: Added T-07 (button only on D3), T-08 (dialog fields), T-09 (written-off section expand) — 3 tests → 6 total in spec.
+- **Commit**: `eee799f` — 17 files changed, 1768 insertions. Build: 0 C# errors, 0 new TS errors.
+- **Smoke**: `GET /api/loans/npa-board` → `{"writtenOffCount":0,"writtenOffLoans":[]}` ✅ LIVE on demobank.
+
+### Session 55 — 2026-04-28 (SAAR-NPA-001 — NPA Classification Board)
+- **Commit 09745b8**: NPA Board full implementation. `[NotMapped]` NpaSubClassification + RequiredProvisioningPct + RequiredProvisioning on LoanApplication. `GET /api/loans/npa-board` endpoint (absolute route). NpaBoard.tsx + npaBoardService.ts + sidebar WarningAmberIcon + router route. 3 NUnit + 3 Cypress tests. Smoke: LIVE ✅
 
 ### Session 53 — 2026-04-28 (SAAR-TESTING-001 — Production-grade testing overhaul + DOB fix)
 - **DOB bug fix**: `Customer.DateOfBirth` DateTime→DateOnly + `.HasColumnType("date")` + EF migration `FixDateOfBirthToDate`. `Nominee.DateOfBirth` DateTime?→DateOnly? + `.HasColumnType("date")` + EF migration `FixNomineeDateOfBirthToDate`. Deployed to Hetzner, smoke tested (DOB returns "1987-08-14" pure date).
