@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-28 (session 55 — SAAR-NPA-001 NPA Classification Board)
+**Last Updated:** 2026-04-29 (session 56 — SAAR-NPA-002 NPA Write-Off Workflow)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,21 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **E2E smoke on demobank**: `/npa-board` (verify KPI cards + empty state renders) | Verify SAAR-NPA-001 live |
-| 2 | **Next feature**: SAAR-LRP-003 (restructured loan tracking) or SAAR-NPA-002 (NPA write-off) | Risk management continuation |
-| 3 | **Fix Kaspersky Application Control** (local only): Add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops` | Enables local `dotnet test` |
+| 1 | **Next feature**: SAAR-LRP-003 (restructured loan tracking) or SAAR-NPA-003 (NPA recovery tracking) | NPA lifecycle continuation |
+| 2 | **Fix Kaspersky Application Control** (local only): Add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops` | Enables local `dotnet test` |
+| 3 | **CI watch**: verify eee799f (SAAR-NPA-002) is green across all 4 workflows | New migration + 3 new tests |
+
+### Recently Completed (session 56 — 2026-04-29)
+- [x] **SAAR-NPA-002 — NPA Loan Write-Off Workflow DEPLOYED** (commit eee799f):
+  - `LoanApplication.cs`: `WriteOffDate`, `WriteOffReason`, `WriteOffAuthorizedBy`, `WriteOffJournalNumber` added.
+  - EF migration `AddWriteOffFields` (schema qualifiers stripped).
+  - `POST /api/loans/{id}/write-off` endpoint (absolute route, AllowAnonymous): DOUBTFUL_3 guard, idempotency guard, GL DR 5040/CR 1020, fail-open.
+  - `GET /api/loans/npa-board` extended with `writtenOffLoans`, `writtenOffCount`, `writtenOffOutstanding`.
+  - `WriteOffTests.cs`: 3 NUnit (T-01 success, T-02 non-D3 400, T-03 already-written-off 400).
+  - All 5 ITransactionServiceClient stubs updated with `PostWriteOffJournalAsync`.
+  - `NpaBoard.tsx`: `WriteOffDialog` + write-off `IconButton` (D3 only, aria-label) + collapsible Written-Off section + KPI card.
+  - `15-npa-board.cy.ts`: T-07/T-08/T-09 added (6 tests total in spec).
+  - Smoke: `GET /api/loans/npa-board` → `{"writtenOffCount":0,"writtenOffLoans":[]}` ✅ LIVE.
 
 ### Recently Completed (session 55 — 2026-04-28)
 - [x] **SAAR-NPA-001 — NPA Classification Board DEPLOYED** (commit 09745b8):
