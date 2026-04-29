@@ -77,6 +77,9 @@ file sealed class StubTransactionClient : ITransactionServiceClient
     public Task<DisbursalJournalResult> PostEmiJournalAsync(
         string appNo, int installmentNumber, decimal principalAmount, decimal interestAmount, CancellationToken ct = default) =>
         Task.FromResult(new DisbursalJournalResult(_succeeds, _succeeds ? $"JNL-EMI-{installmentNumber:D3}" : null, _succeeds ? null : "stub error"));
+    public Task<DisbursalJournalResult> PostWriteOffJournalAsync(
+        string appNo, decimal outstanding, CancellationToken ct = default) =>
+        Task.FromResult(new DisbursalJournalResult(_succeeds, _succeeds ? "JNL-WRITEOFF-001" : null, _succeeds ? null : "stub error"));
 }
 
 // ── DB helper ─────────────────────────────────────────────────────────────────

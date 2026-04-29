@@ -47,6 +47,9 @@ file sealed class RepNoOpTransaction : ITransactionServiceClient
         string applicationNumber, int installmentNumber,
         decimal principalAmount, decimal interestAmount, CancellationToken ct = default) =>
         Task.FromResult(new DisbursalJournalResult(true, $"JNL-EMI-{installmentNumber:D3}", null));
+    public Task<DisbursalJournalResult> PostWriteOffJournalAsync(
+        string applicationNumber, decimal outstanding, CancellationToken ct = default) =>
+        Task.FromResult(new DisbursalJournalResult(true, "JNL-WRITEOFF-001", null));
 }
 
 file static class RepDbFactory

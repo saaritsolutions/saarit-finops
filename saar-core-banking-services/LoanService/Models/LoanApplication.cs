@@ -268,6 +268,22 @@ namespace LoanService.Models
         public decimal RequiredProvisioning =>
             Math.Round((OutstandingPrincipal ?? 0m) * RequiredProvisioningPct / 100m, 2);
 
+        // ── NPA Write-Off (SAAR-NPA-002) ────────────────────────────────────────
+        /// <summary>UTC timestamp when the loan was written off the balance sheet.</summary>
+        public DateTime? WriteOffDate { get; set; }
+
+        /// <summary>Reason provided at time of write-off (max 500 chars).</summary>
+        [MaxLength(500)]
+        public string? WriteOffReason { get; set; }
+
+        /// <summary>User who authorized the write-off (max 150 chars).</summary>
+        [MaxLength(150)]
+        public string? WriteOffAuthorizedBy { get; set; }
+
+        /// <summary>Journal number posted by TransactionService on write-off (null if fail-open).</summary>
+        [MaxLength(50)]
+        public string? WriteOffJournalNumber { get; set; }
+
         // ── Navigation ──────────────────────────────────────────────────────────
         public List<LoanDocument> Documents { get; set; } = new();
         public List<LoanApprovalAction> ApprovalActions { get; set; } = new();
