@@ -1,36 +1,46 @@
 # TASK_QUEUE.md — Development Backlog
 
 **Last Updated:** 2026-05-10
-**Current Focus:** SAAR-RPT-002 (RBI Regulatory Reporting)
+**Current Focus:** SAAR-NPA-003 (NPA Recovery Tracking)
 
 ---
 
 ## Current Focus
 
-### SAAR-RPT-002: RBI Regulatory Reporting
+### SAAR-NPA-003: NPA Recovery Tracking
 **Status:** PLANNING
 **Priority:** HIGH
 **Start Date:** 2026-05-10
 
-#### Backend Tasks
-- [ ] Design regulatory report data models
-- [ ] Create API endpoints for NPA, Restructured, Upgraded summaries
-- [ ] Implement GL aggregation queries
-- [ ] Add regulatory metrics calculations
-- [ ] Write NUnit tests for all endpoints
-- [ ] Document API contracts
-
-#### Frontend Tasks
-- [ ] Create Reports tabs for RBI data
-- [ ] Implement KPI cards for compliance metrics
-- [ ] Build data tables with sorting/filtering
-- [ ] Add CSV/PDF export functionality
+#### Planned Tasks
+- [ ] Design recovery workflow data models
+- [ ] Create recovery endpoints (partial recovery, reversal, forecasting)
+- [ ] Implement GL posting for recovery transactions
+- [ ] Add recovery timeline and metrics calculations
+- [ ] Write NUnit tests for recovery workflows
+- [ ] Create frontend recovery management UI
 - [ ] Create Cypress regression tests
-- [ ] Integrate with existing Reports page
 
 ---
 
 ## Recently Completed
+
+### ✅ SAAR-RPT-002: RBI Regulatory Reporting (Completed 2026-05-10)
+**Commits:** 04a1763 (backend), 71772fc (frontend)
+**Backend Deliverables:**
+- ✅ GET /api/loans/reports/regulatory-summary endpoint
+- ✅ RegulatoryMetricsDto with 18 properties (loan book, NPA, provision, restructured, upgraded, written-off, SMA watch, standard)
+- ✅ 3 NUnit tests (T-01 mixed portfolio, T-02 all standard, T-03 restructured+upgraded)
+- ✅ Idempotency not required (read-only reporting endpoint)
+
+**Frontend Deliverables:**
+- ✅ Tab 7 "RBI Regulatory" in Reports.tsx with lazy loading
+- ✅ KPI cards for Total Loan Book, NPA Outstanding, NPA Ratio, Provision Coverage
+- ✅ KPI cards for Restructured/Upgraded/Written-Off counts and outstanding
+- ✅ Summary table with loan category breakdown (Standard, SMA Watch, NPA, Restructured, Upgraded, Written-Off)
+- ✅ CSV export functionality
+- ✅ Service layer: getRegulatoryMetrics() in loanOriginationService.ts
+- ✅ 4 Cypress regression tests (18-regulatory-report.cy.ts)
 
 ### ✅ SAAR-LRP-004: Loan Upgrade Feature (Completed 2026-05-10)
 **Commits:** ab07403, d7de05a, 528561a (backend) + 793ec27 (frontend)
@@ -63,10 +73,10 @@
 
 | Task | Type | Estimate | Owner | Status |
 |------|------|----------|-------|--------|
-| SAAR-RPT-002 Backend Design | Design | - | Team | 🟡 Planning |
-| SAAR-RPT-002 API Implementation | Backend | Medium | Team | ⏳ Pending |
-| SAAR-RPT-002 Frontend | Frontend | Medium | Team | ⏳ Pending |
-| SAAR-RPT-002 E2E Tests | QA | Small | Team | ⏳ Pending |
+| SAAR-NPA-003 Backend Design | Design | - | Team | 🟡 Planning |
+| SAAR-NPA-003 API Implementation | Backend | Large | Team | ⏳ Pending |
+| SAAR-NPA-003 Frontend | Frontend | Medium | Team | ⏳ Pending |
+| SAAR-NPA-003 E2E Tests | QA | Medium | Team | ⏳ Pending |
 | CI/CD Verification | DevOps | Small | Team | ⏳ Pending |
 
 ---
@@ -125,6 +135,10 @@ For each feature to be considered complete, it must meet ALL of:
 ---
 
 ## Commits by Feature
+
+### SAAR-RPT-002 (RBI Regulatory Reporting)
+- `04a1763` — Backend: Regulatory Metrics API endpoint + NUnit tests
+- `71772fc` — Frontend: Tab 7 + Service layer + Cypress tests
 
 ### SAAR-LRP-004 (Loan Upgrade)
 - `ab07403` — Data model & migrations
@@ -199,7 +213,7 @@ None currently.
 
 | Metric | Target | Current | Status |
 |--------|--------|---------|--------|
-| Features Complete | 4/6 | 3/6 | 🟡 On Track |
-| Test Coverage | 90+ | ~40 | 🟡 In Progress |
+| Features Complete | 4/6 | 4/6 | ✅ Achieved |
+| Test Coverage | 90+ | ~50 | 🟡 In Progress |
 | CI/CD Pass Rate | 100% | TBD | ⏳ Pending |
 | Production Deployment | 1 | 0 | ⏳ Pending |

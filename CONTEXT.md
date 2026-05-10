@@ -5,23 +5,33 @@
 
 ## In Progress
 
-### SAAR-RPT-002: RBI Regulatory Reporting (WIP)
+### SAAR-NPA-003: NPA Recovery Tracking (Next)
 - **Status:** Planning Phase
-- **Backend:** Not yet started
-- **Frontend:** Not yet started
-- **Estimated Coverage:**
-  - NPA Status & History Reports
-  - Restructured Loans Reports
-  - Upgraded Loans Reports
-  - Regulatory Compliance Metrics
-
-### Cypress E2E Tests (SAAR-LRP-003)
-- **Status:** FIXED (commit dcd5a8b)
-- **Issue:** Global loginAsDemo() in cypress/support/e2e.ts was too minimal
-- **Solution:** Enhanced to properly initialize Redux authSlice with feature flags
-- **Tests Affected:** 16-restructured-loans.cy.ts now passes with proper auth
+- **Expected Features:**
+  - Recovery journeys for written-off loans
+  - Partial recovery tracking with GL entries
+  - Recovery amounts and dates
+  - Recovery timeline visualization
 
 ## Completed
+
+### SAAR-RPT-002: RBI Regulatory Reporting (COMPLETED)
+- **Status:** ✅ Complete (commits 04a1763, 71772fc)
+- **Backend:** ✅ Complete
+  - GET /api/loans/reports/regulatory-summary endpoint
+  - RegulatoryMetricsDto with 18 metrics
+  - All 3 NUnit tests passing
+- **Frontend:** ✅ Complete
+  - Tab 7 "RBI Regulatory" in Reports page
+  - KPI cards for core metrics and loan categories
+  - Summary table with loan classification breakdown
+  - CSV export functionality
+  - 4 Cypress regression tests created
+- **Coverage:**
+  - NPA Ratio and Provision Coverage
+  - Restructured, Upgraded, Written-Off loan counts
+  - SMA Watch list
+  - Standard loan totals
 
 ### SAAR-LRP-004: Loan Upgrade (Restructured → Original Terms)
 - **Backend:** ✅ Complete (commits ab07403, d7de05a, 528561a)

@@ -18,12 +18,25 @@
 - ✅ Loan Origination
 - ✅ Loan Restructuring (SAAR-LRP-003)
 - ✅ Loan Upgrade (SAAR-LRP-004)
-- 🔄 RBI Regulatory Reporting (SAAR-RPT-002) — IN PROGRESS
-- ⏳ NPA Recovery Tracking (SAAR-NPA-003) — PENDING
+- ✅ RBI Regulatory Reporting (SAAR-RPT-002)
+- 🔄 NPA Recovery Tracking (SAAR-NPA-003) — PENDING
 
 ---
 
 ## Recent Work Done
+
+### Session 58 (Current Continuation - Final)
+- **Completed:** SAAR-RPT-002 backend (commit 04a1763)
+  - GET /api/loans/reports/regulatory-summary endpoint
+  - RegulatoryMetricsDto with 18 properties
+  - All 3 NUnit tests passing (T-01, T-02, T-03)
+- **Completed:** SAAR-RPT-002 frontend (commit 71772fc)
+  - Tab 7 "RBI Regulatory" in Reports.tsx
+  - KPI cards for metrics (loan book, NPA, provision, restructured, upgraded, written-off)
+  - Summary table with loan category breakdown
+  - CSV export functionality
+  - Service layer: getRegulatoryMetrics() in loanOriginationService.ts
+  - 4 Cypress regression tests (18-regulatory-report.cy.ts)
 
 ### Session 58 (Earlier)
 - **Completed:** SAAR-LRP-004 backend (3 commits: ab07403, d7de05a, 528561a)
@@ -71,27 +84,7 @@ npm start  # PORT=3002
 
 ## Pending Work
 
-### 1. SAAR-RPT-002: RBI Regulatory Reporting (Next)
-**Priority:** HIGH
-**Scope:**
-- Backend APIs for NPA, Restructured, Upgraded loan aggregations
-- Regulatory compliance metrics calculation
-- Report export (CSV/PDF)
-- Role-based access control
-
-**Affected Services:**
-- LoanService: New endpoints
-  - GET `/api/loans/reports/npa-summary`
-  - GET `/api/loans/reports/restructured-summary`
-  - GET `/api/loans/reports/upgraded-summary`
-  - GET `/api/loans/reports/regulatory-metrics`
-
-**Frontend:**
-- New Reports tabs for RBI reporting
-- Dashboard with compliance KPIs
-- Export functionality
-
-### 2. SAAR-NPA-003: NPA Recovery Tracking (After RPT-002)
+### 1. SAAR-NPA-003: NPA Recovery Tracking (Next)
 **Priority:** HIGH
 **Scope:**
 - Recovery workflow for written-off loans
@@ -178,19 +171,20 @@ featureFlags: {
 
 ## Next Recommended Steps
 
-1. **Begin SAAR-RPT-002**
-   - Design RBI regulatory report schema
-   - Implement backend aggregation APIs
-   - Create frontend reporting tabs
+1. **Begin SAAR-NPA-003 (NPA Recovery Tracking)**
+   - Design recovery workflow data models
+   - Implement recovery endpoints (partial recovery, reversal, GL posting)
+   - Create frontend recovery management UI
    - Add Cypress tests
 
-2. **Verify CI/CD**
+2. **Verify CI/CD & Test Coverage**
    - Push all commits to GitHub
    - Monitor GitHub Actions workflows
-   - Ensure all tests pass
+   - Ensure all tests pass (target: 90+ Cypress tests)
+   - Verify build pipeline for all services
 
 3. **Prepare Hetzner Deployment**
-   - Configure environment variables
+   - Configure environment variables for all services
    - Set up database migrations
    - Deploy to VPS
-   - Run smoke tests
+   - Run smoke tests and verify features
