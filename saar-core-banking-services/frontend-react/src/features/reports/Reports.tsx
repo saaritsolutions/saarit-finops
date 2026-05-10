@@ -36,6 +36,7 @@ import {
   WarningAmber as WarningAmberIcon,
   Autorenew as AutorenewIcon,
   ThumbUp as ThumbUpIcon,
+  Description as DescriptionIcon,
 } from '@mui/icons-material';
 import {
   BarChart,
@@ -70,9 +71,11 @@ import {
   getOverdueLoans,
   getRestructuredLoans,
   getUpgradedLoans,
+  getRegulatoryMetrics,
   type OverdueLoanItem,
   type RestructuredLoanItem,
   type UpgradedLoanItem,
+  type RegulatoryMetrics,
 } from '../../services/loanOriginationService';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -178,6 +181,10 @@ const Reports: React.FC = () => {
   const [upgradedTotal, setUpgradedTotal]             = useState(0);
   const [upgradedLoading, setUpgradedLoading]         = useState(false);
 
+  // ── Tab 7 — RBI Regulatory Reporting (SAAR-RPT-002) ──────────────────────
+  const [regulatoryMetrics, setRegulatoryMetrics]     = useState<RegulatoryMetrics | null>(null);
+  const [regulatoryLoading, setRegulatoryLoading]     = useState(false);
+
   // ── Data loaders ──────────────────────────────────────────────────────────
 
   const loadBalances = useCallback(() => {
@@ -245,6 +252,14 @@ const Reports: React.FC = () => {
       .finally(() => setUpgradedLoading(false));
   }, []);
 
+  const loadRegulatoryMetrics = useCallback(() => {
+    setRegulatoryLoading(true);
+    getRegulatoryMetrics()
+      .then(setRegulatoryMetrics)
+      .catch(() => setRegulatoryMetrics(null))
+      .finally(() => setRegulatoryLoading(false));
+  }, []);
+
   async function handleRunDailyAccrual() {
     setAccrualRunning(true);
     setAccrualMsg('');
@@ -302,6 +317,10 @@ const Reports: React.FC = () => {
 
   useEffect(() => {
     if (tab === 6) loadUpgraded();
+  }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (tab === 7) loadRegulatoryMetrics();
   }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── CSV export ────────────────────────────────────────────────────────────
@@ -417,8 +436,9 @@ const Reports: React.FC = () => {
           <Tab icon={<SavingsIcon      fontSize="small" />} iconPosition="start" label="Deposit Maturity"  id="rpt-tab-2" />
           <Tab icon={<TrendingUpIcon   fontSize="small" />} iconPosition="start" label="Deposit Interest"  id="rpt-tab-3" />
           <Tab icon={<WarningAmberIcon fontSize="small" />} iconPosition="start" label="Overdue Loans"    id="rpt-tab-4" />
-          <Tab icon={<AutorenewIcon  fontSize="small" />} iconPosition="start" label="Restructured"     id="rpt-tab-5" />
-          <Tab icon={<ThumbUpIcon    fontSize="small" />} iconPosition="start" label="Loan Upgrades"    id="rpt-tab-6" />
+          <Tab icon={<AutorenewIcon    fontSize="small" />} iconPosition="start" label="Restructured"     id="rpt-tab-5" />
+          <Tab icon={<ThumbUpIcon      fontSize="small" />} iconPosition="start" label="Loan Upgrades"    id="rpt-tab-6" />
+          <Tab icon={<DescriptionIcon  fontSize="small" />} iconPosition="start" label="RBI Regulatory"   id="rpt-tab-7" />
         </Tabs>
 
         {/* ── Tab 0: Financial Reports ─────────────────────────────────────── */}
@@ -1071,6 +1091,192 @@ const Reports: React.FC = () => {
                 </TableBody>
               </Table>
             </TableContainer>
+          )}
+        </TabPanel>
+
+        {/* ── Tab 7: RBI Regulatory Reporting (SAAR-RPT-002) ───────────────────── */}
+        <TabPanel value={tab} index={7}>
+          {/* Header row */}
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+            <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <DescriptionIcon color="info" /> RBI Regulatory Summary
+            </Typography>
+            <Button
+              variant="outlined" size="small" startIcon={<DownloadIcon />}
+              onClick={() => {
+                if (!regulatoryMetrics) return;
+                const csv = [
+                  ['Regulatory Metrics Report', `As of ${regulatoryMetrics.asOfDate}`],
+                  [],
+                  ['Metric', 'Value'],
+                  ['Total Loan Book (₹)', INR(regulatoryMetrics.totalLoanBook)],
+                  ['Total NPA Outstanding (₹)', INR(regulatoryMetrics.totalNpaOutstanding)],
+                  ['NPA Ratio (%)', regulatoryMetrics.npaRatio.toFixed(2)],
+                  ['Total Required Provisioning (₹)', INR(regulatoryMetrics.totalRequiredProvisioning)],
+                  ['Provision Coverage (%)', regulatoryMetrics.provisionCoverage.toFixed(2)],
+                  [],
+                  ['Restructured Count', regulatoryMetrics.restructuredCount.toString()],
+                  ['Restructured Outstanding (₹)', INR(regulatoryMetrics.restructuredOutstanding)],
+                  ['Restructured Ratio (%)', regulatoryMetrics.restructuredRatio.toFixed(2)],
+                  [],
+                  ['Upgraded Count', regulatoryMetrics.upgradedCount.toString()],
+                  ['Upgraded Outstanding (₹)', INR(regulatoryMetrics.upgradedOutstanding)],
+                  [],
+                  ['Written-Off Count', regulatoryMetrics.writtenOffCount.toString()],
+                  ['Written-Off Outstanding (₹)', INR(regulatoryMetrics.writtenOffOutstanding)],
+                  [],
+                  ['SMA Watch Count', regulatoryMetrics.smaWatchCount.toString()],
+                  ['SMA Watch Outstanding (₹)', INR(regulatoryMetrics.smaWatchOutstanding)],
+                  [],
+                  ['Standard Count', regulatoryMetrics.standardCount.toString()],
+                  ['Standard Outstanding (₹)', INR(regulatoryMetrics.standardOutstanding)],
+                ]
+                  .map(row => row.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))
+                  .join('\n');
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `regulatory-report-${regulatoryMetrics.asOfDate}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+              disabled={!regulatoryMetrics}
+              aria-label="Export Regulatory CSV"
+            >Export CSV</Button>
+          </Box>
+
+          {/* As-of date */}
+          {regulatoryMetrics && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+              As of: <strong>{regulatoryMetrics.asOfDate}</strong>
+            </Typography>
+          )}
+
+          {/* KPI Row 1: Core Metrics */}
+          {regulatoryLoading ? (
+            <Stack spacing={1}>{[1, 2, 3, 4].map(i => <Skeleton key={i} height={80} />)}</Stack>
+          ) : regulatoryMetrics ? (
+            <>
+              <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: 'wrap' }}>
+                <Paper variant="outlined" sx={{ p: 2, minWidth: 180 }}>
+                  <Typography variant="caption" color="text.secondary">Total Loan Book</Typography>
+                  <Typography variant="h6" fontWeight={700}>{INR(regulatoryMetrics.totalLoanBook)}</Typography>
+                </Paper>
+                <Paper variant="outlined" sx={{ p: 2, minWidth: 180 }}>
+                  <Typography variant="caption" color="text.secondary">NPA Outstanding</Typography>
+                  <Typography variant="h6" fontWeight={700} color={regulatoryMetrics.npaRatio > 0 ? 'error.main' : 'success.main'}>
+                    {INR(regulatoryMetrics.totalNpaOutstanding)}
+                  </Typography>
+                </Paper>
+                <Paper variant="outlined" sx={{ p: 2, minWidth: 180 }}>
+                  <Typography variant="caption" color="text.secondary">NPA Ratio (%)</Typography>
+                  <Typography variant="h6" fontWeight={700} color={regulatoryMetrics.npaRatio > 5 ? 'error.main' : regulatoryMetrics.npaRatio > 2 ? 'warning.main' : 'success.main'}>
+                    {regulatoryMetrics.npaRatio.toFixed(2)}%
+                  </Typography>
+                </Paper>
+                <Paper variant="outlined" sx={{ p: 2, minWidth: 180 }}>
+                  <Typography variant="caption" color="text.secondary">Provision Coverage (%)</Typography>
+                  <Typography variant="h6" fontWeight={700} color={regulatoryMetrics.provisionCoverage < 100 ? 'warning.main' : 'success.main'}>
+                    {regulatoryMetrics.provisionCoverage.toFixed(2)}%
+                  </Typography>
+                </Paper>
+              </Stack>
+
+              {/* KPI Row 2: Loan Categories */}
+              <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: 'wrap' }}>
+                <Paper variant="outlined" sx={{ p: 2, minWidth: 180 }}>
+                  <Typography variant="caption" color="text.secondary">Restructured Count</Typography>
+                  <Typography variant="h6" fontWeight={700}>{regulatoryMetrics.restructuredCount}</Typography>
+                  <Typography variant="caption" color="text.secondary">{INR(regulatoryMetrics.restructuredOutstanding)}</Typography>
+                </Paper>
+                <Paper variant="outlined" sx={{ p: 2, minWidth: 180 }}>
+                  <Typography variant="caption" color="text.secondary">Upgraded Count</Typography>
+                  <Typography variant="h6" fontWeight={700}>{regulatoryMetrics.upgradedCount}</Typography>
+                  <Typography variant="caption" color="text.secondary">{INR(regulatoryMetrics.upgradedOutstanding)}</Typography>
+                </Paper>
+                <Paper variant="outlined" sx={{ p: 2, minWidth: 180 }}>
+                  <Typography variant="caption" color="text.secondary">Written-Off Count</Typography>
+                  <Typography variant="h6" fontWeight={700} color="error.main">{regulatoryMetrics.writtenOffCount}</Typography>
+                  <Typography variant="caption" color="text.secondary">{INR(regulatoryMetrics.writtenOffOutstanding)}</Typography>
+                </Paper>
+                <Paper variant="outlined" sx={{ p: 2, minWidth: 180 }}>
+                  <Typography variant="caption" color="text.secondary">SMA Watch Count</Typography>
+                  <Typography variant="h6" fontWeight={700} color="warning.main">{regulatoryMetrics.smaWatchCount}</Typography>
+                  <Typography variant="caption" color="text.secondary">{INR(regulatoryMetrics.smaWatchOutstanding)}</Typography>
+                </Paper>
+              </Stack>
+
+              {/* Summary table */}
+              <TableContainer component={Paper} variant="outlined">
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ '& th': { fontWeight: 600, bgcolor: 'action.hover' } }}>
+                      <TableCell>Loan Category</TableCell>
+                      <TableCell align="right">Count</TableCell>
+                      <TableCell align="right">Outstanding (₹)</TableCell>
+                      <TableCell align="right">% of Total</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    <TableRow hover>
+                      <TableCell>Standard</TableCell>
+                      <TableCell align="right">{regulatoryMetrics.standardCount}</TableCell>
+                      <TableCell align="right">{INR(regulatoryMetrics.standardOutstanding)}</TableCell>
+                      <TableCell align="right">
+                        {regulatoryMetrics.totalLoanBook > 0
+                          ? ((regulatoryMetrics.standardOutstanding / regulatoryMetrics.totalLoanBook) * 100).toFixed(2)
+                          : '0.00'}%
+                      </TableCell>
+                    </TableRow>
+                    <TableRow hover>
+                      <TableCell>SMA Watch</TableCell>
+                      <TableCell align="right">{regulatoryMetrics.smaWatchCount}</TableCell>
+                      <TableCell align="right">{INR(regulatoryMetrics.smaWatchOutstanding)}</TableCell>
+                      <TableCell align="right">
+                        {regulatoryMetrics.totalLoanBook > 0
+                          ? ((regulatoryMetrics.smaWatchOutstanding / regulatoryMetrics.totalLoanBook) * 100).toFixed(2)
+                          : '0.00'}%
+                      </TableCell>
+                    </TableRow>
+                    <TableRow hover sx={{ bgcolor: 'error.lighter' }}>
+                      <TableCell sx={{ fontWeight: 600 }}>NPA</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600 }}>—</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600 }}>{INR(regulatoryMetrics.totalNpaOutstanding)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600 }}>
+                        {regulatoryMetrics.npaRatio.toFixed(2)}%
+                      </TableCell>
+                    </TableRow>
+                    <TableRow hover>
+                      <TableCell>Restructured</TableCell>
+                      <TableCell align="right">{regulatoryMetrics.restructuredCount}</TableCell>
+                      <TableCell align="right">{INR(regulatoryMetrics.restructuredOutstanding)}</TableCell>
+                      <TableCell align="right">
+                        {regulatoryMetrics.totalLoanBook > 0
+                          ? ((regulatoryMetrics.restructuredOutstanding / regulatoryMetrics.totalLoanBook) * 100).toFixed(2)
+                          : '0.00'}%
+                      </TableCell>
+                    </TableRow>
+                    <TableRow hover>
+                      <TableCell>Upgraded</TableCell>
+                      <TableCell align="right">{regulatoryMetrics.upgradedCount}</TableCell>
+                      <TableCell align="right">{INR(regulatoryMetrics.upgradedOutstanding)}</TableCell>
+                      <TableCell align="right">—</TableCell>
+                    </TableRow>
+                    <TableRow hover>
+                      <TableCell>Written-Off</TableCell>
+                      <TableCell align="right">{regulatoryMetrics.writtenOffCount}</TableCell>
+                      <TableCell align="right">{INR(regulatoryMetrics.writtenOffOutstanding)}</TableCell>
+                      <TableCell align="right">—</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
+          ) : (
+            <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
+              No regulatory metrics available.
+            </Typography>
           )}
         </TabPanel>
       </Paper>

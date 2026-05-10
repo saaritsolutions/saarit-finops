@@ -579,6 +579,51 @@ export async function upgradeLoan(id: string, req: UpgradeLoanRequest): Promise<
   await axios.post(`${BASE_URL}/api/loans/${id}/restructure-upgrade`, req);
 }
 
+// ── SAAR-RPT-002: Regulatory Metrics ─────────────────────────────────────────
+export interface RegulatoryMetrics {
+  asOfDate: string;
+  totalLoanBook: number;
+  totalNpaOutstanding: number;
+  npaRatio: number;
+  totalRequiredProvisioning: number;
+  provisionCoverage: number;
+  restructuredCount: number;
+  restructuredOutstanding: number;
+  restructuredRatio: number;
+  upgradedCount: number;
+  upgradedOutstanding: number;
+  writtenOffCount: number;
+  writtenOffOutstanding: number;
+  smaWatchCount: number;
+  smaWatchOutstanding: number;
+  standardCount: number;
+  standardOutstanding: number;
+}
+
+export async function getRegulatoryMetrics(): Promise<RegulatoryMetrics> {
+  const res = await axios.get(`${BASE_URL}/api/loans/reports/regulatory-summary`);
+  const d = res.data;
+  return {
+    asOfDate:                  d.asOfDate                  ?? d.AsOfDate                  ?? '',
+    totalLoanBook:             d.totalLoanBook             ?? d.TotalLoanBook              ?? 0,
+    totalNpaOutstanding:       d.totalNpaOutstanding       ?? d.TotalNpaOutstanding        ?? 0,
+    npaRatio:                  d.npaRatio                  ?? d.NpaRatio                   ?? 0,
+    totalRequiredProvisioning: d.totalRequiredProvisioning ?? d.TotalRequiredProvisioning  ?? 0,
+    provisionCoverage:         d.provisionCoverage         ?? d.ProvisionCoverage          ?? 100,
+    restructuredCount:         d.restructuredCount         ?? d.RestructuredCount          ?? 0,
+    restructuredOutstanding:   d.restructuredOutstanding   ?? d.RestructuredOutstanding    ?? 0,
+    restructuredRatio:         d.restructuredRatio         ?? d.RestructuredRatio          ?? 0,
+    upgradedCount:             d.upgradedCount             ?? d.UpgradedCount              ?? 0,
+    upgradedOutstanding:       d.upgradedOutstanding       ?? d.UpgradedOutstanding        ?? 0,
+    writtenOffCount:           d.writtenOffCount           ?? d.WrittenOffCount            ?? 0,
+    writtenOffOutstanding:     d.writtenOffOutstanding     ?? d.WrittenOffOutstanding      ?? 0,
+    smaWatchCount:             d.smaWatchCount             ?? d.SmaWatchCount              ?? 0,
+    smaWatchOutstanding:       d.smaWatchOutstanding       ?? d.SmaWatchOutstanding        ?? 0,
+    standardCount:             d.standardCount             ?? d.StandardCount              ?? 0,
+    standardOutstanding:       d.standardOutstanding       ?? d.StandardOutstanding        ?? 0,
+  };
+}
+
 // ── Legacy exports (backward compat with old LoanOrigination.tsx) ──────────
 export type { PreValidateRequest } from './loanOriginationServiceLegacy';
 export type { ServerField }        from './loanOriginationServiceLegacy';
