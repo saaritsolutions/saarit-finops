@@ -584,6 +584,90 @@ namespace LoanService.Controllers
             });
         }
 
+        // ── GET /api/loans/applications/written-off ──────────────────────────────
+        /// <summary>List all written-off loans with recovery status (SAAR-NPA-003)</summary>
+        [HttpGet("/api/loans/applications/written-off")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetWrittenOffLoans(CancellationToken ct = default)
+        {
+            var loans = await _db.LoanApplications
+                .Where(a => a.Status == "WRITTEN_OFF")
+                .OrderByDescending(a => a.WriteOffDate)
+                .ToListAsync(ct);
+
+            var items = loans.Select(a =>
+            {
+                var recovered  = a.RecoveredAmount ?? 0m;
+                var outstanding = a.OutstandingPrincipal ?? 0m;
+                var status = outstanding > 0 && recovered >= outstanding ? "FULL" : recovered > 0 ? "PARTIAL" : "NONE";
+
+                return new WrittenOffLoanDto
+                {
+                    Id                    = a.Id,
+                    ApplicationNumber    = a.ApplicationNumber,
+                    ApplicantName        = a.ApplicantName,
+                    ProductType          = a.ProductType,
+                    OutstandingPrincipal = outstanding,
+                    WriteOffDate         = a.WriteOffDate,
+                    WriteOffReason       = a.WriteOffReason,
+                    WriteOffJournalNumber = a.WriteOffJournalNumber,
+                    RecoveredAmount      = a.RecoveredAmount,
+                    LastRecoveryDate     = a.LastRecoveryDate,
+                    RecoveryNotes        = a.RecoveryNotes,
+                    RecoveryJournalNumber = a.RecoveryJournalNumber,
+                    RecoveryStatus       = status,
+                };
+            }).ToList();
+
+            return Ok(new { total = items.Count, items });
+        }
+
+        // ── POST /api/loans/{id}/recovery ────────────────────────────────────────
+        /// <summary>Record a recovery amount for a written-off loan (SAAR-NPA-003)</summary>
+        [HttpPost("/api/loans/{id:guid}/recovery")]
+        [AllowAnonymous]
+        public async Task<IActionResult> RecordRecovery(
+            Guid id,
+            [FromBody] RecoveryRequest req,
+            CancellationToken ct = default)
+        {
+            var app = await _db.LoanApplications.FindAsync(new object[] { id }, ct);
+            if (app == null) return NotFound(new { error = "Loan not found" });
+
+            if (app.Status != "WRITTEN_OFF")
+                return BadRequest(new { error = "Recovery can only be recorded for WRITTEN_OFF loans" });
+
+            if (req.Amount <= 0)
+                return BadRequest(new { error = "Recovery amount must be greater than zero" });
+
+            var outstanding  = app.OutstandingPrincipal ?? 0m;
+            var alreadyRecov = app.RecoveredAmount ?? 0m;
+            var remaining    = outstanding - alreadyRecov;
+
+            if (req.Amount > remaining)
+                return BadRequest(new { error = $"Recovery amount {req.Amount:F2} exceeds outstanding balance {remaining:F2}" });
+
+            // Post GL journal
+            var journalResult = await _transactionService.PostRecoveryJournalAsync(
+                app.ApplicationNumber, req.Amount, ct);
+
+            app.RecoveredAmount       = alreadyRecov + req.Amount;
+            app.LastRecoveryDate      = DateTime.UtcNow;
+            app.RecoveryNotes         = req.Notes;
+            app.RecoveryJournalNumber = journalResult.JournalNumber;
+            app.UpdatedAt             = DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
+
+            return Ok(new
+            {
+                applicationNumber    = app.ApplicationNumber,
+                recoveredAmount      = app.RecoveredAmount,
+                lastRecoveryDate     = app.LastRecoveryDate,
+                recoveryJournalNumber = app.RecoveryJournalNumber,
+                remainingOutstanding = outstanding - app.RecoveredAmount,
+            });
+        }
+
         // ── POST /api/loans/applications/{id}/action ─────────────────────────────
         /// <summary>
         /// Take an approval action: CREDIT_APPROVE | SANCTION | REJECT | REQUEST_INFO | DISBURSE | SEND_TO_REVIEW
@@ -1024,22 +1108,35 @@ namespace LoanService.Controllers
         public string  SmaStatus            { get; set; } = "";
     }
 
-    public class WrittenOffLoanDto
-    {
-        public Guid      Id                    { get; set; }
-        public string    ApplicationNumber     { get; set; } = "";
-        public string    ApplicantName         { get; set; } = "";
-        public string    ProductType           { get; set; } = "";
-        public decimal   OutstandingPrincipal  { get; set; }
-        public DateTime? WriteOffDate          { get; set; }
-        public string?   WriteOffReason        { get; set; }
-        public string?   WriteOffJournalNumber { get; set; }
-    }
-
     public class WriteOffRequest
     {
         public string Reason       { get; set; } = "";
         public string AuthorizedBy { get; set; } = "";
+    }
+
+    // ── SAAR-NPA-003 DTOs ────────────────────────────────────────────────────
+
+    public class WrittenOffLoanDto
+    {
+        public Guid      Id                    { get; set; }
+        public string    ApplicationNumber      { get; set; } = "";
+        public string    ApplicantName          { get; set; } = "";
+        public string    ProductType            { get; set; } = "";
+        public decimal   OutstandingPrincipal   { get; set; }
+        public DateTime? WriteOffDate           { get; set; }
+        public string?   WriteOffReason         { get; set; }
+        public string?   WriteOffJournalNumber  { get; set; }
+        public decimal?  RecoveredAmount        { get; set; }
+        public DateTime? LastRecoveryDate       { get; set; }
+        public string?   RecoveryNotes          { get; set; }
+        public string?   RecoveryJournalNumber  { get; set; }
+        public string    RecoveryStatus         { get; set; } = "NONE";
+    }
+
+    public class RecoveryRequest
+    {
+        public decimal Amount { get; set; }
+        public string  Notes  { get; set; } = "";
     }
 
     // ── SAAR-LRP-003 DTOs ────────────────────────────────────────────────────

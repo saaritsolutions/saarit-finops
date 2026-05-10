@@ -55,6 +55,9 @@ file sealed class UpgNoOpTransaction : ITransactionServiceClient
     public Task<DisbursalJournalResult> PostLoanUpgradeJournalAsync(
         string applicationNumber, decimal outstanding, CancellationToken ct = default) =>
         Task.FromResult(new DisbursalJournalResult(true, "JNL-UPGRADE-001", null));
+    public Task<DisbursalJournalResult> PostRecoveryJournalAsync(
+        string applicationNumber, decimal recoveredAmount, CancellationToken ct = default) =>
+        Task.FromResult(new DisbursalJournalResult(true, "JNL-RECOVERY-001", null));
 }
 
 file static class UpgDbFactory

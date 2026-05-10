@@ -284,6 +284,22 @@ namespace LoanService.Models
         [MaxLength(50)]
         public string? WriteOffJournalNumber { get; set; }
 
+        // ── NPA Recovery (SAAR-NPA-003) ──────────────────────────────────────────
+        /// <summary>Cumulative amount recovered from written-off loan.</summary>
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? RecoveredAmount { get; set; }
+
+        /// <summary>UTC timestamp of last recovery posting.</summary>
+        public DateTime? LastRecoveryDate { get; set; }
+
+        /// <summary>Notes on recovery (max 500 chars).</summary>
+        [MaxLength(500)]
+        public string? RecoveryNotes { get; set; }
+
+        /// <summary>Journal number for last recovery posting.</summary>
+        [MaxLength(50)]
+        public string? RecoveryJournalNumber { get; set; }
+
         // ── Loan Restructuring (SAAR-LRP-003) ───────────────────────────────────
         /// <summary>True when the loan has been restructured (revised terms agreed with borrower).</summary>
         public bool IsRestructured { get; set; } = false;

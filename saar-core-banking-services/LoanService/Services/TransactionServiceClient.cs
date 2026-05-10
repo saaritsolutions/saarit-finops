@@ -81,6 +81,16 @@ namespace LoanService.Services
             string applicationNumber,
             decimal outstanding,
             CancellationToken ct = default);
+
+        /// <summary>
+        /// Posts a recovery journal entry for a written-off loan:
+        ///   DR 1010 Cash and Bank / CR 4050 Recovery Income
+        /// Idempotency key: RECOVERY-{applicationNumber}.
+        /// </summary>
+        Task<DisbursalJournalResult> PostRecoveryJournalAsync(
+            string applicationNumber,
+            decimal recoveredAmount,
+            CancellationToken ct = default);
     }
 
     public class TransactionServiceClient : ITransactionServiceClient
@@ -239,6 +249,29 @@ namespace LoanService.Services
                           currency = "INR", narration = $"Restructure reversal — restore original terms — {applicationNumber}" },
                     new { accountCode = "5045", debitAmount = 0m,          creditAmount = outstanding,
                           currency = "INR", narration = $"Restructuring provision reversal — {applicationNumber}" }
+                }
+            };
+            return await PostJournalAsync(applicationNumber, payload, ct);
+        }
+
+        public async Task<DisbursalJournalResult> PostRecoveryJournalAsync(
+            string applicationNumber,
+            decimal recoveredAmount,
+            CancellationToken ct = default)
+        {
+            var payload = new
+            {
+                idempotencyKey = $"RECOVERY-{applicationNumber}",
+                description    = $"NPA Recovery — {applicationNumber}",
+                referenceType  = "NpaRecovery",
+                referenceId    = applicationNumber,
+                postedBy       = "LoanService",
+                entries        = new[]
+                {
+                    new { accountCode = "1010", debitAmount = recoveredAmount, creditAmount = 0m,
+                          currency = "INR", narration = $"NPA Recovery — {applicationNumber}" },
+                    new { accountCode = "4050", debitAmount = 0m,              creditAmount = recoveredAmount,
+                          currency = "INR", narration = $"Recovery Income from Written-Off Loan — {applicationNumber}" }
                 }
             };
             return await PostJournalAsync(applicationNumber, payload, ct);
