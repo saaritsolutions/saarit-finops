@@ -6,6 +6,7 @@ using LoanService.Controllers;
 using LoanService.Data;
 using LoanService.Models;
 using LoanService.Services;
+using LoanService.Controllers; // For UpgradeRequest access
 
 namespace LoanService.Tests;
 
@@ -131,10 +132,8 @@ public class LoanUpgradeTests
         await db.SaveChangesAsync();
 
         // Act
-        var reqType = typeof(LoanApplicationsController).Assembly.GetType("LoanService.Controllers.UpgradeRequest")!;
-        var req = Activator.CreateInstance(reqType)!;
-        reqType.GetProperty("Reason")!.SetValue(req, "1-year satisfactory repayment completed");
-        var res = await ctl.UpgradeLoan(app.Id, (dynamic)req, CancellationToken.None) as OkObjectResult;
+        var req = new UpgradeRequest { Reason = "1-year satisfactory repayment completed" };
+        var res = await ctl.UpgradeLoan(app.Id, req, CancellationToken.None) as OkObjectResult;
 
         // Assert
         Assert.That(res, Is.Not.Null, "Expected 200 OK response");
@@ -170,7 +169,7 @@ public class LoanUpgradeTests
         await db.SaveChangesAsync();
 
         // Act
-        dynamic req = new { reason = "Retry upgrade" };
+        var req = new UpgradeRequest { Reason = "Retry upgrade" };
         var res = await ctl.UpgradeLoan(app.Id, req, CancellationToken.None) as BadRequestObjectResult;
 
         // Assert
@@ -216,7 +215,7 @@ public class LoanUpgradeTests
         await db.SaveChangesAsync();
 
         // Act
-        dynamic req = new { reason = "Attempting upgrade on non-restructured loan" };
+        var req = new UpgradeRequest { Reason = "Attempting upgrade on non-restructured loan" };
         var res = await ctl.UpgradeLoan(app.Id, req, CancellationToken.None) as BadRequestObjectResult;
 
         // Assert
