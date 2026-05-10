@@ -25,9 +25,10 @@ import DescriptionIcon   from '@mui/icons-material/Description';
 import CalculateIcon     from '@mui/icons-material/Calculate';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
+import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  getApplicationDetail, takeApplicationAction, getRepaymentHistory, collectEmi, restructureLoan, upgradeLoan,
+  getApplicationDetail, takeApplicationAction, getRepaymentHistory, collectEmi, restructureLoan, upgradeLoan, recordRecovery,
   type ApplicationDetail, type ApprovalAction, type RepaymentHistoryResponse, type RestructureRequest, type UpgradeLoanRequest,
 } from '../services/loanOriginationService';
 import JournalDetailDialog from '../components/dialogs/JournalDetailDialog';
@@ -98,6 +99,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: 'default' | 'warning
   APPROVED:       { label: 'Sanctioned',      color: 'success' },
   REJECTED:       { label: 'Rejected',        color: 'error'   },
   DISBURSED:      { label: 'Disbursed',       color: 'success' },
+  WRITTEN_OFF:    { label: 'Written Off',     color: 'error'   },
 };
 
 // ── Action config ──────────────────────────────────────────────────────────────
@@ -246,6 +248,11 @@ const LoanDetail: React.FC = () => {
   const [upgradeReason, setUpgradeReason]         = useState('');
   const [upgrading, setUpgrading]                 = useState(false);
   const [upgradeError, setUpgradeError]           = useState<string | null>(null);
+  const [recoveryOpen, setRecoveryOpen]           = useState(false);
+  const [recoveryAmount, setRecoveryAmount]       = useState('');
+  const [recoveryNotes, setRecoveryNotes]         = useState('');
+  const [recovering, setRecovering]               = useState(false);
+  const [recoveryError, setRecoveryError]         = useState<string | null>(null);
 
   const app = detail?.application ?? null;
 
@@ -352,6 +359,27 @@ const LoanDetail: React.FC = () => {
       setUpgradeError(e?.response?.data?.error ?? 'Upgrade failed. Please try again.');
     } finally {
       setUpgrading(false);
+    }
+  };
+
+  const handleRecovery = async () => {
+    if (!id || !recoveryAmount) return;
+    setRecovering(true);
+    setRecoveryError(null);
+    try {
+      await recordRecovery(id, {
+        amount: parseFloat(recoveryAmount),
+        notes: recoveryNotes,
+      });
+      await load();
+      setRecoveryOpen(false);
+      setRecoveryAmount('');
+      setRecoveryNotes('');
+      setSuccessMsg('Recovery recorded successfully');
+    } catch (e: any) {
+      setRecoveryError(e?.response?.data?.error ?? 'Recovery failed. Please try again.');
+    } finally {
+      setRecovering(false);
     }
   };
 
@@ -1025,6 +1053,62 @@ const LoanDetail: React.FC = () => {
         </Box>
       )}
 
+      {/* Write-Off Info Card (SAAR-NPA-003) */}
+      {status === 'WRITTEN_OFF' && (
+        <Box mt={3}>
+          <Card sx={{ border: `2px solid #EF4444`, boxShadow: 'none', borderRadius: 2, bgcolor: '#FEF2F2' }}>
+            <CardContent sx={{ p: 2.5 }}>
+              <Stack direction="row" spacing={1} alignItems="center" mb={1.5}>
+                <RemoveCircleIcon sx={{ color: '#991B1B' }} />
+                <Typography variant="subtitle2" fontWeight={700} color="#7F1D1D">
+                  Write-Off Information
+                </Typography>
+                <Chip label="NPA" size="small" color="error" variant="outlined"
+                  sx={{ fontWeight: 600, fontSize: '0.7rem', height: 20 }} />
+              </Stack>
+              <Divider sx={{ mb: 1.5, borderColor: '#FECACA' }} />
+              <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap', mb: 1.5 }}>
+                <Box>
+                  <Typography variant="caption" color="#7F1D1D">Write-Off Date</Typography>
+                  <Typography variant="h6" fontWeight={700} color="#7F1D1D">{fmtDateOnly(f('writeOffDate'))}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="#7F1D1D">Write-Off Journal</Typography>
+                  <Typography variant="h6" fontWeight={700} color="#7F1D1D">{f('writeOffJournalNumber') || '—'}</Typography>
+                </Box>
+                {f('recoveredAmount') && f('recoveredAmount') > 0 && (
+                  <>
+                    <Box>
+                      <Typography variant="caption" color="#7F1D1D">Recovered Amount</Typography>
+                      <Typography variant="h6" fontWeight={700} color="#7F1D1D">{INR(f('recoveredAmount'))}</Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" color="#7F1D1D">Last Recovery Date</Typography>
+                      <Typography variant="h6" fontWeight={700} color="#7F1D1D">{fmtDateOnly(f('lastRecoveryDate'))}</Typography>
+                    </Box>
+                  </>
+                )}
+              </Box>
+              {f('writeOffReason') && (
+                <Typography variant="body2" color="#7F1D1D" mb={1.5} fontStyle="italic">
+                  Reason: {f('writeOffReason')}
+                </Typography>
+              )}
+              {f('recoveryNotes') && (
+                <Typography variant="body2" color="#7F1D1D" mb={1.5} fontStyle="italic">
+                  Recovery Notes: {f('recoveryNotes')}
+                </Typography>
+              )}
+              {(!f('recoveredAmount') || f('recoveredAmount') < f('outstandingPrincipal')) && (
+                <Button variant="contained" color="error" size="small" onClick={() => setRecoveryOpen(true)} sx={{ mt: 1 }}>
+                  Record Recovery
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        </Box>
+      )}
+
       {/* Collect EMI Dialog */}
       <Dialog open={collectOpen} onClose={() => setCollectOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle sx={{ fontWeight: 700 }}>Collect EMI Payment</DialogTitle>
@@ -1168,6 +1252,57 @@ const LoanDetail: React.FC = () => {
             disabled={upgrading || !upgradeReason.trim()}
           >
             {upgrading ? <CircularProgress size={18} color="inherit" /> : 'Upgrade Loan'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Record Recovery Dialog (SAAR-NPA-003) */}
+      <Dialog open={recoveryOpen} onClose={() => setRecoveryOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700 }}>Record Recovery</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" mb={2}>
+            Record a recovery amount against this written-off loan.
+          </Typography>
+          {recoveryError && <Alert severity="error" sx={{ mb: 2 }}>{recoveryError}</Alert>}
+          <Stack spacing={2} mt={1}>
+            <TextField
+              label="Recovery Amount (₹)"
+              type="number"
+              fullWidth
+              value={recoveryAmount}
+              onChange={e => setRecoveryAmount(e.target.value)}
+              inputProps={{ min: 1, step: 0.01 }}
+              aria-label="recovery amount"
+            />
+            <TextField
+              label="Recovery Notes (optional)"
+              fullWidth
+              multiline
+              rows={3}
+              value={recoveryNotes}
+              onChange={e => setRecoveryNotes(e.target.value)}
+              placeholder="e.g. payment received from borrower, settlement, etc."
+              aria-label="recovery notes"
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => {
+            setRecoveryOpen(false);
+            setRecoveryAmount('');
+            setRecoveryNotes('');
+            setRecoveryError(null);
+          }} variant="outlined" sx={{ borderColor: SLATE_200 }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            aria-label="confirm recovery"
+            onClick={handleRecovery}
+            disabled={recovering || !recoveryAmount || parseFloat(recoveryAmount) <= 0}
+          >
+            {recovering ? <CircularProgress size={18} color="inherit" /> : 'Record Recovery'}
           </Button>
         </DialogActions>
       </Dialog>

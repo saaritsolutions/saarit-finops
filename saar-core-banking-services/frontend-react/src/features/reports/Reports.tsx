@@ -37,6 +37,7 @@ import {
   Autorenew as AutorenewIcon,
   ThumbUp as ThumbUpIcon,
   Description as DescriptionIcon,
+  RemoveCircle as RemoveCircleIcon,
 } from '@mui/icons-material';
 import {
   BarChart,
@@ -72,10 +73,12 @@ import {
   getRestructuredLoans,
   getUpgradedLoans,
   getRegulatoryMetrics,
+  getWrittenOffLoans,
   type OverdueLoanItem,
   type RestructuredLoanItem,
   type UpgradedLoanItem,
   type RegulatoryMetrics,
+  type WrittenOffLoanItem,
 } from '../../services/loanOriginationService';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -185,6 +188,11 @@ const Reports: React.FC = () => {
   const [regulatoryMetrics, setRegulatoryMetrics]     = useState<RegulatoryMetrics | null>(null);
   const [regulatoryLoading, setRegulatoryLoading]     = useState(false);
 
+  // ── Tab 8 — Written-Off Loans & Recovery (SAAR-NPA-003) ──────────────────
+  const [writtenOffLoans, setWrittenOffLoans]         = useState<WrittenOffLoanItem[]>([]);
+  const [writtenOffTotal, setWrittenOffTotal]         = useState(0);
+  const [writtenOffLoading, setWrittenOffLoading]     = useState(false);
+
   // ── Data loaders ──────────────────────────────────────────────────────────
 
   const loadBalances = useCallback(() => {
@@ -260,6 +268,14 @@ const Reports: React.FC = () => {
       .finally(() => setRegulatoryLoading(false));
   }, []);
 
+  const loadWrittenOff = useCallback(() => {
+    setWrittenOffLoading(true);
+    getWrittenOffLoans()
+      .then(r => { setWrittenOffLoans(r.items); setWrittenOffTotal(r.total); })
+      .catch(() => { setWrittenOffLoans([]); setWrittenOffTotal(0); })
+      .finally(() => setWrittenOffLoading(false));
+  }, []);
+
   async function handleRunDailyAccrual() {
     setAccrualRunning(true);
     setAccrualMsg('');
@@ -323,6 +339,10 @@ const Reports: React.FC = () => {
     if (tab === 7) loadRegulatoryMetrics();
   }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (tab === 8) loadWrittenOff();
+  }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── CSV export ────────────────────────────────────────────────────────────
 
   function exportCsv() {
@@ -382,11 +402,33 @@ const Reports: React.FC = () => {
     URL.revokeObjectURL(url);
   }
 
+  function exportWrittenOffCsv() {
+    const header = 'Application No,Applicant,Product,Outstanding,Write-Off Date,Write-Off Reason,Recovered Amount,Recovery Status\n';
+    const rows   = writtenOffLoans.map(l =>
+      `${l.applicationNumber},${l.applicantName},${l.productType},${l.outstandingPrincipal},${l.writeOffDate ? String(l.writeOffDate).slice(0, 10) : ''},${l.writeOffReason ?? ''},${l.recoveredAmount ?? ''},${l.recoveryStatus}`
+    ).join('\n');
+    const blob = new Blob([header + rows], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'written-off-loans.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function smaColor(s: string): 'success' | 'warning' | 'error' | 'default' {
     if (s === 'STANDARD') return 'success';
     if (s === 'SMA-0' || s === 'SMA-1') return 'warning';
     if (s === 'SMA-2' || s === 'NPA')   return 'error';
     return 'default';
+  }
+
+  function recoveryStatusChip(status: string) {
+    const color =
+      status === 'FULL'    ? 'success' :
+      status === 'PARTIAL' ? 'warning' :
+      'default';
+    return <Chip label={status} size="small" color={color as any} />;
   }
 
   // ── Review alert ──────────────────────────────────────────────────────────
@@ -439,6 +481,7 @@ const Reports: React.FC = () => {
           <Tab icon={<AutorenewIcon    fontSize="small" />} iconPosition="start" label="Restructured"     id="rpt-tab-5" />
           <Tab icon={<ThumbUpIcon      fontSize="small" />} iconPosition="start" label="Loan Upgrades"    id="rpt-tab-6" />
           <Tab icon={<DescriptionIcon  fontSize="small" />} iconPosition="start" label="RBI Regulatory"   id="rpt-tab-7" />
+          <Tab icon={<RemoveCircleIcon fontSize="small" />} iconPosition="start" label="Written-Off"      id="rpt-tab-8" />
         </Tabs>
 
         {/* ── Tab 0: Financial Reports ─────────────────────────────────────── */}
@@ -1276,6 +1319,88 @@ const Reports: React.FC = () => {
           ) : (
             <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
               No regulatory metrics available.
+            </Typography>
+          )}
+        </TabPanel>
+
+        {/* ── Tab 8: Written-Off Loans & Recovery (SAAR-NPA-003) ────────────────── */}
+        <TabPanel value={tab} index={8}>
+          {/* Header row */}
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+            <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <RemoveCircleIcon color="error" /> Written-Off Loans & Recovery
+            </Typography>
+            <Button
+              variant="outlined" size="small" startIcon={<DownloadIcon />}
+              onClick={exportWrittenOffCsv}
+              disabled={writtenOffLoans.length === 0}
+              aria-label="Export Written-Off CSV"
+            >Export CSV</Button>
+          </Box>
+
+          {/* KPI Cards */}
+          {writtenOffLoading ? (
+            <Stack spacing={1}>{[1, 2, 3, 4].map(i => <Skeleton key={i} height={80} />)}</Stack>
+          ) : writtenOffLoans.length > 0 ? (
+            <>
+              <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: 'wrap' }}>
+                <Paper variant="outlined" sx={{ p: 2, minWidth: 180 }}>
+                  <Typography variant="caption" color="text.secondary">Total Written-Off</Typography>
+                  <Typography variant="h6" fontWeight={700} color="error.main">{writtenOffTotal}</Typography>
+                </Paper>
+                <Paper variant="outlined" sx={{ p: 2, minWidth: 180 }}>
+                  <Typography variant="caption" color="text.secondary">Outstanding Principal</Typography>
+                  <Typography variant="h6" fontWeight={700}>{INR(writtenOffLoans.reduce((sum, l) => sum + (l.outstandingPrincipal ?? 0), 0))}</Typography>
+                </Paper>
+                <Paper variant="outlined" sx={{ p: 2, minWidth: 180 }}>
+                  <Typography variant="caption" color="text.secondary">Total Recovered</Typography>
+                  <Typography variant="h6" fontWeight={700} color="success.main">{INR(writtenOffLoans.reduce((sum, l) => sum + (l.recoveredAmount ?? 0), 0))}</Typography>
+                </Paper>
+                <Paper variant="outlined" sx={{ p: 2, minWidth: 180 }}>
+                  <Typography variant="caption" color="text.secondary">Recovery Rate (%)</Typography>
+                  <Typography variant="h6" fontWeight={700}>
+                    {(() => {
+                      const total = writtenOffLoans.reduce((sum, l) => sum + (l.outstandingPrincipal ?? 0), 0);
+                      const recovered = writtenOffLoans.reduce((sum, l) => sum + (l.recoveredAmount ?? 0), 0);
+                      return total > 0 ? ((recovered / total) * 100).toFixed(2) : '0.00';
+                    })()}%
+                  </Typography>
+                </Paper>
+              </Stack>
+
+              {/* Written-Off Loans Table */}
+              <TableContainer component={Paper} variant="outlined">
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ '& th': { fontWeight: 600, bgcolor: 'action.hover' } }}>
+                      <TableCell>Application No</TableCell>
+                      <TableCell>Applicant</TableCell>
+                      <TableCell>Product</TableCell>
+                      <TableCell align="right">Outstanding (₹)</TableCell>
+                      <TableCell>Write-Off Date</TableCell>
+                      <TableCell align="right">Recovered (₹)</TableCell>
+                      <TableCell>Status</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {writtenOffLoans.map(l => (
+                      <TableRow key={l.id} hover>
+                        <TableCell sx={{ fontWeight: 600 }}>{l.applicationNumber}</TableCell>
+                        <TableCell>{l.applicantName}</TableCell>
+                        <TableCell>{l.productType}</TableCell>
+                        <TableCell align="right">{INR(l.outstandingPrincipal)}</TableCell>
+                        <TableCell>{l.writeOffDate ? String(l.writeOffDate).slice(0, 10) : '—'}</TableCell>
+                        <TableCell align="right">{l.recoveredAmount ? INR(l.recoveredAmount) : '—'}</TableCell>
+                        <TableCell>{recoveryStatusChip(l.recoveryStatus)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
+          ) : (
+            <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
+              No written-off loans available.
             </Typography>
           )}
         </TabPanel>

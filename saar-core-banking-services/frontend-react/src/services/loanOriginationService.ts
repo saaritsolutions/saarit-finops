@@ -624,6 +624,60 @@ export async function getRegulatoryMetrics(): Promise<RegulatoryMetrics> {
   };
 }
 
+// ── SAAR-NPA-003: Written-Off Loans & Recovery ──────────────────────────────
+export interface WrittenOffLoanItem {
+  id: string;
+  applicationNumber: string;
+  applicantName: string;
+  productType: string;
+  outstandingPrincipal: number;
+  writeOffDate?: string;
+  writeOffReason?: string;
+  writeOffJournalNumber?: string;
+  recoveredAmount?: number;
+  lastRecoveryDate?: string;
+  recoveryNotes?: string;
+  recoveryJournalNumber?: string;
+  recoveryStatus: 'NONE' | 'PARTIAL' | 'FULL';
+}
+
+export interface WrittenOffLoansResult {
+  total: number;
+  items: WrittenOffLoanItem[];
+}
+
+export interface RecoveryRequest {
+  amount: number;
+  notes: string;
+}
+
+export async function getWrittenOffLoans(): Promise<WrittenOffLoansResult> {
+  const res = await axios.get(`${LOANS_ROOT}/applications/written-off`);
+  const d = res.data;
+  return {
+    total: d.total ?? 0,
+    items: (d.items ?? []).map((item: any) => ({
+      id:                     item.id                     ?? '',
+      applicationNumber:      item.applicationNumber      ?? '',
+      applicantName:          item.applicantName          ?? '',
+      productType:            item.productType            ?? '',
+      outstandingPrincipal:   item.outstandingPrincipal   ?? 0,
+      writeOffDate:           item.writeOffDate           ?? undefined,
+      writeOffReason:         item.writeOffReason         ?? undefined,
+      writeOffJournalNumber:  item.writeOffJournalNumber  ?? undefined,
+      recoveredAmount:        item.recoveredAmount        ?? undefined,
+      lastRecoveryDate:       item.lastRecoveryDate       ?? undefined,
+      recoveryNotes:          item.recoveryNotes          ?? undefined,
+      recoveryJournalNumber:  item.recoveryJournalNumber  ?? undefined,
+      recoveryStatus:         item.recoveryStatus         ?? 'NONE',
+    })),
+  };
+}
+
+export async function recordRecovery(id: string, req: RecoveryRequest): Promise<void> {
+  await axios.post(`${LOANS_ROOT}/${id}/recovery`, req);
+}
+
 // ── Legacy exports (backward compat with old LoanOrigination.tsx) ──────────
 export type { PreValidateRequest } from './loanOriginationServiceLegacy';
 export type { ServerField }        from './loanOriginationServiceLegacy';
