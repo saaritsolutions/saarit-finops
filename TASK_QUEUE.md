@@ -1,29 +1,41 @@
 # TASK_QUEUE.md — Development Backlog
 
 **Last Updated:** 2026-05-10
-**Current Focus:** SAAR-NPA-003 (NPA Recovery Tracking)
+**Current Focus:** CI/CD & Deployment Verification
 
 ---
 
 ## Current Focus
 
-### SAAR-NPA-003: NPA Recovery Tracking
+### CI/CD & Deployment Verification
 **Status:** PLANNING
-**Priority:** HIGH
-**Start Date:** 2026-05-10
-
-#### Planned Tasks
-- [ ] Design recovery workflow data models
-- [ ] Create recovery endpoints (partial recovery, reversal, forecasting)
-- [ ] Implement GL posting for recovery transactions
-- [ ] Add recovery timeline and metrics calculations
-- [ ] Write NUnit tests for recovery workflows
-- [ ] Create frontend recovery management UI
-- [ ] Create Cypress regression tests
+**Priority:** CRITICAL
+**Next Steps:**
+- [ ] Run full backend test suite (dotnet test)
+- [ ] Run full Cypress regression test suite (target: 90+ tests)
+- [ ] Verify production build compilation
+- [ ] Deploy to Hetzner VPS staging
+- [ ] Run smoke tests on staging environment
 
 ---
 
 ## Recently Completed
+
+### ✅ SAAR-NPA-003: NPA Recovery Tracking (Completed 2026-05-10)
+**Commits:** e4cc48a (backend), 35b4244 (frontend)
+**Backend Deliverables:**
+- ✅ LoanApplication: RecoveredAmount, LastRecoveryDate, RecoveryNotes, RecoveryJournalNumber fields
+- ✅ ITransactionServiceClient.PostRecoveryJournalAsync (DR 1010 / CR 4050)
+- ✅ GET /api/loans/applications/written-off endpoint
+- ✅ POST /api/loans/{id}/recovery endpoint with GL posting
+- ✅ RecoveryTests.cs: 3 NUnit tests all passing (T-01, T-02, T-03)
+- ✅ Updated 9 test files with PostRecoveryJournalAsync stub implementation
+
+**Frontend Deliverables:**
+- ✅ WrittenOffLoanItem interface + getWrittenOffLoans() + recordRecovery() functions
+- ✅ LoanDetail.tsx: WRITTEN_OFF status chip, write-off info card, RecoveryDialog
+- ✅ Reports.tsx Tab 8 "Written-Off" with KPI cards, recovery status table, CSV export
+- ✅ 19-written-off-recovery.cy.ts: 4 E2E regression tests
 
 ### ✅ SAAR-RPT-002: RBI Regulatory Reporting (Completed 2026-05-10)
 **Commits:** 04a1763 (backend), 71772fc (frontend)
@@ -73,11 +85,9 @@
 
 | Task | Type | Estimate | Owner | Status |
 |------|------|----------|-------|--------|
-| SAAR-NPA-003 Backend Design | Design | - | Team | 🟡 Planning |
-| SAAR-NPA-003 API Implementation | Backend | Large | Team | ⏳ Pending |
-| SAAR-NPA-003 Frontend | Frontend | Medium | Team | ⏳ Pending |
-| SAAR-NPA-003 E2E Tests | QA | Medium | Team | ⏳ Pending |
-| CI/CD Verification | DevOps | Small | Team | ⏳ Pending |
+| CI/CD Verification | DevOps | Medium | Team | 🟡 In Progress |
+| Full Test Suite Run | QA | Small | Team | ⏳ Pending |
+| Production Build Verification | DevOps | Small | Team | ⏳ Pending |
 
 ---
 
@@ -85,9 +95,8 @@
 
 | Task | Type | Estimate | Owner | Status |
 |------|------|----------|-------|--------|
-| SAAR-NPA-003 Backend | Backend | Large | Team | ⏳ Pending |
-| SAAR-NPA-003 Frontend | Frontend | Medium | Team | ⏳ Pending |
-| SAAR-NPA-003 E2E Tests | QA | Medium | Team | ⏳ Pending |
+| Hetzner VPS Staging Deployment | DevOps | Medium | Team | ⏳ Pending |
+| Smoke Tests on Staging | QA | Small | Team | ⏳ Pending |
 | Documentation Updates | Docs | Small | Team | ⏳ Pending |
 
 ---
@@ -135,6 +144,10 @@ For each feature to be considered complete, it must meet ALL of:
 ---
 
 ## Commits by Feature
+
+### SAAR-NPA-003 (NPA Recovery Tracking)
+- `e4cc48a` — Backend: Recovery endpoints + model fields + NUnit tests
+- `35b4244` — Frontend: Tab 8 + LoanDetail recovery card + Cypress tests
 
 ### SAAR-RPT-002 (RBI Regulatory Reporting)
 - `04a1763` — Backend: Regulatory Metrics API endpoint + NUnit tests

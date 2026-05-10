@@ -19,11 +19,25 @@
 - ✅ Loan Restructuring (SAAR-LRP-003)
 - ✅ Loan Upgrade (SAAR-LRP-004)
 - ✅ RBI Regulatory Reporting (SAAR-RPT-002)
-- 🔄 NPA Recovery Tracking (SAAR-NPA-003) — PENDING
+- ✅ NPA Recovery Tracking (SAAR-NPA-003)
 
 ---
 
 ## Recent Work Done
+
+### Session 59 (Current - SAAR-NPA-003)
+- **Completed:** SAAR-NPA-003 backend (commit e4cc48a)
+  - LoanApplication: RecoveredAmount, LastRecoveryDate, RecoveryNotes, RecoveryJournalNumber
+  - ITransactionServiceClient.PostRecoveryJournalAsync (DR 1010 / CR 4050)
+  - GET /api/loans/applications/written-off endpoint (list written-off loans)
+  - POST /api/loans/{id}/recovery endpoint (record recovery with GL posting)
+  - RecoveryTests.cs: 3 NUnit tests all passing (T-01, T-02, T-03)
+  - Updated 9 test files with PostRecoveryJournalAsync stub implementation
+- **Completed:** SAAR-NPA-003 frontend (commit 35b4244)
+  - loanOriginationService.ts: WrittenOffLoanItem interface, getWrittenOffLoans(), recordRecovery()
+  - LoanDetail.tsx: WRITTEN_OFF status chip, write-off info card, RecoveryDialog component
+  - Reports.tsx: Tab 8 "Written-Off" with KPI cards, recovery status table, CSV export
+  - 19-written-off-recovery.cy.ts: 4 E2E regression tests (Tab 8 load, status column, export, LoanDetail card)
 
 ### Session 58 (Current Continuation - Final)
 - **Completed:** SAAR-RPT-002 backend (commit 04a1763)
@@ -84,15 +98,7 @@ npm start  # PORT=3002
 
 ## Pending Work
 
-### 1. SAAR-NPA-003: NPA Recovery Tracking (Next)
-**Priority:** HIGH
-**Scope:**
-- Recovery workflow for written-off loans
-- Partial recovery tracking + GL entries
-- Recovery timeline + forecasting
-- Recovery success metrics
-
-### 3. CI/CD & Deployment (Final)
+### 1. CI/CD & Deployment (Final)
 **Priority:** CRITICAL
 **Tasks:**
 - Build verification for all commits

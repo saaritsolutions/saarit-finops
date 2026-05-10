@@ -3,17 +3,21 @@
 **Last Updated:** 2026-05-10
 **Current Session:** Continuation of session 58
 
-## In Progress
-
-### SAAR-NPA-003: NPA Recovery Tracking (Next)
-- **Status:** Planning Phase
-- **Expected Features:**
-  - Recovery journeys for written-off loans
-  - Partial recovery tracking with GL entries
-  - Recovery amounts and dates
-  - Recovery timeline visualization
-
 ## Completed
+
+### SAAR-NPA-003: NPA Recovery Tracking (COMPLETED)
+- **Status:** ✅ Complete (commits e4cc48a, 35b4244)
+- **Backend:** ✅ Complete
+  - LoanApplication: RecoveredAmount, LastRecoveryDate, RecoveryNotes, RecoveryJournalNumber
+  - ITransactionServiceClient: PostRecoveryJournalAsync (DR 1010 / CR 4050)
+  - GET /api/loans/applications/written-off: List written-off loans with recovery status
+  - POST /api/loans/{id}/recovery: Record recovery with GL posting and validation
+  - RecoveryTests.cs: 3 NUnit tests (record, reject, list) all passing
+- **Frontend:** ✅ Complete
+  - loanOriginationService.ts: WrittenOffLoanItem, getWrittenOffLoans(), recordRecovery()
+  - LoanDetail.tsx: WRITTEN_OFF status chip, write-off info card, RecoveryDialog
+  - Reports.tsx: Tab 8 "Written-Off" with KPI cards, table, recovery status chips
+  - 19-written-off-recovery.cy.ts: 4 E2E regression tests
 
 ### SAAR-RPT-002: RBI Regulatory Reporting (COMPLETED)
 - **Status:** ✅ Complete (commits 04a1763, 71772fc)
@@ -64,13 +68,6 @@
 
 ## Pending
 
-### SAAR-NPA-003: NPA Recovery Tracking
-- **Status:** Not started
-- **Expected Features:**
-  - Recovery journeys for written-off loans
-  - Partial recovery tracking
-  - Recovery amounts and dates
-
 ### CI/CD & Deployment
 - **Status:** Pending
 - **Tasks:**
@@ -111,6 +108,6 @@
 
 ## Next Steps (Priority Order)
 1. ✅ Fix SAAR-LRP-003 E2E tests (DONE - commit dcd5a8b)
-2. → Implement SAAR-RPT-002 (RBI Regulatory Reporting)
-3. → Implement SAAR-NPA-003 (NPA Recovery Tracking)
+2. ✅ Implement SAAR-RPT-002 (RBI Regulatory Reporting) - DONE (commits 04a1763, 71772fc)
+3. ✅ Implement SAAR-NPA-003 (NPA Recovery Tracking) - DONE (commits e4cc48a, 35b4244)
 4. → Deploy all features to Hetzner and verify CI/CD
