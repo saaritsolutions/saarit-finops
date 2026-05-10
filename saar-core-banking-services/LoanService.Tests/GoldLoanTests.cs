@@ -80,6 +80,10 @@ file sealed class StubTransactionClient : ITransactionServiceClient
     public Task<DisbursalJournalResult> PostWriteOffJournalAsync(
         string appNo, decimal outstanding, CancellationToken ct = default) =>
         Task.FromResult(new DisbursalJournalResult(_succeeds, _succeeds ? "JNL-WRITEOFF-001" : null, _succeeds ? null : "stub error"));
+
+    public Task<DisbursalJournalResult> PostLoanUpgradeJournalAsync(
+        string appNo, decimal outstanding, CancellationToken ct = default) =>
+        Task.FromResult(new DisbursalJournalResult(_succeeds, _succeeds ? "JNL-UPGRADE-001" : null, _succeeds ? null : "stub error"));
 }
 
 // ── DB helper ─────────────────────────────────────────────────────────────────

@@ -324,6 +324,89 @@ namespace LoanService.Controllers
             });
         }
 
+        // ── POST /api/loans/{id}/restructure-upgrade ────────────────────────────────
+        /// <summary>
+        /// Upgrade a restructured DISBURSED loan back to original terms after 1-year satisfactory repayment.
+        /// Guards: DISBURSED + IsRestructured + !IsUpgraded + RestructuredDate ≤ (today-365 days) + last 6 months SMA=STANDARD.
+        /// Calls GL service to post upgrade reversal journal (reverses the restructure journal).
+        /// </summary>
+        [HttpPost("/api/loans/{id:guid}/restructure-upgrade")]
+        [AllowAnonymous]
+        public async Task<IActionResult> UpgradeLoan(
+            Guid id,
+            [FromBody] UpgradeRequest req,
+            CancellationToken ct = default)
+        {
+            var app = await _db.LoanApplications.FindAsync(new object[] { id }, ct);
+            if (app == null) return NotFound(new { error = "Loan not found" });
+
+            if (app.Status != "DISBURSED")
+                return BadRequest(new { error = "Only DISBURSED loans can be upgraded" });
+
+            if (!app.IsRestructured)
+                return BadRequest(new { error = "Loan is not restructured — cannot upgrade" });
+
+            if (app.IsUpgraded)
+                return BadRequest(new { error = "Loan has already been upgraded" });
+
+            if (!app.RestructuredDate.HasValue)
+                return BadRequest(new { error = "Restructured date is missing" });
+
+            // Check 1-year elapsed since restructuring
+            var daysElapsed = (DateTime.UtcNow - app.RestructuredDate.Value).TotalDays;
+            if (daysElapsed < 365)
+                return BadRequest(new { error = $"Loan must be restructured for 1 year. Currently {Math.Floor(daysElapsed)} days." });
+
+            // Check last 6 months SMA status is STANDARD (no defaults)
+            if (app.SmaStatus != "STANDARD")
+                return BadRequest(new { error = $"Loan is in {app.SmaStatus} status. Must be STANDARD for 6 months before upgrade." });
+
+            // Call GL service to post upgrade journal (reversal of restructure journal)
+            try
+            {
+                var journalResult = await _transactionService.PostLoanUpgradeJournalAsync(
+                    app.ApplicationNumber,
+                    app.OutstandingPrincipal ?? 0m,
+                    ct);
+                app.UpgradeJournalNumber = journalResult?.JournalNumber;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to post upgrade journal for loan {AppNo}", app.ApplicationNumber);
+                return StatusCode(500, new { error = "Failed to post GL journal. Please retry." });
+            }
+
+            // Restore original terms
+            if (app.OriginalTenureMonths.HasValue)
+                app.TenureMonths = app.OriginalTenureMonths.Value;
+            if (app.OriginalInterestRate.HasValue)
+                app.InterestRate = app.OriginalInterestRate.Value;
+
+            // Mark as upgraded
+            app.IsUpgraded       = true;
+            app.UpgradedDate     = DateTime.UtcNow;
+            app.UpgradedReason   = req.Reason;
+            // Clear restructure flags
+            app.IsRestructured   = false;
+            app.UpdatedAt        = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync(ct);
+
+            _logger.LogInformation(
+                "Loan {AppNo} upgraded — restored to tenure={Tenure}mo, rate={Rate}%, journalNo={JournalNo}",
+                app.ApplicationNumber, app.TenureMonths, app.InterestRate, app.UpgradeJournalNumber);
+
+            return Ok(new
+            {
+                applicationNumber   = app.ApplicationNumber,
+                isUpgraded          = app.IsUpgraded,
+                upgradedDate        = app.UpgradedDate,
+                restoredTenure      = app.TenureMonths,
+                restoredRate        = app.InterestRate,
+                journalNumber       = app.UpgradeJournalNumber,
+            });
+        }
+
         // ── GET /api/loans/npa-board ─────────────────────────────────────────────
         /// <summary>
         /// Portfolio NPA summary with sub-classification and provisioning per RBI IRAC norms.
@@ -941,5 +1024,10 @@ namespace LoanService.Controllers
         public int     NewTenureMonths  { get; set; }
         public decimal NewInterestRate  { get; set; }
         public string  Reason           { get; set; } = "";
+    }
+
+    public class UpgradeRequest
+    {
+        public string Reason { get; set; } = "";
     }
 }

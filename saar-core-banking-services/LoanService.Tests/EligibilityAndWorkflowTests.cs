@@ -44,6 +44,9 @@ file sealed class NoOpTransactionService : ITransactionServiceClient
     public Task<DisbursalJournalResult> PostWriteOffJournalAsync(
         string applicationNumber, decimal outstanding, CancellationToken ct = default) =>
         Task.FromResult(new DisbursalJournalResult(true, "JNL-WRITEOFF-001", null));
+    public Task<DisbursalJournalResult> PostLoanUpgradeJournalAsync(
+        string applicationNumber, decimal outstanding, CancellationToken ct = default) =>
+        Task.FromResult(new DisbursalJournalResult(true, "JNL-UPGRADE-001", null));
 }
 
 // ── Fake workflow client (no-op) ───────────────────────────────────────────────

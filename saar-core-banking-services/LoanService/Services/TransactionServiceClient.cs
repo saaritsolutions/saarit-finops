@@ -70,6 +70,17 @@ namespace LoanService.Services
             string applicationNumber,
             decimal outstanding,
             CancellationToken ct = default);
+
+        /// <summary>
+        /// Posts loan upgrade journal (reversal of restructure) — 2-line:
+        ///   DR 1020 Loans and Advances (restores original terms basis, clears restructure flag)
+        ///   CR 5045 Restructuring Provision Reversal (releases the 5% provision)
+        /// Idempotency key: UPGRADE-{applicationNumber}.
+        /// </summary>
+        Task<DisbursalJournalResult> PostLoanUpgradeJournalAsync(
+            string applicationNumber,
+            decimal outstanding,
+            CancellationToken ct = default);
     }
 
     public class TransactionServiceClient : ITransactionServiceClient
@@ -205,6 +216,29 @@ namespace LoanService.Services
                           currency = "INR", narration = $"Provision consumed on write-off — {applicationNumber}" },
                     new { accountCode = "1020", debitAmount = 0m,          creditAmount = outstanding,
                           currency = "INR", narration = $"Loan written off balance sheet — {applicationNumber}" }
+                }
+            };
+            return await PostJournalAsync(applicationNumber, payload, ct);
+        }
+
+        public async Task<DisbursalJournalResult> PostLoanUpgradeJournalAsync(
+            string applicationNumber,
+            decimal outstanding,
+            CancellationToken ct = default)
+        {
+            var payload = new
+            {
+                idempotencyKey = $"UPGRADE-{applicationNumber}",
+                description    = $"Loan Upgrade (Restructure Reversal) — {applicationNumber}",
+                referenceType  = "LoanUpgrade",
+                referenceId    = applicationNumber,
+                postedBy       = "LoanService",
+                entries        = new[]
+                {
+                    new { accountCode = "1020", debitAmount = outstanding, creditAmount = 0m,
+                          currency = "INR", narration = $"Restructure reversal — restore original terms — {applicationNumber}" },
+                    new { accountCode = "5045", debitAmount = 0m,          creditAmount = outstanding,
+                          currency = "INR", narration = $"Restructuring provision reversal — {applicationNumber}" }
                 }
             };
             return await PostJournalAsync(applicationNumber, payload, ct);
