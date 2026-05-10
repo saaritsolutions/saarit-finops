@@ -291,6 +291,10 @@ namespace LoanService.Controllers
             if (app.IsRestructured)
                 return BadRequest(new { error = "Loan is already restructured" });
 
+            // Save original terms before overwriting (for potential upgrade later)
+            app.OriginalTenureMonths         = app.TenureMonths;
+            app.OriginalInterestRate         = app.InterestRate;
+
             app.IsRestructured               = true;
             app.RestructuredDate             = DateTime.UtcNow;
             app.RestructuredReason           = req.Reason;

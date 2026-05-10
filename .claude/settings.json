@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/LENOVO YOGA/.ssh/**)",
+      "Bash(git -c:*)",
+      "Bash(ping:*)",
+      "Bash(nmap:*)",
+      "Bash(timeout 10 bash -c 'echo >/dev/tcp/65.21.227.140/22')",
+      "Bash(ASPNETCORE_ENVIRONMENT=Development dotnet ef migrations add:*)"
+    ]
+  }
+}

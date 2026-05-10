@@ -320,6 +320,28 @@ namespace LoanService.Models
         public decimal RestructuredProvisioning =>
             Math.Round((OutstandingPrincipal ?? 0m) * RestructuredProvisioningPct / 100m, 2);
 
+        // ── Loan Upgrade (SAAR-LRP-004) ─────────────────────────────────────────
+        /// <summary>Tenure (months) BEFORE restructuring — saved for potential upgrade back to original terms.</summary>
+        public int? OriginalTenureMonths { get; set; }
+
+        /// <summary>Interest rate BEFORE restructuring — saved for potential upgrade back to original terms.</summary>
+        [Column(TypeName = "decimal(6,4)")]
+        public decimal? OriginalInterestRate { get; set; }
+
+        /// <summary>True when restructured loan has been upgraded back to original terms after 1 year satisfactory performance.</summary>
+        public bool IsUpgraded { get; set; } = false;
+
+        /// <summary>Date when loan was upgraded back to original terms.</summary>
+        public DateTime? UpgradedDate { get; set; }
+
+        /// <summary>Reason/remarks for upgrade (e.g. "1-year satisfactory repayment completed").</summary>
+        [MaxLength(500)]
+        public string? UpgradedReason { get; set; }
+
+        /// <summary>GL Journal number from the upgrade transaction (reversal of restructure journal).</summary>
+        [MaxLength(50)]
+        public string? UpgradeJournalNumber { get; set; }
+
         // ── Navigation ──────────────────────────────────────────────────────────
         public List<LoanDocument> Documents { get; set; } = new();
         public List<LoanApprovalAction> ApprovalActions { get; set; } = new();
