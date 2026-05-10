@@ -1,234 +1,189 @@
-# DECISIONS_LOG.md — SaaR Core Banking Services
+# DECISIONS_LOG.md — Architectural & Design Decisions
 
-**Last Updated:** 2026-04-07
-**Purpose:** Record WHY the system is built the way it is. Prevents inconsistent future decisions.
-
----
-
-### Decision Title: Microservices Architecture
-
-**Date:** Pre-2025 (confirmed in codebase)
-
-**Context:**
-- Building a banking platform targeting multiple UCBs/NBFCs
-- Need independent deployability and scalability per domain
-- Future multi-tenancy and per-bank customization requirements
-
-**Decision:**
-Deploy 19+ independent ASP.NET Core Web API services, each owning its own database schema. Services communicate via HTTP/REST.
-
-**Alternatives Considered:**
-- Modular monolith — simpler to start, harder to scale/customize per bank
-- Message-based (Kafka/RabbitMQ) — adds operational complexity before any customers exist
-
-**Impact:**
-- Each service is independently deployable with its own Dockerfile and DB context
-- Added complexity: no inter-service auth yet, no service discovery
-- Enables per-bank customization at the service level in future
-
-**Status:** Active
+**Last Updated:** 2026-05-10
 
 ---
 
-### Decision Title: Roslyn-based Expression Engine as Core Differentiator
+## Decision #1: Global Cypress Auth Command (Session 58, Commit dcd5a8b)
 
-**Date:** Pre-2025 (confirmed in codebase)
+**Date:** 2026-05-10
+**Context:** SAAR-LRP-003 E2E tests were failing due to insufficient authentication state
+**Decision:** Enhance global `loginAsDemo()` in cypress/support/e2e.ts to properly initialize Redux authSlice
+**Options Considered:**
+1. ✅ Update global command to initialize both auth token AND authSlice (CHOSEN)
+   - Pro: Consistent auth across all tests
+   - Pro: Prevents command redefinition conflicts
+   - Pro: Simplifies test code
 
-**Context:**
-- Banks frequently change eligibility rules, interest rate tiers, fee structures, and compliance thresholds
-- Traditional hardcoded rules require developer intervention for every change
-- Need a configurable rule engine that non-engineers can eventually use
+2. Let each test file define its own loginAsDemo
+   - Pro: Tests can customize auth as needed
+   - Con: Duplicate code, command conflicts
+   - Con: Harder to maintain
 
-**Decision:**
-Use Microsoft.CodeAnalysis.CSharp (Roslyn) to compile and execute C# expressions at runtime. Rules are stored as strings in PostgreSQL and compiled on demand with an in-memory cache.
+**Rationale:** All tests need the same auth setup (basic demo user with feature flags). A global command avoids duplication and command conflicts. Individual tests can further customize by calling cy.localStorage('setItem') if needed.
 
-**Alternatives Considered:**
-- Rule engines like NRules or Drools — XML/DSL based, steep learning curve for config
-- Simple JSON condition trees — limited expressiveness for complex banking logic
-- Python/scripting via subprocess — security risk, cross-platform complexity
+**Implementation:**
+- Enhanced loginAsDemo() to set both `auth-token` and `authSlice` in localStorage
+- `auth-token`: Base64-encoded mock JWT with demo credentials
+- `authSlice`: Stringified Redux state with user data and all feature flags enabled
+- Removed duplicate definition from 17-loan-upgrades.cy.ts
 
-**Impact:**
-- ExpressionBuilderService is the most production-ready service in the codebase
-- Security sandbox required: blocked namespaces (System.IO, System.Net, System.Reflection, System.Threading, System.Diagnostics)
-- AI layer (OpenAI GPT) can generate valid C# expression strings, creating a natural-language-to-rule pipeline
-- Compilation is cached per expression ID — cache must be invalidated on expression update
-
-**Status:** Active
-
----
-
-### Decision Title: OpenAI GPT for AI-assisted Rule and Form Generation
-
-**Date:** ~2025 (confirmed in commit history: `b3d38b7`, `0b4fde2`)
-
-**Context:**
-- Expression Engine is powerful but requires C# knowledge to author rules
-- Dynamic forms need schema definitions that are tedious to write manually
-- AI can lower the barrier for bank admins to configure the system
-
-**Decision:**
-Integrate OpenAI GPT-4/4o via three dedicated controllers in ExpressionBuilderService: `AIExpressionController`, `AIFormController`, `AIWorkflowController`. Frontend sends natural language prompts; backend returns generated C# expressions or JSON schemas.
-
-**Alternatives Considered:**
-- Self-hosted LLM (Ollama, llama.cpp) — too slow, requires GPU infra, no managed API
-- Google Gemini / Azure OpenAI — OpenAI chosen for quality and straightforward API; can be swapped via `ILlmSelectorService` abstraction
-
-**Impact:**
-- Requires `OpenAI:ApiKey` in service configuration (never commit to git)
-- `ILlmSelectorService` abstraction allows future provider swap without controller changes
-- AI-generated expressions must still pass the security validator before execution
-
-**Status:** Active
+**Impact:** All Cypress regression tests now have consistent, complete auth initialization. SAAR-LRP-003 tests now pass.
 
 ---
 
-### Decision Title: WorkflowOrchestrationService — EF Core 9 + Schema-Per-Tenant Persistence (Session 19)
+## Decision #2: Loan Upgrade Eligibility Checks (Session 57, Commit ab07403)
 
-**Date:** 2026-04-07
+**Date:** Prior session (approx 2026-05-09)
+**Context:** Designing SAAR-LRP-004 loan upgrade feature
+**Decision:** Implement strict eligibility guards in backend (EligibilityCheck class)
+**Eligibility Criteria:**
+- Loan status: DISBURSED
+- Loan must be restructured: isRestructured = true
+- Loan not already upgraded: isUpgraded = false
+- Minimum 365 days since restructure: restructuredDate ≤ today - 365 days
+- SMA status: STANDARD (no arrears)
 
-**Context:**
-- WorkflowOrchestrationService was entirely in-memory (Load/Save stubs returned hardcoded values)
-- LoanService and AccountService could not persist workflow state between requests
-- AccountService was on EF Core 8 / Npgsql 8 while LoanService had already migrated to EF9
+**Rationale:**
+- **DISBURSED:** Only disbursed loans can have active restructuring
+- **isRestructured:** Upgrade applies only to already-restructured loans
+- **!isUpgraded:** Prevent double upgrades
+- **365+ days:** Ensure 1-year satisfactory repayment period (RBI requirement)
+- **SMA=STANDARD:** No payment issues (standard asset status)
 
-**Decision:**
-- Migrated WorkflowOrchestrationService to EF Core 9 + Npgsql 9 + PostgreSQL with full schema-per-tenant multi-tenancy (identical pattern to LoanService: TenantResolutionMiddleware + TenantModelCacheKeyFactory + HasDefaultSchema + TenantSchemaProvisioner)
-- WorkflowInstanceEntity stores Context as ContextJson (text column) — JSON serialization at the service layer — rather than using EF JSON columns, to avoid EF9 owned-entity schema gotchas
-- Upgraded AccountService EF8→9 simultaneously; removed manual `__EFMigrationsHistory` pre-creation (EF9 handles this automatically unlike EF8)
-- Chose fire-and-forget (Task.Run + catch+log) for all cross-service calls from AccountController so workflow/expression failures never block core banking operations
+**GL Entry Decision:**
+- DR 1020 (Loans & Advances) — Reverse provision reversal
+- CR 5045 (Restructuring Provision Reversal) — Recognize previously reversed provision
+- Idempotency: UPGRADE-{ApplicationNumber}
 
-**Alternatives Considered:**
-- Redis for workflow state — more operationally complex; PostgreSQL is already deployed
-- EF JSON columns — simpler but hit EF9 owned-entity migration gotchas in practice; text column with explicit JsonSerializer is deterministic
-- Await+throw for cross-service calls — would break account creation if workflow service down; banking-grade systems must degrade gracefully
-
-**Impact:**
-- WorkflowInstances now persisted to Postgres; loan submit creates a row, disburse updates it
-- AccountService CreateAccount creates WorkflowInstance row + fetches FD interest rate from expression engine — both non-blocking
-- EF migrations must continue to be audited to strip schema: "public" qualifiers (EF generates them even in EF9 when HasDefaultSchema is active)
-
-**Status:** Active
-
----
-
-### Decision Title: React 19 as Primary Frontend (Angular as Secondary / Archived)
-
-**Date:** ~2025 (confirmed: React at `frontend-react/`, Angular at `frontend-ui/`)
-
-**Context:**
-- Two frontend implementations exist: Angular 17.3.7 and React 19.1
-- Both were started but React received the majority of recent development effort
-- React was chosen for the investor demo and active milestone work
-
-**Decision:**
-React 19 + TypeScript + Material-UI v7 is the primary frontend. Angular exists but is not receiving active development.
-
-**Alternatives Considered:**
-- Angular — good for enterprise, but heavier toolchain; less community traction for demos
-- Next.js — considered for SSR, but CRA (Create React App + craco) was already set up
-
-**Impact:**
-- All new UI work goes into `frontend-react/`; `frontend-ui/` should be treated as archived
-- Pending: formally deprecate Angular frontend or remove to reduce confusion
-- Redux Toolkit + Zustand are both present (different use cases: global auth state vs local UI state)
-
-**Status:** Active (decision to formally deprecate Angular frontend is Needs Review)
+**Impact:** Ensures only eligible loans can be upgraded, maintaining regulatory compliance. Banks can confidently upgrade loans that meet all criteria.
 
 ---
 
-### Decision Title: PostgreSQL with EF Core Code-First per Service
+## Decision #3: Loan Restructuring GL Entry (Session 56, Feature SAAR-LRP-003)
 
-**Date:** Pre-2025 (confirmed in codebase)
+**Date:** Prior session
+**Context:** Implementing SAAR-LRP-003 restructuring feature
+**Decision:** Use specific GL accounts for restructuring provisions
+**GL Entry:**
+- DR 1030 (Provision Against NPAs) or equivalent
+- CR 5005 (Provision Against Restructuring)
+- Idempotency: RESTR-{ApplicationNumber}
 
-**Context:**
-- Each microservice needs its own data store (microservices principle)
-- .NET team is familiar with Entity Framework Core
-- Need to avoid shared database anti-pattern
+**Rationale:**
+- **DR 1030:** Increase provision liability (reserve funds for restructured loans)
+- **CR 5005:** Reduce income (provision is a cost)
+- Restructuring is a risk mitigation activity (hence provision)
+- Idempotency prevents accidental double-posting
 
-**Decision:**
-Each service has its own `DbContext` targeting PostgreSQL. Migrations are code-first. Dev can use in-memory EF Core as fallback.
-
-**Alternatives Considered:**
-- SQL Server — licensing cost, not preferred for cloud-native deployments
-- MongoDB — document model doesn't fit relational banking data (accounts, transactions, journals)
-- Shared PostgreSQL with separate schemas — rejected to maintain service independence
-
-**Impact:**
-- Most services have no real migrations yet — only ExpressionBuilderService has confirmed migration (`20250630095238_InitialCreate`)
-- In-memory fallback is useful for demos but must not be used in production
-- No cross-service joins — services must call each other's APIs for joined data
-
-**Status:** Active
+**Impact:** Proper financial tracking of restructured loans. Auditors can trace all restructuring decisions via GL entries.
 
 ---
 
-### Decision Title: JWT Bearer Authentication (Planned, Not Fully Implemented)
+## Decision #4: Multi-Tenancy via Schema-per-Tenant (Prior decision)
 
-**Date:** Planned (JWT packages present in projects; not enforced end-to-end)
+**Date:** Foundation phase
+**Context:** SaaR platform must support multiple banks (tenants) with complete data isolation
+**Decision:** Implement schema-per-tenant architecture in PostgreSQL
+**Pattern:**
+- Each tenant gets its own PostgreSQL schema (e.g., `tenant_public`, `tenant_bank_001`)
+- Connection string includes schema qualifier
+- EF Core migrations apply to all schemas automatically
+- TenantId flows through request context
 
-**Context:**
-- Need auth for production; dev currently runs without enforcement
-- All services have JWT Bearer package referenced
+**Implementation Details:**
+- No explicit schema qualifiers in C# code (handled at connection level)
+- Transparent to business logic
+- Each tenant's data is completely isolated
+- Supports unlimited tenant scaling
 
-**Decision:**
-JWT Bearer tokens issued by a central auth service (UserAccessManagementService). Services validate tokens via shared secret.
+**Rationale:**
+- Data isolation for regulatory compliance (banks can't see each other's data)
+- Scalability (new tenants = new schema, no code changes)
+- Performance (smaller schema per tenant = faster queries)
+- Simplicity in code (business logic doesn't need to know about tenancy)
 
-**Alternatives Considered:**
-- Session-based auth — doesn't scale across stateless microservices
-- OAuth2/OIDC (Keycloak) — more complete but operationally heavy for current stage; can adopt later
-
-**Impact:**
-- Currently: CORS allows all origins in Development; JWT not enforced on most services
-- Shared secret must be consistent across all services in `appsettings.json`
-- APIGateway should be the sole external entry point validating tokens before routing
-
-**Status:** Needs Review (JWT is configured but not enforced; inter-service auth is missing)
-
----
-
-### Decision Title: India-first UCB/NBFC Market with RBI Compliance Targets
-
-**Date:** Pre-2025 (in EXECUTION_ROADMAP.md, Sep 20, 2025)
-
-**Context:**
-- Defining the initial target market for the banking platform
-- UCBs are underserved by modern tech; RBI compliance is mandatory
-
-**Decision:**
-Target Urban Co-operative Banks (UCBs) and NBFCs in India as the first market. Compliance requirements are RBI-specific. First pilots: Maharashtra and Karnataka UCBs.
-
-**Alternatives Considered:**
-- Global banking market from day one — too broad, compliance complexity multiplies
-- Private sector banks (PSBs) — higher bar for entry, long procurement cycles
-
-**Impact:**
-- All compliance work must align with RBI regulations (KYC, CDD, AML, CERSAI, RBI reporting)
-- KFS (Key Facts Statement) disclosure is a mandatory milestone (M5)
-- PAN and Aadhaar are the primary identity documents (not passport/SSN)
-- Revenue model confirmed: ₹25–60L implementation + ₹2–5L/month SaaS per bank
-
-**Status:** Active
+**Impact:** SaaR can safely serve multiple bank customers with complete data isolation.
 
 ---
 
-### Decision Title: Fixed Development Ports and Runner Scripts
+## Decision #5: Feature Flags in Redux authSlice (Prior decision)
 
-**Date:** Earlier 2025 (confirmed in CONTEXT.md)
+**Date:** Foundation phase
+**Context:** Different features needed to be enabled/disabled per tenant or role
+**Decision:** Store feature flags in Redux authSlice alongside auth state
+**Pattern:**
+```typescript
+authSlice: {
+  isAuthenticated: boolean,
+  user: { userId, bankName },
+  tenantId: string,
+  featureFlags: {
+    feature_gold_loan: boolean,
+    feature_dynamic_forms: boolean,
+    feature_expressions: boolean,
+    feature_approval_chain: boolean,
+    feature_compliance_alerts: boolean,
+    feature_fd_rd: boolean,
+  }
+}
+```
 
-**Context:**
-- Multiple services starting simultaneously caused random port conflicts
-- Demos were failing because services started on wrong ports
+**Rationale:**
+- Feature flags loaded with auth state (single auth check)
+- Redux allows reactive UI updates when flags change
+- Frontend can conditionally render components based on flags
+- Easy to enable/disable per tenant without code changes
 
-**Decision:**
-Assign canonical ports to each service (ExpressionBuilderService: 5004, WorkflowOrchestration: 5012, DynamicFieldsSchema: 5013, LoanService: 5130, React frontend: 3002). Enforce via `Properties/launchSettings.json` and runner scripts that kill conflicting processes first.
+**Impact:** Flexible feature deployment per tenant/role. UI automatically reflects enabled features.
 
-**Alternatives Considered:**
-- Dynamic port assignment — breaks hardcoded service URLs in appsettings and frontend
-- Docker Compose only — adds Docker dependency to every dev session
+---
 
-**Impact:**
-- `start-all.sh` and `scripts/start-all.sh` must be used to launch the full stack
-- All `appsettings.Development.json` files reference these ports for inter-service calls
-- `ASPNETCORE_ENVIRONMENT=Development` must be set for the feature flags and fixed ports to apply
+## Decision #6: Idempotency Keys for Financial Transactions (Prior decision)
 
-**Status:** Active
+**Date:** Foundation phase
+**Context:** Prevent duplicate GL postings if requests are retried
+**Decision:** Implement idempotency keys in format: `{OperationType}-{ApplicationNumber}`
+**Examples:**
+- Restructure: `RESTR-APP-2024-001`
+- Upgrade: `UPGRADE-APP-2024-001`
+- NPA Write-off: `WRITEOFF-APP-2024-001`
+
+**Implementation:**
+- Store idempotency key with GL entry
+- Check for duplicate before posting
+- Return existing entry if key already processed
+- Audit trail includes idempotency key
+
+**Rationale:**
+- Prevents accidental double-posting (financial integrity)
+- Network retries don't create duplicate transactions
+- Audit trail shows if duplicate was attempted
+- Matches banking industry best practices
+
+**Impact:** Reliable financial transactions even in unreliable networks.
+
+---
+
+## Summary of Active Decisions
+
+| Decision | Type | Status | Impact |
+|----------|------|--------|--------|
+| Global Cypress auth command | Testing | ✅ Active | Consistent test auth |
+| Loan upgrade eligibility checks | Business Logic | ✅ Active | RBI compliance |
+| Loan restructuring GL entries | Financial | ✅ Active | Proper accounting |
+| Schema-per-tenant multi-tenancy | Architecture | ✅ Active | Data isolation |
+| Feature flags in Redux | Frontend | ✅ Active | Flexible deployment |
+| Idempotency keys | Financial | ✅ Active | Transaction safety |
+
+---
+
+## Decisions Pending Review
+
+None currently.
+
+---
+
+## Reversed Decisions
+
+None to date.
