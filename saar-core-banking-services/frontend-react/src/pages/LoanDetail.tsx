@@ -27,8 +27,8 @@ import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  getApplicationDetail, takeApplicationAction, getRepaymentHistory, collectEmi, restructureLoan,
-  type ApplicationDetail, type ApprovalAction, type RepaymentHistoryResponse, type RestructureRequest,
+  getApplicationDetail, takeApplicationAction, getRepaymentHistory, collectEmi, restructureLoan, upgradeLoan,
+  type ApplicationDetail, type ApprovalAction, type RepaymentHistoryResponse, type RestructureRequest, type UpgradeLoanRequest,
 } from '../services/loanOriginationService';
 import JournalDetailDialog from '../components/dialogs/JournalDetailDialog';
 
@@ -242,6 +242,10 @@ const LoanDetail: React.FC = () => {
   const [restructureReason, setRestructureReason] = useState('');
   const [restructuring, setRestructuring]         = useState(false);
   const [restructureError, setRestructureError]   = useState<string | null>(null);
+  const [upgradeOpen, setUpgradeOpen]             = useState(false);
+  const [upgradeReason, setUpgradeReason]         = useState('');
+  const [upgrading, setUpgrading]                 = useState(false);
+  const [upgradeError, setUpgradeError]           = useState<string | null>(null);
 
   const app = detail?.application ?? null;
 
@@ -329,6 +333,25 @@ const LoanDetail: React.FC = () => {
       setRestructureError(e?.response?.data?.error ?? 'Restructure failed. Please try again.');
     } finally {
       setRestructuring(false);
+    }
+  };
+
+  const handleUpgrade = async () => {
+    if (!id) return;
+    setUpgrading(true);
+    setUpgradeError(null);
+    try {
+      await upgradeLoan(id, {
+        reason: upgradeReason,
+      } as UpgradeLoanRequest);
+      await load();
+      setUpgradeOpen(false);
+      setUpgradeReason('');
+      setSuccessMsg('Loan upgraded to original terms successfully');
+    } catch (e: any) {
+      setUpgradeError(e?.response?.data?.error ?? 'Upgrade failed. Please try again.');
+    } finally {
+      setUpgrading(false);
     }
   };
 
@@ -430,6 +453,19 @@ const LoanDetail: React.FC = () => {
                 aria-label="restructure loan"
               >
                 Restructure Loan
+              </Button>
+            )}
+            {status === 'DISBURSED' && f('isRestructured') && !f('isUpgraded') && (
+              <Button
+                variant="outlined"
+                color="success"
+                size="small"
+                startIcon={<ThumbUpIcon />}
+                onClick={() => setUpgradeOpen(true)}
+                sx={{ fontWeight: 600 }}
+                aria-label="upgrade loan"
+              >
+                Upgrade to Original Terms
               </Button>
             )}
           </Stack>
@@ -951,6 +987,44 @@ const LoanDetail: React.FC = () => {
         </Box>
       )}
 
+      {/* Upgraded Terms Card */}
+      {f('isUpgraded') && (
+        <Box mt={3}>
+          <Card sx={{ border: `2px solid #10B981`, boxShadow: 'none', borderRadius: 2, bgcolor: '#F0FDF4' }}>
+            <CardContent sx={{ p: 2.5 }}>
+              <Stack direction="row" spacing={1} alignItems="center" mb={1.5}>
+                <ThumbUpIcon sx={{ color: '#047857' }} />
+                <Typography variant="subtitle2" fontWeight={700} color="#065F46">
+                  Loan Upgraded
+                </Typography>
+                <Chip label="Original Terms Restored" size="small" color="success" variant="outlined"
+                  sx={{ fontWeight: 600, fontSize: '0.7rem', height: 20 }} />
+              </Stack>
+              <Divider sx={{ mb: 1.5, borderColor: '#DCFCE7' }} />
+              <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                <Box>
+                  <Typography variant="caption" color="#065F46">Original Tenure</Typography>
+                  <Typography variant="h6" fontWeight={700} color="#065F46">{f('originalTenureMonths') ? `${f('originalTenureMonths')} months` : '—'}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="#065F46">Original Interest Rate</Typography>
+                  <Typography variant="h6" fontWeight={700} color="#065F46">{f('originalInterestRate') ? `${f('originalInterestRate')}% p.a.` : '—'}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="#065F46">Upgraded On</Typography>
+                  <Typography variant="h6" fontWeight={700} color="#065F46">{fmtDateOnly(f('upgradedDate'))}</Typography>
+                </Box>
+              </Box>
+              {f('upgradedReason') && (
+                <Typography variant="body2" color="#065F46" mt={1.5} fontStyle="italic">
+                  Reason: {f('upgradedReason')}
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+        </Box>
+      )}
+
       {/* Collect EMI Dialog */}
       <Dialog open={collectOpen} onClose={() => setCollectOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle sx={{ fontWeight: 700 }}>Collect EMI Payment</DialogTitle>
@@ -1058,6 +1132,42 @@ const LoanDetail: React.FC = () => {
             }
           >
             {restructuring ? <CircularProgress size={18} color="inherit" /> : 'Restructure Loan'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Upgrade Loan Dialog */}
+      <Dialog open={upgradeOpen} onClose={() => setUpgradeOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700 }}>Upgrade to Original Terms</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" mb={2}>
+            After 1 year of satisfactory repayment, upgrade the loan back to original terms. This will restore the original EMI, tenure, and interest rate.
+          </Typography>
+          {upgradeError && <Alert severity="error" sx={{ mb: 2 }}>{upgradeError}</Alert>}
+          <Stack spacing={2} mt={1}>
+            <TextField
+              label="Reason"
+              fullWidth
+              multiline
+              rows={3}
+              value={upgradeReason}
+              onChange={e => setUpgradeReason(e.target.value)}
+              placeholder="e.g. 1-year satisfactory repayment completed — borrower eligible for original terms"
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setUpgradeOpen(false)} variant="outlined" sx={{ borderColor: SLATE_200 }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="success"
+            aria-label="confirm upgrade"
+            onClick={handleUpgrade}
+            disabled={upgrading || !upgradeReason.trim()}
+          >
+            {upgrading ? <CircularProgress size={18} color="inherit" /> : 'Upgrade Loan'}
           </Button>
         </DialogActions>
       </Dialog>

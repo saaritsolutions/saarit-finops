@@ -531,6 +531,54 @@ export async function restructureLoan(id: string, req: RestructureRequest): Prom
   await axios.post(`${BASE_URL}/api/loans/${id}/restructure`, req);
 }
 
+// ── Loan Upgrade (SAAR-LRP-004) ───────────────────────────────────────────────
+
+export interface UpgradedLoanItem {
+  id: string;
+  applicationNumber: string;
+  applicantName: string;
+  productType: string;
+  outstandingPrincipal: number;
+  originalTenureMonths: number | null;
+  originalInterestRate: number | null;
+  upgradedDate: string | null;
+  upgradedReason: string | null;
+  upgradeJournalNumber: string | null;
+}
+
+export interface UpgradedLoansResult {
+  total: number;
+  items: UpgradedLoanItem[];
+}
+
+export interface UpgradeLoanRequest {
+  reason: string;
+}
+
+export async function getUpgradedLoans(): Promise<UpgradedLoansResult> {
+  const res = await axios.get(`${APPS_ROOT}/upgraded`);
+  const d = res.data;
+  return {
+    total: d.total ?? d.Total ?? 0,
+    items: (d.items ?? d.Items ?? []).map((a: any) => ({
+      id:                    a.id                    ?? a.Id,
+      applicationNumber:     a.applicationNumber     ?? a.ApplicationNumber ?? '',
+      applicantName:         a.applicantName         ?? a.ApplicantName     ?? '',
+      productType:           a.productType           ?? a.ProductType       ?? '',
+      outstandingPrincipal:  a.outstandingPrincipal  ?? a.OutstandingPrincipal ?? 0,
+      originalTenureMonths:  a.originalTenureMonths  ?? a.OriginalTenureMonths ?? null,
+      originalInterestRate:  a.originalInterestRate  ?? a.OriginalInterestRate ?? null,
+      upgradedDate:          a.upgradedDate          ?? a.UpgradedDate     ?? null,
+      upgradedReason:        a.upgradedReason        ?? a.UpgradedReason   ?? null,
+      upgradeJournalNumber:  a.upgradeJournalNumber  ?? a.UpgradeJournalNumber ?? null,
+    })),
+  };
+}
+
+export async function upgradeLoan(id: string, req: UpgradeLoanRequest): Promise<void> {
+  await axios.post(`${BASE_URL}/api/loans/${id}/restructure-upgrade`, req);
+}
+
 // ── Legacy exports (backward compat with old LoanOrigination.tsx) ──────────
 export type { PreValidateRequest } from './loanOriginationServiceLegacy';
 export type { ServerField }        from './loanOriginationServiceLegacy';

@@ -35,6 +35,7 @@ import {
   AccountBalanceWallet as PostIcon,
   WarningAmber as WarningAmberIcon,
   Autorenew as AutorenewIcon,
+  ThumbUp as ThumbUpIcon,
 } from '@mui/icons-material';
 import {
   BarChart,
@@ -68,8 +69,10 @@ import {
 import {
   getOverdueLoans,
   getRestructuredLoans,
+  getUpgradedLoans,
   type OverdueLoanItem,
   type RestructuredLoanItem,
+  type UpgradedLoanItem,
 } from '../../services/loanOriginationService';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -170,6 +173,11 @@ const Reports: React.FC = () => {
   const [restructuredTotal, setRestructuredTotal]     = useState(0);
   const [restructuredLoading, setRestructuredLoading] = useState(false);
 
+  // ── Tab 6 — Upgraded Loans (SAAR-LRP-004) ───────────────────────────────
+  const [upgradedLoans, setUpgradedLoans]             = useState<UpgradedLoanItem[]>([]);
+  const [upgradedTotal, setUpgradedTotal]             = useState(0);
+  const [upgradedLoading, setUpgradedLoading]         = useState(false);
+
   // ── Data loaders ──────────────────────────────────────────────────────────
 
   const loadBalances = useCallback(() => {
@@ -229,6 +237,14 @@ const Reports: React.FC = () => {
       .finally(() => setRestructuredLoading(false));
   }, []);
 
+  const loadUpgraded = useCallback(() => {
+    setUpgradedLoading(true);
+    getUpgradedLoans()
+      .then(r => { setUpgradedLoans(r.items); setUpgradedTotal(r.total); })
+      .catch(() => { setUpgradedLoans([]); setUpgradedTotal(0); })
+      .finally(() => setUpgradedLoading(false));
+  }, []);
+
   async function handleRunDailyAccrual() {
     setAccrualRunning(true);
     setAccrualMsg('');
@@ -284,6 +300,10 @@ const Reports: React.FC = () => {
     if (tab === 5) loadRestructured();
   }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (tab === 6) loadUpgraded();
+  }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── CSV export ────────────────────────────────────────────────────────────
 
   function exportCsv() {
@@ -325,6 +345,20 @@ const Reports: React.FC = () => {
     const a    = document.createElement('a');
     a.href     = url;
     a.download = 'restructured-loans.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportUpgradedCsv() {
+    const header = 'Application No,Applicant,Product,Outstanding,Original Tenure,Original Rate,Upgraded Date\n';
+    const rows   = upgradedLoans.map(l =>
+      `${l.applicationNumber},${l.applicantName},${l.productType},${l.outstandingPrincipal},${l.originalTenureMonths ?? ''},${l.originalInterestRate ?? ''},${l.upgradedDate ? String(l.upgradedDate).slice(0, 10) : ''}`
+    ).join('\n');
+    const blob = new Blob([header + rows], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'upgraded-loans.csv';
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -384,6 +418,7 @@ const Reports: React.FC = () => {
           <Tab icon={<TrendingUpIcon   fontSize="small" />} iconPosition="start" label="Deposit Interest"  id="rpt-tab-3" />
           <Tab icon={<WarningAmberIcon fontSize="small" />} iconPosition="start" label="Overdue Loans"    id="rpt-tab-4" />
           <Tab icon={<AutorenewIcon  fontSize="small" />} iconPosition="start" label="Restructured"     id="rpt-tab-5" />
+          <Tab icon={<ThumbUpIcon    fontSize="small" />} iconPosition="start" label="Loan Upgrades"    id="rpt-tab-6" />
         </Tabs>
 
         {/* ── Tab 0: Financial Reports ─────────────────────────────────────── */}
@@ -958,6 +993,78 @@ const Reports: React.FC = () => {
                       <TableCell align="right">{l.restructuredNewEmi != null ? INR(l.restructuredNewEmi) : '—'}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 600, color: 'error.main' }}>
                         {INR(l.requiredProvisioning)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </TabPanel>
+
+        {/* ── Tab 6: Loan Upgrades (SAAR-LRP-004) ────────────────────────────── */}
+        <TabPanel value={tab} index={6}>
+          {/* Header row */}
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+            <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <ThumbUpIcon color="success" /> Loan Upgrades ({upgradedTotal})
+            </Typography>
+            <Button
+              variant="outlined" size="small" startIcon={<DownloadIcon />}
+              onClick={exportUpgradedCsv} disabled={upgradedLoans.length === 0}
+              aria-label="Export Upgraded CSV"
+            >Export CSV</Button>
+          </Box>
+
+          {/* KPI row */}
+          {!upgradedLoading && upgradedLoans.length > 0 && (() => {
+            const totalOutstanding = upgradedLoans.reduce((s, l) => s + l.outstandingPrincipal, 0);
+            return (
+              <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: 'wrap' }}>
+                <Paper variant="outlined" sx={{ p: 2, minWidth: 160 }}>
+                  <Typography variant="caption" color="text.secondary">Upgraded Count</Typography>
+                  <Typography variant="h6" fontWeight={700} color="success.main">{upgradedTotal}</Typography>
+                </Paper>
+                <Paper variant="outlined" sx={{ p: 2, minWidth: 160 }}>
+                  <Typography variant="caption" color="text.secondary">Total Outstanding</Typography>
+                  <Typography variant="h6" fontWeight={700}>{INR(totalOutstanding)}</Typography>
+                </Paper>
+              </Stack>
+            );
+          })()}
+
+          {/* Table */}
+          {upgradedLoading ? (
+            <Stack spacing={1}>{[1, 2, 3].map(i => <Skeleton key={i} height={40} />)}</Stack>
+          ) : upgradedLoans.length === 0 ? (
+            <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
+              No upgraded loans on record.
+            </Typography>
+          ) : (
+            <TableContainer component={Paper} variant="outlined">
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ '& th': { fontWeight: 600, bgcolor: 'action.hover' } }}>
+                    <TableCell>Application No</TableCell>
+                    <TableCell>Applicant</TableCell>
+                    <TableCell>Product</TableCell>
+                    <TableCell align="right">Outstanding (₹)</TableCell>
+                    <TableCell align="right">Original Tenure (months)</TableCell>
+                    <TableCell align="right">Original Rate (% p.a.)</TableCell>
+                    <TableCell>Upgraded Date</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {upgradedLoans.map(l => (
+                    <TableRow key={l.id} hover>
+                      <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{l.applicationNumber}</TableCell>
+                      <TableCell>{l.applicantName}</TableCell>
+                      <TableCell>{l.productType.replace(/_/g, ' ')}</TableCell>
+                      <TableCell align="right">{INR(l.outstandingPrincipal)}</TableCell>
+                      <TableCell align="right">{l.originalTenureMonths ?? '—'}</TableCell>
+                      <TableCell align="right">{l.originalInterestRate != null ? `${l.originalInterestRate}%` : '—'}</TableCell>
+                      <TableCell sx={{ fontSize: '0.8rem' }}>
+                        {l.upgradedDate ? String(l.upgradedDate).slice(0, 10) : '—'}
                       </TableCell>
                     </TableRow>
                   ))}
