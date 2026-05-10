@@ -487,6 +487,50 @@ namespace LoanService.Controllers
             });
         }
 
+        // ── GET /api/loans/reports/regulatory-summary ──────────────────────────
+        /// <summary>
+        /// RBI regulatory reporting summary: NPA ratio, provision coverage, restructured/upgraded counts.
+        /// Consolidates metrics from NPA, restructured, and upgraded loan portfolios.
+        /// </summary>
+        [HttpGet("/api/loans/reports/regulatory-summary")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetRegulatorySummary(CancellationToken ct = default)
+        {
+            var loans = await _db.LoanApplications
+                .Where(a => a.Status == "DISBURSED" || a.Status == "WRITTEN_OFF")
+                .ToListAsync(ct);
+
+            var disbursed = loans.Where(a => a.Status == "DISBURSED").ToList();
+            var writtenOff = loans.Where(a => a.Status == "WRITTEN_OFF").ToList();
+
+            var totalBook       = disbursed.Sum(a => a.OutstandingPrincipal ?? 0m);
+            var npaLoans        = disbursed.Where(a => a.SmaStatus == "NPA").ToList();
+            var npaOutstanding  = npaLoans.Sum(a => a.OutstandingPrincipal ?? 0m);
+            var provisioning    = disbursed.Sum(a => a.RequiredProvisioning);
+            var smaWatch        = disbursed.Where(a => a.SmaStatus is "SMA-0" or "SMA-1" or "SMA-2").ToList();
+
+            return Ok(new RegulatoryMetricsDto
+            {
+                AsOfDate                  = DateTime.UtcNow.ToString("yyyy-MM-dd"),
+                TotalLoanBook             = totalBook,
+                TotalNpaOutstanding       = npaOutstanding,
+                NpaRatio                  = totalBook > 0 ? Math.Round(npaOutstanding / totalBook * 100, 2) : 0m,
+                TotalRequiredProvisioning = provisioning,
+                ProvisionCoverage         = npaOutstanding > 0 ? Math.Round(provisioning / npaOutstanding * 100, 2) : 100m,
+                RestructuredCount         = disbursed.Count(a => a.IsRestructured),
+                RestructuredOutstanding   = disbursed.Where(a => a.IsRestructured).Sum(a => a.OutstandingPrincipal ?? 0m),
+                RestructuredRatio         = totalBook > 0 ? Math.Round(disbursed.Where(a => a.IsRestructured).Sum(a => a.OutstandingPrincipal ?? 0m) / totalBook * 100, 2) : 0m,
+                UpgradedCount             = disbursed.Count(a => a.IsUpgraded),
+                UpgradedOutstanding       = disbursed.Where(a => a.IsUpgraded).Sum(a => a.OutstandingPrincipal ?? 0m),
+                WrittenOffCount           = writtenOff.Count,
+                WrittenOffOutstanding     = writtenOff.Sum(a => a.OutstandingPrincipal ?? 0m),
+                SmaWatchCount             = smaWatch.Count,
+                SmaWatchOutstanding       = smaWatch.Sum(a => a.OutstandingPrincipal ?? 0m),
+                StandardCount             = disbursed.Count(a => a.SmaStatus == "STANDARD"),
+                StandardOutstanding       = disbursed.Where(a => a.SmaStatus == "STANDARD").Sum(a => a.OutstandingPrincipal ?? 0m),
+            });
+        }
+
         // ── POST /api/loans/{id}/write-off ─────────────────────────────────────
         /// <summary>
         /// Write off an NPA loan that is DOUBTFUL_3 (≥ 1096 DPD, 100% provisioned).
@@ -1029,5 +1073,28 @@ namespace LoanService.Controllers
     public class UpgradeRequest
     {
         public string Reason { get; set; } = "";
+    }
+
+    // ── SAAR-RPT-002 DTOs ────────────────────────────────────────────────────
+
+    public class RegulatoryMetricsDto
+    {
+        public string   AsOfDate                  { get; set; } = "";
+        public decimal  TotalLoanBook             { get; set; }
+        public decimal  TotalNpaOutstanding       { get; set; }
+        public decimal  NpaRatio                  { get; set; }
+        public decimal  TotalRequiredProvisioning { get; set; }
+        public decimal  ProvisionCoverage         { get; set; }
+        public int      RestructuredCount         { get; set; }
+        public decimal  RestructuredOutstanding   { get; set; }
+        public decimal  RestructuredRatio         { get; set; }
+        public int      UpgradedCount             { get; set; }
+        public decimal  UpgradedOutstanding       { get; set; }
+        public int      WrittenOffCount           { get; set; }
+        public decimal  WrittenOffOutstanding     { get; set; }
+        public int      SmaWatchCount             { get; set; }
+        public decimal  SmaWatchOutstanding       { get; set; }
+        public int      StandardCount             { get; set; }
+        public decimal  StandardOutstanding       { get; set; }
     }
 }
