@@ -318,6 +318,22 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
   - **`16-restructured-loans.cy.ts`**: T-04 button visible, T-05 dialog+chip, T-06 Reports tab.
   - **Deployed** (commit 834e262): loanservice + frontend rebuilt on Hetzner. Smoke: `GET /api/loans/applications/restructured` → `{"total":0,"items":[]}`. ✅ LIVE.
 
+- SAAR-LRP-004 — Restructured Loan Upgrade (session 58, 2026-05-10, commits ab07403 + d7de05a + 528561a):
+  - **Backend Implementation**:
+    - **`LoanApplication.cs`**: Added 6 new fields — `IsUpgraded` (bool), `UpgradedDate` (DateTime?), `UpgradedReason` (string?), `UpgradeJournalNumber` (string?), `OriginalTenureMonths` (int?), `OriginalInterestRate` (decimal?). Captures original terms at restructure time for upgrade reversal.
+    - **`AddLoanUpgradeFields` EF migration** (20260510062938): 4 columns (IsUpgraded, UpgradedDate, UpgradedReason, UpgradeJournalNumber). Schema qualifiers stripped.
+    - **`AddLoanOriginalTermsFields` EF migration** (20260510063048): 2 columns (OriginalTenureMonths, OriginalInterestRate). Schema qualifiers stripped.
+    - **`LoanApplicationsController.cs`**:
+      - Updated `RestructureLoan` endpoint to capture original terms: `app.OriginalTenureMonths = app.TenureMonths; app.OriginalInterestRate = app.InterestRate;` before modifying.
+      - New `POST /api/loans/{id}/restructure-upgrade` endpoint with eligibility guards: DISBURSED status, IsRestructured=true, !IsUpgraded, 365+ days since restructure, SmaStatus=STANDARD. Restores original TenureMonths/InterestRate, posts GL journal, sets IsUpgraded=true + UpgradedDate + UpgradeJournalNumber.
+    - **`TransactionServiceClient.cs`**: `PostLoanUpgradeJournalAsync(appNo, outstanding)` — DR 1020 (Loans & Advances) / CR 5045 (Restructuring Provision Reversal), idempotency key `UPGRADE-{appNo}`.
+    - **`UpgradeRequest` DTO**: Simple struct with `Reason` (string). Nested in controller namespace.
+    - **`LoanUpgradeTests.cs`**: 3 NUnit tests — T-01 UpgradeEligible_Succeeds (380-day restructured, STANDARD SMA), T-02 UpgradeAlreadyUpgraded_Fails (400 "already been upgraded"), T-03 UpgradeNonRestructured_Fails (400 "not restructured").
+    - **All 5 stub clients updated**: `PostLoanUpgradeJournalAsync` added to `ITransactionServiceClient` stubs in WriteOffTests, RestructuredLoanTests, EligibilityAndWorkflowTests, NpaBoardTests, OverdueLoansTests, GoldLoanTests.
+  - **Test Result**: All 3 tests passing after fixing UpgradeRequest accessibility + dynamic typing issues.
+  - **Commits**: ab07403 (models + migrations + endpoint), d7de05a (test stubs), 528561a (test fixes).
+  - **Frontend**: Not yet implemented (pending in next phase).
+
 ## Completed (continued)
 - SAAR-NPA-001 — NPA Classification Board (session 55, 2026-04-28, commit 09745b8):
   - **`SAAR_NPA_001_REQUIREMENTS.md`**: JIRA-format requirement doc (FR-1 NPA sub-classification, FR-2 provisioning calc, FR-3 npa-board endpoint, FR-4 frontend page, FR-5 sidebar+router, FR-6 nginx). RBI IRAC bands table, provisioning table, test plan T-01 through T-06.

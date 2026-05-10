@@ -1,6 +1,6 @@
 # TASK_QUEUE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-29 (session 57 — SAAR-LRP-003 Loan Restructuring Tracking)
+**Last Updated:** 2026-05-10 (session 58 — SAAR-LRP-004 Restructured Loan Upgrade backend complete)
 **Single source of truth for what to do next.**
 
 ---
@@ -11,9 +11,21 @@
 
 | # | Task | Why Now |
 |---|---|---|
-| 1 | **Next feature**: SAAR-LRP-004 (restructured loan upgrade after 1-year) or SAAR-RPT-002 (RBI regulatory reporting) or SAAR-NPA-003 (NPA recovery tracking) | Loan portfolio lifecycle continuation |
-| 2 | **Fix Kaspersky Application Control** (local only): Add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops` | Enables local `dotnet test` |
-| 3 | **CI watch**: verify 834e262 (SAAR-LRP-003) is green across all 4 workflows | New migration + 3 new NUnit tests |
+| 1 | **SAAR-LRP-004 frontend** — button, dialog, Reports tab, Cypress tests | Completes restructured loan upgrade feature (backend ✅ in session 58) |
+| 2 | **SAAR-RPT-002 or SAAR-NPA-003** — RBI regulatory reporting OR NPA recovery tracking | Loan portfolio lifecycle continuation; frontend for SAAR-LRP-004 must complete first |
+| 3 | **CI watch**: Monitor new SAAR-LRP-004 commits (ab07403, d7de05a, 528561a) | Backend-only; should pass all 4 workflows like SAAR-LRP-003 (834e262) |
+
+### Recently Completed (session 58 — 2026-05-10)
+- [x] **SAAR-LRP-004 — Restructured Loan Upgrade BACKEND COMPLETE** (commits ab07403, d7de05a, 528561a):
+  - `LoanApplication.cs`: 6 new fields — `IsUpgraded` (bool), `UpgradedDate` (DateTime?), `UpgradedReason` (string?), `UpgradeJournalNumber` (string?), `OriginalTenureMonths` (int?), `OriginalInterestRate` (decimal?).
+  - EF migrations `AddLoanUpgradeFields` (4 columns) + `AddLoanOriginalTermsFields` (2 columns); schema qualifiers stripped.
+  - `RestructureLoan` endpoint updated to capture original terms before modifying: `app.OriginalTenureMonths = app.TenureMonths; app.OriginalInterestRate = app.InterestRate;`.
+  - `POST /api/loans/{id}/restructure-upgrade` (new endpoint, absolute route): Eligibility guards (DISBURSED, IsRestructured=true, !IsUpgraded, 365+ days elapsed, SmaStatus=STANDARD). Restores original terms, posts GL journal (DR 1020/CR 5045), sets IsUpgraded+UpgradedDate.
+  - `PostLoanUpgradeJournalAsync` added to `ITransactionServiceClient` — GL DR 1020 (Loans & Advances) / CR 5045 (Restructuring Provision Reversal); idempotency key `UPGRADE-{appNo}`.
+  - `UpgradeRequest` DTO: struct with `Reason` (string).
+  - `LoanUpgradeTests.cs` (3 NUnit): T-01 successful upgrade (380-day restructured, STANDARD SMA), T-02 already-upgraded → 400, T-03 non-restructured → 400. All 3 passing after fixing UpgradeRequest accessibility + test typing.
+  - All 6 stub clients updated: `PostLoanUpgradeJournalAsync` added to ITransactionServiceClient stubs.
+  - **Frontend pending** — button, dialog, Reports tab, Cypress tests.
 
 ### Recently Completed (session 57 — 2026-04-29)
 - [x] **SAAR-LRP-003 — Loan Restructuring Tracking DEPLOYED** (commit 834e262):
