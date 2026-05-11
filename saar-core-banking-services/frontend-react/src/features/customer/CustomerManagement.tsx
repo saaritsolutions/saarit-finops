@@ -14,6 +14,7 @@ import UploadFileIcon from '@mui/icons-material/UploadFile';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import BlockIcon from '@mui/icons-material/Block';
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import {
   customerService,
   CustomerRecord,
@@ -21,6 +22,7 @@ import {
   CreateCustomerDto,
   KYC_STATUS_LABELS,
 } from '../../services/customerService';
+import KycDocumentDialog from './KycDocumentDialog';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -76,6 +78,11 @@ const CustomerManagement: React.FC = () => {
   const [kycInput, setKycInput]       = useState('');
   const [kycLoading, setKycLoading]   = useState(false);
   const [kycError, setKycError]       = useState<string | null>(null);
+
+  // KYC document upload dialog
+  const [kycDocDialogOpen, setKycDocDialogOpen] = useState(false);
+  const [kycDocTargetId, setKycDocTargetId]     = useState<number | null>(null);
+  const [kycDocCustomerType, setKycDocCustomerType] = useState('Individual');
 
   // ── data ──────────────────────────────────────────────────────────────────
 
@@ -215,19 +222,41 @@ const CustomerManagement: React.FC = () => {
 
   // ── KYC actions ───────────────────────────────────────────────────────────
 
-  async function handleKycSimple(id: number, action: 'initiate' | 'submit-documents' | 'expire') {
+  async function handleKycSimple(id: number, action: 'initiate' | 'expire') {
     setSuccessMsg(null);
     setError(null);
     try {
       const result = action === 'initiate'
         ? await customerService.initiateKyc(id)
-        : action === 'submit-documents'
-          ? await customerService.submitKycDocuments(id)
-          : await customerService.expireKyc(id);
+        : await customerService.expireKyc(id);
       setSuccessMsg(result.message);
       await load();
     } catch (e: any) {
       setError(e?.response?.data || e?.message || 'KYC action failed');
+    }
+  }
+
+  function openKycDocumentDialog(id: number, customerType: string) {
+    setKycDocTargetId(id);
+    setKycDocCustomerType(customerType);
+    setKycDocDialogOpen(true);
+  }
+
+  async function handleKycDocumentSuccess(markAsSubmitted: boolean) {
+    setSuccessMsg(markAsSubmitted ? 'Documents submitted successfully' : 'Documents saved');
+    await load();
+  }
+
+  async function handleMarkKycIncomplete(id: number) {
+    if (!window.confirm('Mark KYC as incomplete? You will need to re-upload documents.')) return;
+    setSuccessMsg(null);
+    setError(null);
+    try {
+      const result = await customerService.markKycIncomplete(id);
+      setSuccessMsg(result.message);
+      await load();
+    } catch (e: any) {
+      setError(e?.response?.data || e?.message || 'Failed to mark KYC incomplete');
     }
   }
 
@@ -387,9 +416,9 @@ const CustomerManagement: React.FC = () => {
                     </Tooltip>
                   )}
                   {c.kycStatus === 1 && (
-                    <Tooltip title="Submit Documents">
-                      <IconButton size="small" color="info" aria-label="Submit Documents"
-                        onClick={() => handleKycSimple(c.customerId, 'submit-documents')}>
+                    <Tooltip title="Upload Documents">
+                      <IconButton size="small" color="info" aria-label="Upload Documents"
+                        onClick={() => openKycDocumentDialog(c.customerId, c.customerType || 'Individual')}>
                         <UploadFileIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
@@ -406,6 +435,12 @@ const CustomerManagement: React.FC = () => {
                         <IconButton size="small" color="error" aria-label="Reject KYC"
                           onClick={() => openKycDialog(c.customerId, 'reject')}>
                           <BlockIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Back to In Progress">
+                        <IconButton size="small" color="warning" aria-label="Back to In Progress"
+                          onClick={() => handleMarkKycIncomplete(c.customerId)}>
+                          <RestartAltIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                     </>
@@ -597,6 +632,15 @@ const CustomerManagement: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* KYC Document Upload dialog */}
+      <KycDocumentDialog
+        open={kycDocDialogOpen}
+        customerId={kycDocTargetId || 0}
+        customerType={kycDocCustomerType}
+        onClose={() => setKycDocDialogOpen(false)}
+        onSuccess={handleKycDocumentSuccess}
+      />
     </Box>
   );
 };

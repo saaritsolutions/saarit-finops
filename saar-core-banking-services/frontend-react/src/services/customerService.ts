@@ -116,4 +116,19 @@ export const customerService = {
 
   expireKyc: (id: number) =>
     apiService.post<KycActionResult>(`${BASE}/${id}/kyc/expire`, {}),
+
+  // ── Document Upload ─────────────────────────────────────────────────────
+  uploadDocument: async (id: number, docType: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('documentType', docType);
+    // Don't set Content-Type header; let axios/browser handle multipart/form-data boundary
+    return apiService.post<{ message: string }>(
+      `${BASE}/${id}/documents/upload`,
+      formData
+    );
+  },
+
+  markKycIncomplete: (id: number) =>
+    apiService.post<KycActionResult>(`${BASE}/${id}/kyc/mark-incomplete`, {}),
 };

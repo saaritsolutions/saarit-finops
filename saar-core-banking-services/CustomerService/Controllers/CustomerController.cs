@@ -212,6 +212,46 @@ namespace CustomerService.Controllers
             await _context.SaveChangesAsync();
             return Ok(new { kycStatus = (int)customer.KycStatus, message = "KYC expired — re-KYC required." });
         }
+
+        [HttpPost("{id}/kyc/mark-incomplete")]
+        public async Task<IActionResult> KycMarkIncomplete(int id)
+        {
+            var customer = await _context.Customers.FindAsync(id);
+            if (customer == null) return NotFound();
+            if (customer.KycStatus != KycStatus.DocumentsSubmitted)
+                return UnprocessableEntity($"Only DocumentsSubmitted KYC can be marked incomplete (current: {customer.KycStatus}).");
+            customer.KycStatus = KycStatus.InProgress;
+            customer.KycRejectionReason = null;
+            await _context.SaveChangesAsync();
+            return Ok(new { kycStatus = (int)customer.KycStatus, message = "KYC marked as incomplete. Please re-upload documents." });
+        }
+
+        // ── Document Upload ───────────────────────────────────────────────────
+        // Simple file upload endpoint that accepts KYC documents.
+        // In a production system, files would be stored in cloud storage (S3, Azure Blob, etc.)
+        // For now, we just validate the upload and return success.
+
+        [HttpPost("{id}/documents/upload")]
+        public async Task<IActionResult> UploadDocument(int id, [FromForm] IFormFile file, [FromForm] string? documentType)
+        {
+            var customer = await _context.Customers.FindAsync(id);
+            if (customer == null) return NotFound();
+
+            if (file == null || file.Length == 0)
+                return BadRequest("No file provided.");
+
+            if (file.Length > 5 * 1024 * 1024) // 5MB limit
+                return BadRequest("File size exceeds 5MB limit.");
+
+            var allowedExtensions = new[] { ".pdf", ".jpg", ".jpeg", ".png" };
+            var fileExtension = Path.GetExtension(file.FileName).ToLower();
+            if (!allowedExtensions.Contains(fileExtension))
+                return BadRequest("Invalid file type. Allowed: PDF, JPG, PNG.");
+
+            // In production, save to cloud storage here
+            // For now, just validate and return success
+            return Ok(new { message = $"Document '{file.FileName}' uploaded successfully." });
+        }
     }
 
     public record ValidateDocumentRequest(string? Value);

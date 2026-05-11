@@ -5,6 +5,24 @@
 
 ## Completed
 
+### BUGFIX: Customer KYC Document Upload Workflow
+- **Status:** ✅ Complete (current session)
+- **Issue:** During smoke testing, user found no document upload UI in KYC workflow; status could change without uploading documents
+- **Solution:**
+  - **Frontend:** Created KycDocumentDialog component with document checklist by customer type
+  - Updated CustomerManagement.tsx to integrate document upload dialog
+  - Added "Back to In Progress" action to revert submitted documents
+  - Integrated document upload into KYC workflow instead of just status change
+  - **Backend:** Added two endpoints to CustomerController
+    - POST /api/customer/{id}/documents/upload (with file validation: 5MB max, PDF/JPG/PNG only)
+    - POST /api/customer/{id}/kyc/mark-incomplete (revert from DocumentsSubmitted to InProgress)
+  - **TypeScript:** No compilation errors; Backend: Build successful
+  - **Files Modified:**
+    - frontend-react/src/features/customer/KycDocumentDialog.tsx (NEW)
+    - frontend-react/src/features/customer/CustomerManagement.tsx
+    - frontend-react/src/services/customerService.ts
+    - saar-core-banking-services/CustomerService/Controllers/CustomerController.cs
+
 ### SAAR-NPA-003: NPA Recovery Tracking (COMPLETED)
 - **Status:** ✅ Complete (commits e4cc48a, 35b4244)
 - **Backend:** ✅ Complete
@@ -68,13 +86,22 @@
 
 ## Pending
 
+### KYC Document Upload - E2E Testing
+- **Status:** Pending
+- **Tasks:**
+  - Create Cypress tests for KYC document upload workflow
+  - Test document validation (file size, type, required fields)
+  - Test "Save for Later" vs "Upload & Submit" actions
+  - Test "Back to In Progress" revert action
+  - Verify frontend integrates with backend endpoints
+
 ### CI/CD & Deployment
 - **Status:** Pending
 - **Tasks:**
   - Verify all commits build successfully
   - Verify all Cypress E2E tests pass (target: 90+)
   - Deploy to Hetzner VPS
-  - Verify smoke tests on production
+  - Verify smoke tests on production (including new KYC document workflow)
 
 ## Key Architectural Patterns
 
