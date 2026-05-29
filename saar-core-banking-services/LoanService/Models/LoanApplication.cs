@@ -358,6 +358,25 @@ namespace LoanService.Models
         [MaxLength(50)]
         public string? UpgradeJournalNumber { get; set; }
 
+        // ── Phase 1: Eligibility & Pre-Approval ──────────────────────────────────
+        /// <summary>Reference to the eligibility check performed before application submission.</summary>
+        public Guid? EligibilityCheckId { get; set; }
+
+        /// <summary>Pre-approval amount locked in from eligibility check (valid for 24 hours).</summary>
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? PreApprovalAmount { get; set; }
+
+        /// <summary>Timestamp until which the pre-approval is valid (24 hours from eligibility check).</summary>
+        public DateTime? PreApprovalValidUntil { get; set; }
+
+        /// <summary>Risk grade from eligibility check (A+, A, B+, B, C).</summary>
+        [MaxLength(5)]
+        public string? PreApprovalRiskGrade { get; set; }
+
+        /// <summary>Recommended rate from eligibility check.</summary>
+        [Column(TypeName = "decimal(6,4)")]
+        public decimal? PreApprovalRate { get; set; }
+
         // ── Navigation ──────────────────────────────────────────────────────────
         public List<LoanDocument> Documents { get; set; } = new();
         public List<LoanApprovalAction> ApprovalActions { get; set; } = new();

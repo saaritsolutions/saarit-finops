@@ -32,6 +32,10 @@ namespace LoanService.Data
         public DbSet<LoanApprovalAction> LoanApprovalActions { get; set; }
         public DbSet<LoanRepayment> LoanRepayments { get; set; }
 
+        // ── Phase 1: Eligibility & KYC ─────────────────────────────────────────
+        public DbSet<LoanEligibilityCheck> LoanEligibilityChecks { get; set; }
+        public DbSet<LoanApplicationKycVerification> LoanApplicationKycVerifications { get; set; }
+
         // ── Gold Loan ──────────────────────────────────────────────────────────
         public DbSet<GoldLoanDetails> GoldLoanDetails { get; set; }
         public DbSet<GoldPledgeItem> GoldPledgeItems { get; set; }
@@ -71,6 +75,35 @@ namespace LoanService.Data
             modelBuilder.Entity<LoanProduct>(e =>
             {
                 e.HasIndex(p => p.ProductCode).IsUnique();
+            });
+
+            // ── Phase 1: LoanEligibilityCheck ──────────────────────────────────
+            modelBuilder.Entity<LoanEligibilityCheck>(e =>
+            {
+                e.HasKey(x => x.Id);
+                e.Property(x => x.MaxEligibleAmount).HasColumnType("decimal(18,2)");
+                e.Property(x => x.FOIRPercent).HasColumnType("decimal(6,4)");
+                e.Property(x => x.FOIRLimit).HasColumnType("decimal(6,4)");
+                e.Property(x => x.LTVPercent).HasColumnType("decimal(6,4)");
+                e.Property(x => x.LTVLimit).HasColumnType("decimal(6,4)");
+                e.Property(x => x.RecommendedRate).HasColumnType("decimal(6,4)");
+                e.Property(x => x.CollateralValue).HasColumnType("decimal(18,2)");
+                e.HasIndex(x => new { x.PanNumber, x.CheckedAt }).IsUnique();
+                e.HasIndex(x => x.ApplicationId);
+                e.HasIndex(x => x.Status);
+                e.HasIndex(x => x.ExpiresAt);
+            });
+
+            // ── Phase 1: LoanApplicationKycVerification ────────────────────────
+            modelBuilder.Entity<LoanApplicationKycVerification>(e =>
+            {
+                e.HasKey(x => x.Id);
+                e.Property(x => x.ApplicationId);
+                e.Property(x => x.CustomerId).HasMaxLength(150);
+                e.HasIndex(x => new { x.ApplicationId, x.CustomerId }).IsUnique();
+                e.HasIndex(x => x.VerificationStatus);
+                e.HasIndex(x => x.ExpiresAt);
+                e.HasIndex(x => x.PepCheckStatus);
             });
 
             // ── GoldLoanDetails ↔ LoanApplication (1:1) ──────────────────────

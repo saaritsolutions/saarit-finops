@@ -114,6 +114,10 @@ builder.Services.AddHttpClient<ITransactionServiceClient, TransactionServiceClie
 // Gold Loan services
 builder.Services.AddScoped<LoanService.Services.Gold.IGoldRateService, LoanService.Services.Gold.GoldRateService>();
 
+// Phase 1: Eligibility Check Service
+builder.Services.AddScoped<ILoanProductRepository, LoanProductRepository>();
+builder.Services.AddScoped<IEligibilityCheckService, EligibilityCheckService>();
+
 // Add DbContext (use InMemory for integration tests)
 if (builder.Environment.IsEnvironment("IntegrationTesting"))
 {

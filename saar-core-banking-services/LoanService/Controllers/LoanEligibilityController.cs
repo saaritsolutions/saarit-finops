@@ -17,17 +17,20 @@ namespace LoanService.Controllers
     {
         private readonly LoanDbContext _db;
         private readonly IExpressionEvaluationService _expressions;
+        private readonly IEligibilityCheckService _eligibilityService;
         private readonly IConfiguration _config;
         private readonly ILogger<LoanEligibilityController> _logger;
 
         public LoanEligibilityController(
             LoanDbContext db,
             IExpressionEvaluationService expressions,
+            IEligibilityCheckService eligibilityService,
             IConfiguration config,
             ILogger<LoanEligibilityController> logger)
         {
             _db = db;
             _expressions = expressions;
+            _eligibilityService = eligibilityService;
             _config = config;
             _logger = logger;
         }
@@ -217,6 +220,154 @@ namespace LoanService.Controllers
             });
         }
 
+        // ── PHASE 1: Comprehensive Eligibility Check ─────────────────────────────────
+        /// <summary>
+        /// Perform comprehensive eligibility check with CIBIL scoring, FOIR, LTV calculations
+        /// </summary>
+        [HttpPost("eligibility-check")]
+        public async Task<ActionResult<EligibilityCheckResponse>> PerformEligibilityCheck(
+            [FromBody] PerformEligibilityCheckRequest req)
+        {
+            if (req == null)
+                return BadRequest("Request body is required");
+
+            try
+            {
+                var eligibilityCheck = await _eligibilityService.PerformEligibilityCheckAsync(
+                    applicantName: req.ApplicantName,
+                    panNumber: req.PanNumber,
+                    dateOfBirth: req.DateOfBirth,
+                    productType: req.ProductType,
+                    employmentType: req.EmploymentType,
+                    grossMonthlyIncome: req.GrossMonthlyIncome,
+                    existingMonthlyEmi: req.ExistingMonthlyEmi,
+                    monthlyObligations: req.MonthlyObligations,
+                    otherMonthlyIncome: req.OtherMonthlyIncome ?? 0,
+                    cibilScore: req.CibilScore,
+                    collateralType: req.CollateralType,
+                    collateralValue: req.CollateralValue);
+
+                // Persist the eligibility check
+                _db.LoanEligibilityChecks.Add(eligibilityCheck);
+                await _db.SaveChangesAsync();
+
+                _logger.LogInformation($"Eligibility check saved: {eligibilityCheck.Id}");
+
+                return Ok(new EligibilityCheckResponse
+                {
+                    EligibilityCheckId = eligibilityCheck.Id,
+                    Status = eligibilityCheck.Status,
+                    MaxEligibleAmount = eligibilityCheck.MaxEligibleAmount,
+                    RecommendedRate = eligibilityCheck.RecommendedRate,
+                    RiskGrade = eligibilityCheck.RiskGrade,
+                    EligibilityScore = eligibilityCheck.EligibilityScore,
+                    FOIRPercent = eligibilityCheck.FOIRPercent,
+                    FOIRBreached = eligibilityCheck.FOIRBreach,
+                    LTVPercent = eligibilityCheck.LTVPercent,
+                    CibilBand = eligibilityCheck.CibilBand,
+                    ExpiresAt = eligibilityCheck.ExpiresAt,
+                    RejectionReasons = eligibilityCheck.RejectionReasonsJson != null
+                        ? System.Text.Json.JsonSerializer.Deserialize<string[]>(eligibilityCheck.RejectionReasonsJson) ?? Array.Empty<string>()
+                        : Array.Empty<string>()
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Eligibility check failed for {ApplicantName}", req.ApplicantName);
+                return StatusCode(500, new { error = "Eligibility check failed", details = ex.Message });
+            }
+        }
+
+        // ── GET /api/loans/applications/{id}/eligibility-status ────────────────────
+        /// <summary>
+        /// Get the eligibility check status for a loan application
+        /// </summary>
+        [HttpGet("applications/{id:guid}/eligibility-status")]
+        public async Task<ActionResult<EligibilityCheckResponse>> GetEligibilityStatus(Guid id)
+        {
+            var app = await _db.LoanApplications.FindAsync(id);
+            if (app == null)
+                return NotFound(new { error = "Application not found" });
+
+            if (!app.EligibilityCheckId.HasValue)
+                return NotFound(new { error = "No eligibility check found for this application" });
+
+            var check = await _db.LoanEligibilityChecks.FindAsync(app.EligibilityCheckId.Value);
+            if (check == null)
+                return NotFound(new { error = "Eligibility check record not found" });
+
+            return Ok(new EligibilityCheckResponse
+            {
+                EligibilityCheckId = check.Id,
+                Status = check.Status,
+                MaxEligibleAmount = check.MaxEligibleAmount,
+                RecommendedRate = check.RecommendedRate,
+                RiskGrade = check.RiskGrade,
+                EligibilityScore = check.EligibilityScore,
+                FOIRPercent = check.FOIRPercent,
+                FOIRBreached = check.FOIRBreach,
+                LTVPercent = check.LTVPercent,
+                CibilBand = check.CibilBand,
+                ExpiresAt = check.ExpiresAt,
+                RejectionReasons = check.RejectionReasonsJson != null
+                    ? System.Text.Json.JsonSerializer.Deserialize<string[]>(check.RejectionReasonsJson) ?? Array.Empty<string>()
+                    : Array.Empty<string>()
+            });
+        }
+
+        // ── POST /api/loans/applications/{id}/pre-approve ────────────────────────────
+        /// <summary>
+        /// Lock in pre-approval for 24 hours with rate and amount
+        /// </summary>
+        [HttpPost("applications/{id:guid}/pre-approve")]
+        public async Task<ActionResult<PreApprovalResponse>> PreApprove(
+            Guid id,
+            [FromBody] PreApprovalRequest req)
+        {
+            var app = await _db.LoanApplications.FindAsync(id);
+            if (app == null)
+                return NotFound(new { error = "Application not found" });
+
+            if (!app.EligibilityCheckId.HasValue)
+                return BadRequest(new { error = "Eligibility check required before pre-approval" });
+
+            var check = await _db.LoanEligibilityChecks.FindAsync(app.EligibilityCheckId.Value);
+            if (check == null)
+                return BadRequest(new { error = "Eligibility check not found" });
+
+            if (check.Status != "APPROVED" && check.Status != "APPROVED_WITH_CONDITIONS")
+                return BadRequest(new { error = $"Application is {check.Status}, cannot pre-approve" });
+
+            if (req.PreApprovalAmount > check.MaxEligibleAmount)
+                return BadRequest(new
+                {
+                    error = "Pre-approval amount exceeds maximum eligible amount",
+                    maxEligible = check.MaxEligibleAmount,
+                    requested = req.PreApprovalAmount
+                });
+
+            // Lock in pre-approval
+            app.PreApprovalAmount = req.PreApprovalAmount;
+            app.PreApprovalRate = check.RecommendedRate;
+            app.PreApprovalRiskGrade = check.RiskGrade;
+            app.PreApprovalValidUntil = DateTime.UtcNow.AddHours(24);
+            app.UpdatedAt = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync();
+
+            _logger.LogInformation($"Pre-approval locked for application {app.ApplicationNumber}: ₹{req.PreApprovalAmount} @ {check.RecommendedRate}%");
+
+            return Ok(new PreApprovalResponse
+            {
+                ApplicationNumber = app.ApplicationNumber,
+                PreApprovalAmount = req.PreApprovalAmount,
+                PreApprovalRate = check.RecommendedRate,
+                RiskGrade = check.RiskGrade,
+                ValidUntil = app.PreApprovalValidUntil.Value,
+                Message = "Pre-approval locked for 24 hours"
+            });
+        }
+
         // ── Helpers ───────────────────────────────────────────────────────────
         private static decimal ComputeEMI(decimal principal, int months, decimal annualRatePercent)
         {
@@ -288,5 +439,54 @@ namespace LoanService.Controllers
         public decimal Principal { get; set; }
         public decimal AnnualRate { get; set; }
         public int TenureMonths { get; set; }
+    }
+
+    // ── PHASE 1 DTOs ───────────────────────────────────────────────────────────────
+
+    public class PerformEligibilityCheckRequest
+    {
+        public string ApplicantName { get; set; } = string.Empty;
+        public string? PanNumber { get; set; }
+        public DateTime? DateOfBirth { get; set; }
+        public string ProductType { get; set; } = "PERSONAL_LOAN";
+        public string? EmploymentType { get; set; }
+        public decimal GrossMonthlyIncome { get; set; }
+        public decimal ExistingMonthlyEmi { get; set; }
+        public decimal MonthlyObligations { get; set; }
+        public decimal? OtherMonthlyIncome { get; set; }
+        public int? CibilScore { get; set; }
+        public string? CollateralType { get; set; }
+        public decimal? CollateralValue { get; set; }
+    }
+
+    public class EligibilityCheckResponse
+    {
+        public Guid EligibilityCheckId { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public decimal MaxEligibleAmount { get; set; }
+        public decimal? RecommendedRate { get; set; }
+        public string RiskGrade { get; set; } = string.Empty;
+        public int EligibilityScore { get; set; }
+        public decimal? FOIRPercent { get; set; }
+        public bool FOIRBreached { get; set; }
+        public decimal? LTVPercent { get; set; }
+        public string? CibilBand { get; set; }
+        public DateTime ExpiresAt { get; set; }
+        public string[] RejectionReasons { get; set; } = Array.Empty<string>();
+    }
+
+    public class PreApprovalRequest
+    {
+        public decimal PreApprovalAmount { get; set; }
+    }
+
+    public class PreApprovalResponse
+    {
+        public string ApplicationNumber { get; set; } = string.Empty;
+        public decimal PreApprovalAmount { get; set; }
+        public decimal? PreApprovalRate { get; set; }
+        public string? RiskGrade { get; set; }
+        public DateTime ValidUntil { get; set; }
+        public string Message { get; set; } = string.Empty;
     }
 }
