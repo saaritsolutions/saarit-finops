@@ -678,6 +678,106 @@ export async function recordRecovery(id: string, req: RecoveryRequest): Promise<
   await axios.post(`${LOANS_ROOT}/${id}/recovery`, req);
 }
 
+// ── PHASE 1: Loan Eligibility Checking ──────────────────────────────────────
+export interface PerformEligibilityCheckRequest {
+  applicantName: string;
+  panNumber?: string;
+  dateOfBirth?: string;
+  productType: string;
+  employmentType?: string;
+  grossMonthlyIncome: number;
+  existingMonthlyEmi: number;
+  monthlyObligations: number;
+  otherMonthlyIncome?: number;
+  cibilScore?: number;
+  collateralType?: string;
+  collateralValue?: number;
+}
+
+export interface EligibilityCheckResponse {
+  eligibilityCheckId: string;
+  status: string;
+  maxEligibleAmount: number;
+  recommendedRate?: number;
+  riskGrade: string;
+  eligibilityScore: number;
+  foirPercent?: number;
+  foirBreached: boolean;
+  ltvPercent?: number;
+  cibilBand?: string;
+  expiresAt: string;
+  rejectionReasons: string[];
+}
+
+export interface PreApprovalResponse {
+  applicationNumber: string;
+  preApprovalAmount: number;
+  preApprovalRate?: number;
+  riskGrade?: string;
+  validUntil: string;
+  message: string;
+}
+
+export async function performEligibilityCheck(
+  req: PerformEligibilityCheckRequest
+): Promise<EligibilityCheckResponse> {
+  const res = await axios.post(`${LOANS_ROOT}/eligibility-check`, req);
+  const d = res.data;
+  return {
+    eligibilityCheckId:  norm(d, 'EligibilityCheckId', 'eligibilityCheckId') ?? '',
+    status:              norm(d, 'Status', 'status') ?? '',
+    maxEligibleAmount:   norm(d, 'MaxEligibleAmount', 'maxEligibleAmount') ?? 0,
+    recommendedRate:     norm(d, 'RecommendedRate', 'recommendedRate'),
+    riskGrade:           norm(d, 'RiskGrade', 'riskGrade') ?? '',
+    eligibilityScore:    norm(d, 'EligibilityScore', 'eligibilityScore') ?? 0,
+    foirPercent:         norm(d, 'FOIRPercent', 'foirPercent'),
+    foirBreached:        norm(d, 'FOIRBreached', 'foirBreached') ?? false,
+    ltvPercent:          norm(d, 'LTVPercent', 'ltvPercent'),
+    cibilBand:           norm(d, 'CibilBand', 'cibilBand'),
+    expiresAt:           norm(d, 'ExpiresAt', 'expiresAt') ?? '',
+    rejectionReasons:    norm(d, 'RejectionReasons', 'rejectionReasons') ?? [],
+  };
+}
+
+export async function getEligibilityStatus(
+  applicationId: string
+): Promise<EligibilityCheckResponse> {
+  const res = await axios.get(`${LOANS_ROOT}/applications/${applicationId}/eligibility-status`);
+  const d = res.data;
+  return {
+    eligibilityCheckId:  norm(d, 'EligibilityCheckId', 'eligibilityCheckId') ?? '',
+    status:              norm(d, 'Status', 'status') ?? '',
+    maxEligibleAmount:   norm(d, 'MaxEligibleAmount', 'maxEligibleAmount') ?? 0,
+    recommendedRate:     norm(d, 'RecommendedRate', 'recommendedRate'),
+    riskGrade:           norm(d, 'RiskGrade', 'riskGrade') ?? '',
+    eligibilityScore:    norm(d, 'EligibilityScore', 'eligibilityScore') ?? 0,
+    foirPercent:         norm(d, 'FOIRPercent', 'foirPercent'),
+    foirBreached:        norm(d, 'FOIRBreached', 'foirBreached') ?? false,
+    ltvPercent:          norm(d, 'LTVPercent', 'ltvPercent'),
+    cibilBand:           norm(d, 'CibilBand', 'cibilBand'),
+    expiresAt:           norm(d, 'ExpiresAt', 'expiresAt') ?? '',
+    rejectionReasons:    norm(d, 'RejectionReasons', 'rejectionReasons') ?? [],
+  };
+}
+
+export async function lockInPreApproval(
+  applicationId: string,
+  preApprovalAmount: number
+): Promise<PreApprovalResponse> {
+  const res = await axios.post(`${LOANS_ROOT}/applications/${applicationId}/pre-approve`, {
+    preApprovalAmount,
+  });
+  const d = res.data;
+  return {
+    applicationNumber:  norm(d, 'ApplicationNumber', 'applicationNumber') ?? '',
+    preApprovalAmount:  norm(d, 'PreApprovalAmount', 'preApprovalAmount') ?? 0,
+    preApprovalRate:    norm(d, 'PreApprovalRate', 'preApprovalRate'),
+    riskGrade:          norm(d, 'RiskGrade', 'riskGrade'),
+    validUntil:         norm(d, 'ValidUntil', 'validUntil') ?? '',
+    message:            norm(d, 'Message', 'message') ?? '',
+  };
+}
+
 // ── Legacy exports (backward compat with old LoanOrigination.tsx) ──────────
 export type { PreValidateRequest } from './loanOriginationServiceLegacy';
 export type { ServerField }        from './loanOriginationServiceLegacy';
