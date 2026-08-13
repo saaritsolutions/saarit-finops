@@ -28,6 +28,15 @@
 **Git workflow for automated runs:** each day's work lands on a dedicated feature branch
 (`auto/<service>-<yyyy-mm-dd>`), never directly on main. User reviews and merges via the daily digest.
 
+**2026-08-13 — Manual dry run of the automation (tier 1, GLAccountingService.Tests):** replaced the scaffold
+`Assert.Pass()` test with 10 real NUnit tests covering GeneralLedgerAccountsController and
+JournalEntriesController (create/get/getAll/delete + 404 paths), on branch
+`auto/glaccounting-tests-2026-08-13`. **Found a pipeline bug during this run:** the sandbox that runs the
+daily task has no .NET SDK, no root access, and the network proxy blocks dotnet.microsoft.com/apt installs —
+so the "self-verify with dotnet build/test" step in the scheduled prompt cannot execute. The prompt has been
+corrected to flag every commit as build-unverified rather than silently skip or falsely claim a pass. **User
+must run `dotnet build` + `dotnet test` locally before merging any `auto/*` branch until this is fixed.**
+
 ---
 
 ## Recently Completed
