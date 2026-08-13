@@ -2,6 +2,9 @@
 bin/
 obj/
 
+# OmniSharp/IDE language server cache
+*.lscache
+
 # User-specific files
 *.user
 *.suo
