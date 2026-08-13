@@ -7,15 +7,26 @@
 
 ## Current Focus
 
-### CI/CD & Deployment Verification
-**Status:** PLANNING
+### Autonomous Daily Build-Out (Depth-First)
+**Status:** ACTIVE — automated daily task, see SCOPE_RBI_STUB_SERVICES.md for stub service specs
 **Priority:** CRITICAL
-**Next Steps:**
-- [ ] Run full backend test suite (dotnet test)
-- [ ] Run full Cypress regression test suite (target: 90+ tests)
-- [ ] Verify production build compilation
-- [ ] Deploy to Hetzner VPS staging
-- [ ] Run smoke tests on staging environment
+**Order of work (depth-first — deepen existing services before starting new ones):**
+1. Real NUnit tests for services with only scaffold tests: GLAccountingService, RegulatoryComplianceService,
+   ChequeClearingService, CardATMService, AuditLoggingService, DocumentManagementService, HRMSService,
+   NotificationService, RemittancePaymentService, ReportingMISService.Tests
+2. Flesh out "partial/skeleton" services to full controller + service layer coverage: GLAccountingService,
+   RegulatoryComplianceService, ChequeClearingService, CardATMService, AuditLoggingService,
+   DocumentManagementService, HRMSService, NotificationService, RemittancePaymentService,
+   ProductParamManagementService (add controller — currently models/migrations only, no controller found),
+   LockerService (wire up controller — DbContext/model exist but unwired)
+3. Cypress regression suite toward 90+ test target (frontend-react/cypress/, not the unused root cypress/)
+4. Empty-stub services, per SCOPE_RBI_STUB_SERVICES.md — only after items 1-3, and only after the 3 open
+   decisions logged there are answered by the user (ProductConfigurationService fate, VersioningAuditService
+   vs AuditLoggingService merge, ReportingMISService vs LoanService regulatory-summary consolidation)
+5. CI/CD & Hetzner VPS deployment verification (deferred until above is stable)
+
+**Git workflow for automated runs:** each day's work lands on a dedicated feature branch
+(`auto/<service>-<yyyy-mm-dd>`), never directly on main. User reviews and merges via the daily digest.
 
 ---
 
