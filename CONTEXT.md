@@ -1,9 +1,18 @@
 # CONTEXT.md — SaaR Core Banking Services Project State
 
-**Last Updated:** 2026-05-29
-**Current Session:** Session 61 — Phase 1 Backend Implementation
+**Last Updated:** 2026-08-13
+**Current Session:** Autonomous Daily Build-Out — Tier 1 test coverage
 
 ## Completed
+
+### Autonomous Daily Build-Out: RegulatoryComplianceService.Tests (2026-08-13)
+- **Status:** ✅ Complete, on branch `auto/regulatorycompliance-tests-2026-08-13` (not merged to main)
+- Replaced scaffold `Assert.Pass()` with 11 real NUnit tests covering ComplianceReportsController
+  and RegulatoryFilingsController (create/stamp-date, getAll, get-404, get-found, delete, delete-404,
+  update-mismatched-id-badrequest)
+- Added `Microsoft.EntityFrameworkCore.InMemory` to the test csproj, matching the pattern used for
+  GLAccountingService.Tests the previous run
+- ⚠️ UNVERIFIED — sandbox has no .NET SDK; run `dotnet build`/`dotnet test` locally before merging
 
 ### BUGFIX: Customer KYC Document Upload Workflow
 - **Status:** ✅ Complete (current session)

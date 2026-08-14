@@ -11,9 +11,11 @@
 **Status:** ACTIVE — automated daily task, see SCOPE_RBI_STUB_SERVICES.md for stub service specs
 **Priority:** CRITICAL
 **Order of work (depth-first — deepen existing services before starting new ones):**
-1. Real NUnit tests for services with only scaffold tests: GLAccountingService, RegulatoryComplianceService,
-   ChequeClearingService, CardATMService, AuditLoggingService, DocumentManagementService, HRMSService,
-   NotificationService, RemittancePaymentService, ReportingMISService.Tests
+1. Real NUnit tests for services with only scaffold tests: ~~GLAccountingService~~ (done, unmerged branch
+   `auto/glaccounting-tests-2026-08-13`), ~~RegulatoryComplianceService~~ (done, unmerged branch
+   `auto/regulatorycompliance-tests-2026-08-13`), ChequeClearingService, CardATMService, AuditLoggingService,
+   DocumentManagementService, HRMSService, NotificationService, RemittancePaymentService,
+   ReportingMISService.Tests — **next up: ChequeClearingService.Tests**
 2. Flesh out "partial/skeleton" services to full controller + service layer coverage: GLAccountingService,
    RegulatoryComplianceService, ChequeClearingService, CardATMService, AuditLoggingService,
    DocumentManagementService, HRMSService, NotificationService, RemittancePaymentService,
@@ -31,6 +33,18 @@
 ---
 
 ## Recently Completed
+
+### ✅ Autonomous Daily Build-Out: RegulatoryComplianceService.Tests (2026-08-13)
+**Branch:** `auto/regulatorycompliance-tests-2026-08-13` (unmerged, local only)
+- 11 real NUnit tests replacing `Assert.Pass()` scaffold — ComplianceReportsController (7 tests) and
+  RegulatoryFilingsController (4 tests)
+- Added `Microsoft.EntityFrameworkCore.InMemory` package to test csproj
+- ⚠️ UNVERIFIED — sandbox lacks .NET SDK; build/test locally before merging
+
+### ✅ Autonomous Daily Build-Out: GLAccountingService.Tests (2026-08-13, prior run)
+**Branch:** `auto/glaccounting-tests-2026-08-13` (unmerged, local only)
+- 10 real NUnit tests replacing scaffold — GeneralLedgerAccountsController + JournalEntriesController
+- ⚠️ UNVERIFIED — same SDK limitation
 
 ### ✅ SAAR-NPA-003: NPA Recovery Tracking (Completed 2026-05-10)
 **Commits:** e4cc48a (backend), 35b4244 (frontend)
