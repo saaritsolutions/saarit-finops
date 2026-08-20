@@ -293,6 +293,32 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
 - (none)
 
 ## Completed (continued)
+- SAAR-NPA-002 — NPA Loan Write-Off Workflow (session 56, 2026-04-28, commit eee799f):
+  - **`SAAR_NPA_002_REQUIREMENTS.md`**: JIRA-format requirement doc (FR-1 through FR-6, GL DR 5040/CR 1020, test plan T-01–T-06).
+  - **`LoanApplication.cs`**: 4 new fields — WriteOffDate, WriteOffReason, WriteOffAuthorizedBy, WriteOffJournalNumber.
+  - **`AddWriteOffFields` EF migration**: 4 columns, schema qualifiers stripped.
+  - **`TransactionServiceClient.cs`**: `PostWriteOffJournalAsync` — DR 5040 (Bad Debts Written Off) / CR 1020 (Loans & Advances), idempotency key `WRITEOFF-{appNo}`.
+  - **`LoanApplicationsController.cs`**: `POST /api/loans/{id}/write-off` (absolute route, AllowAnonymous). Eligibility guard: DOUBTFUL_3 only (≥1096 DPD, 100% provisioned). `GET /api/loans/npa-board` extended with `writtenOffCount`, `writtenOffOutstanding`, `writtenOffLoans[]`.
+  - **`WriteOffTests.cs`**: 3 NUnit tests — DOUBTFUL_3 success, SUB_STANDARD → 400, already-written-off → 400.
+  - **All 5 test stubs updated**: `PostWriteOffJournalAsync` added to each `ITransactionServiceClient` stub.
+  - **`NpaBoard.tsx`**: WriteOffDialog (reason + authorizedBy, aria-label="confirm write off"), write-off IconButton (aria-label per app#), "Written Off (YTD)" KPI card, collapsible Written-Off section.
+  - **`npaBoardService.ts`**: `WrittenOffLoanItem`, `WriteOffRequest` types + `writeOffLoan()`.
+  - **`15-npa-board.cy.ts`**: T-07 write-off button DOUBTFUL_3 only, T-08 dialog opens, T-09 written-off section expandable.
+  - **Deployed** (commit eee799f): loanservice + frontend rebuilt on Hetzner. Smoke: `GET /api/loans/npa-board` → writtenOffCount:0. ✅ LIVE.
+
+- SAAR-LRP-003 — Loan Restructuring Tracking (session 57, 2026-04-29, commit 834e262):
+  - **`SAAR_LRP_003_REQUIREMENTS.md`**: JIRA-format requirement doc (FR-1 through FR-6, RBI 5% provisioning for restructured standard, test plan T-01–T-06).
+  - **`LoanApplication.cs`**: 6 new fields — IsRestructured, RestructuredDate, RestructuredReason, RestructuredNewEmi, RestructuredNewTenureMonths, RestructuredNewInterestRate. Plus 2 `[NotMapped]` computed: RestructuredProvisioningPct (5% for standard, NPA sub-class rate for NPA) + RestructuredProvisioning.
+  - **`AddRestructureFields` EF migration**: 6 columns, schema qualifiers stripped.
+  - **`LoanApplicationsController.cs`**: `POST /api/loans/{id}/restructure` (absolute route, AllowAnonymous) — resets NextDueDate, updates TenureMonths + InterestRate. `GET /api/loans/applications/restructured` — all IsRestructured=true loans, in-memory SMA+provisioning.
+  - **`RestructuredLoanTests.cs`**: 3 NUnit tests — DISBURSED success, already-restructured → 400, non-DISBURSED → 400.
+  - **`loanOriginationService.ts`**: `RestructuredLoanItem`, `RestructuredLoansResult`, `RestructureRequest` types + `getRestructuredLoans()` + `restructureLoan()`.
+  - **`LoanDetail.tsx`**: RESTRUCTURED amber chip, Restructure Loan button (DISBURSED+!isRestructured), RestructureDialog (4 fields — NewEMI/NewTenure/NewRate/Reason, all required), Restructured Terms card (amber border, shows revised terms + RBI 5% provisioning label).
+  - **`Reports.tsx`**: Tab 5 "Restructured" — KPI row (count/outstanding/5% provisioning), table, CSV export.
+  - **`16-restructured-loans.cy.ts`**: T-04 button visible, T-05 dialog+chip, T-06 Reports tab.
+  - **Deployed** (commit 834e262): loanservice + frontend rebuilt on Hetzner. Smoke: `GET /api/loans/applications/restructured` → `{"total":0,"items":[]}`. ✅ LIVE.
+
+## Completed (continued)
 - SAAR-NPA-001 — NPA Classification Board (session 55, 2026-04-28, commit 09745b8):
   - **`SAAR_NPA_001_REQUIREMENTS.md`**: JIRA-format requirement doc (FR-1 NPA sub-classification, FR-2 provisioning calc, FR-3 npa-board endpoint, FR-4 frontend page, FR-5 sidebar+router, FR-6 nginx). RBI IRAC bands table, provisioning table, test plan T-01 through T-06.
   - **`LoanApplication.cs`**: 3 new `[NotMapped]` computed properties — `NpaSubClassification` (SUB_STANDARD/DOUBTFUL_1/2/3 based on OverdueDays), `RequiredProvisioningPct` (15/25/40/100% RBI IRAC secured), `RequiredProvisioning` = `OutstandingPrincipal × pct / 100`.
@@ -567,8 +593,7 @@ This file tracks goals, decisions, and incremental progress for the investor-rea
 
 ## Pending Next
 - Fix Kaspersky Application Control blocking `dotnet test` locally: Kaspersky Settings → Application Control → add exclusion for `C:\Users\LENOVO YOGA\SAARIT\saarit-finops`.
-- E2E smoke on demobank: `/npa-board` (verify page renders, KPI cards), `/accounts` (Statement dialog), EMI Collection card on DISBURSED loan.
-- Next feature: SAAR-NPA-002 (NPA upgrade/write-off actions) or SAAR-LRP-003 (restructured loan tracking).
+- Next feature: SAAR-LRP-004 (restructured loan upgrade after 1-year satisfactory performance) or SAAR-RPT-002 (RBI regulatory reporting of restructured portfolio) or production-grade testing overhaul (DOB fix + TransactionService/AccountService unit tests).
 
 ## Notes
 - Eligibility expression ID currently in use: EXPR_1755237353842.

@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — SaaR Core Banking Services
 
-**Last Updated:** 2026-04-29 (session 56 — SAAR-NPA-002 NPA Write-Off Workflow)
+**Last Updated:** 2026-04-29 (session 57 — SAAR-LRP-003 Loan Restructuring Tracking)
 **Snapshot Purpose:** Enable any developer or AI session to resume work immediately without re-analysis.
 
 ---
@@ -146,6 +146,20 @@ A modern, configurable Core Banking System (CBS) targeted at Urban Co-operative 
 ---
 
 ## 5. Recent Work Done
+
+### Session 57 — 2026-04-29 (SAAR-LRP-003 — Loan Restructuring Tracking)
+- **`SAAR_LRP_003_REQUIREMENTS.md`**: JIRA-format requirement doc (FR-1 through FR-6, RBI 5% provisioning for restructured standard assets, test plan T-01–T-06).
+- **`LoanApplication.cs`**: 6 new fields — IsRestructured (bool default false), RestructuredDate (DateTime?), RestructuredReason (string?500), RestructuredNewEmi (decimal?18,2), RestructuredNewTenureMonths (int?), RestructuredNewInterestRate (decimal?6,4). Plus 2 `[NotMapped]` computed: `RestructuredProvisioningPct` (5% for standard, NPA sub-class rate if NPA) and `RestructuredProvisioning` (outstanding × pct / 100).
+- **`AddRestructureFields` EF migration** (20260429080717): 6 AddColumn calls, schema qualifiers stripped for multi-tenancy. LoanDbContextModelSnapshot updated.
+- **`LoanApplicationsController.cs`**: `POST /api/loans/{id:guid}/restructure` (absolute route, AllowAnonymous) — guards: not DISBURSED→400, already IsRestructured→400. Updates TenureMonths + InterestRate to new values, resets NextDueDate to today+1mo. `GET /api/loans/applications/restructured` — EF WHERE IsRestructured, in-memory SMA+provisioning computation. New DTOs: `RestructuredLoanDto`, `RestructureRequest`.
+- **`RestructuredLoanTests.cs`**: 3 NUnit tests — T-01 DISBURSED success (verifies all 6 fields), T-02 already-restructured → 400, T-03 SANCTIONED → 400. File-scoped stubs: `RsNoOpExpressions`, `RsNoOpWorkflow`, `RsNoOpTransaction`, `RsDbFactory`.
+- **`loanOriginationService.ts`**: `RestructuredLoanItem`, `RestructuredLoansResult`, `RestructureRequest` interfaces + `getRestructuredLoans()` (GET /api/loans/applications/restructured) + `restructureLoan(id, req)` (POST /api/loans/{id}/restructure). Appended after existing `getOverdueLoans` function.
+- **`LoanDetail.tsx`**: `AutorenewIcon` import + `restructureLoan` import. 7 new state vars (restructureOpen/Emi/Tenure/Rate/Reason/restructuring/restructureError). `handleRestructure()` async function. RESTRUCTURED amber chip in title row (when `f('isRestructured')`). Restructure Loan button (DISBURSED + !isRestructured, `aria-label="restructure loan"`). Restructured Terms card (amber border, #FFFBEB, shows EMI/Tenure/Rate/Date + reason). RestructureDialog (4 TextFields — newEmi/newTenure/newRate/reason, all required for submit enable).
+- **`Reports.tsx`**: Tab 5 "Restructured" — `AutorenewIcon`, state `restructuredLoans/Total/Loading`, `loadRestructured()` + `useEffect(tab===5)`, `exportRestructuredCsv()`. KPI row (count + outstanding + 5% provisioning Paper cards). Table (9 cols including Restructured Date, New EMI, Required Prov.). Lazy-loads on tab click.
+- **`16-restructured-loans.cy.ts`**: 3 Cypress regression tests — T-04 restructure button visible (DISBURSED, !isRestructured), T-05 dialog fields + `aria-label="confirm restructure"` + RESTRUCTURED chip post-submit, T-06 Reports Restructured tab KPI + table.
+- **Build**: LoanService 0 errors ✅ LoanService.Tests 0 errors ✅ TypeScript 0 new errors in modified files ✅
+- **Commit**: `834e262` — 12 files changed, 1994 insertions.
+- **Deployed** (Hetzner): loanservice + frontend rebuilt. Migration ran. Smoke: `GET /api/loans/applications/restructured` → `{"total":0,"items":[]}` ✅ LIVE.
 
 ### Session 56 — 2026-04-29 (SAAR-NPA-002 — NPA Loan Write-Off Workflow)
 - **`LoanApplication.cs`**: Added `WriteOffDate` (DateTime?), `WriteOffReason` (string?500), `WriteOffAuthorizedBy` (string?150), `WriteOffJournalNumber` (string?50) persisted fields.
